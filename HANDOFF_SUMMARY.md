@@ -73,6 +73,12 @@ Implemented:
 - Slack app manifest:
   - App Home Messages tab enabled for `출근`/`퇴근` DM usage.
   - `files:read` and `files:write` included for meeting audio reads and transcript/result uploads.
+- Slack app setup progress:
+  - Slack app token/signing secret, channel IDs, and member IDs were collected by the user in the local ignored file `codex 참고.txt`.
+  - The bot was invited to `#회의-결과록`, `#in-process`, and `#finals`.
+  - Do not commit or quote the token/signing secret.
+  - Use `display_name: "민성"` for 배민성 even if the Slack display name is `Corvus Gold`, so Subjector says `민성님`.
+  - Use `display_name: "조은"` for 김조은 unless the user explicitly changes it.
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
@@ -882,7 +888,7 @@ No additional MVP product decisions are currently open.
 Next steps:
 
 1. User creates/connects the real accounts and credentials:
-   - Slack app install using `slack/manifest.yaml`.
+   - Slack app install using `slack/manifest.yaml`. Initial Slack app install/invite is done; remaining work is putting secrets into `.env`/Render and verifying event delivery.
    - Supabase project and schema migration.
    - OpenAI API billing/key readiness.
    - Render service connected to the GitHub repository.
