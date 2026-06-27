@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector In Process Layout Options</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: #f5f6f8;
+      color: #1f2933;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 34px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: #5b6876;
+      line-height: 1.55;
+    }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .panel {
+      background: #fff;
+      border: 1px solid #dce3ea;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+    }
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #dce3ea;
+      background: #fbfcfd;
+      font-weight: 700;
+    }
+    .panel-body {
+      padding: 16px;
+    }
+    .slack-message {
+      border-left: 4px solid #4a154b;
+      background: #fff;
+      padding: 14px 14px 16px;
+    }
+    .meta {
+      color: #697586;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .person-title {
+      font-weight: 800;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+    .task {
+      border: 1px solid #dce3ea;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      background: #fbfcfd;
+      line-height: 1.5;
+    }
+    .task-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .field {
+      margin: 6px 0;
+    }
+    .label {
+      color: #52606d;
+      font-weight: 700;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    button {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 12px;
+      font-weight: 700;
+      color: #1f2933;
+    }
+    .primary {
+      background: #007a5a;
+      color: #fff;
+      border-color: #007a5a;
+    }
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      background: #eef6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      line-height: 1.55;
+    }
+    @media (max-width: 840px) {
+      .compare {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>#in-process 개인별 task 메시지 비교</h1>
+    <p class="subtitle">아까 화면은 버튼 종류 비교였습니다. 이 화면은 사람별 task 메시지에 들어갈 정보량을 비교합니다.</p>
+
+    <section class="compare">
+      <article class="panel">
+        <div class="panel-header">1번. 단순 목록형</div>
+        <div class="panel-body">
+          <div class="slack-message">
+            <div class="meta">#in-process · 2026-06-27</div>
+            <div class="person-title">김조은 오늘의 task</div>
+
+            <div class="task">
+              <div class="task-title">1. ESP32와 라즈베리파이 비교</div>
+              <div class="field"><span class="label">중요도:</span> 상 · <span class="label">협응도:</span> 상</div>
+              <div class="buttons">
+                <button class="primary">수락</button>
+                <button>완료</button>
+                <button>변경 요청</button>
+                <button>회의 요청</button>
+                <button>Codex에서 진행</button>
+              </div>
+            </div>
+
+            <div class="task">
+              <div class="task-title">2. 센서 연결 방식 후보 정리</div>
+              <div class="field"><span class="label">중요도:</span> 중 · <span class="label">협응도:</span> 하</div>
+              <div class="buttons">
+                <button class="primary">수락</button>
+                <button>완료</button>
+                <button>Codex에서 진행</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">2번. 상세 맥락형</div>
+        <div class="panel-body">
+          <div class="slack-message">
+            <div class="meta">#in-process · 2026-06-27</div>
+            <div class="person-title">김조은 오늘의 task</div>
+
+            <div class="task">
+              <div class="task-title">1. ESP32와 라즈베리파이 비교 후 추천안 작성</div>
+              <div class="field"><span class="label">상태:</span> 반영됨, 수락 대기</div>
+              <div class="field"><span class="label">회의 맥락:</span> 하드웨어 선택이 데이터 수집 방식과 모델 실행 구조에 영향을 줍니다.</div>
+              <div class="field"><span class="label">수행 도우미:</span> 전력, 센서 연결, 구현 난이도, 시연 안정성을 기준으로 비교하세요.</div>
+              <div class="field"><span class="label">결정 필요:</span> ESP32로 변경할지, 라즈베리파이를 유지할지 추천 근거 작성</div>
+              <div class="field"><span class="label">중요도:</span> 상 · <span class="label">협응도:</span> 상</div>
+              <div class="buttons">
+                <button class="primary">수락</button>
+                <button>완료</button>
+                <button>변경 요청</button>
+                <button>회의 요청</button>
+                <button>Codex에서 진행</button>
+              </div>
+            </div>
+
+            <div class="task">
+              <div class="task-title">2. 센서 연결 방식 후보 정리</div>
+              <div class="field"><span class="label">상태:</span> 반영됨, 수락 대기</div>
+              <div class="field"><span class="label">회의 맥락:</span> 하드웨어 결정 후 바로 구현할 수 있도록 후보를 준비합니다.</div>
+              <div class="field"><span class="label">수행 도우미:</span> ESP32 기준 GPIO, I2C, UART 연결 가능성을 확인하세요.</div>
+              <div class="field"><span class="label">중요도:</span> 중 · <span class="label">협응도:</span> 하</div>
+              <div class="buttons">
+                <button class="primary">수락</button>
+                <button>완료</button>
+                <button>Codex에서 진행</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="note">
+      <strong>차이:</strong> 버튼은 거의 같습니다. 1번은 task 이름과 상태만 빨리 훑는 화면이고, 2번은 각자가 왜 이 일을 하는지와 Codex에게 넘길 맥락이 메시지 안에 이미 보이는 화면입니다.
+    </div>
+  </main>
+</body>
+</html>

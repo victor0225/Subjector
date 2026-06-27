@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Task Dependency Board</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #617080;
+      --line: #dce3ea;
+      --soft: #f5f6f8;
+      --slack: #4a154b;
+      --ok: #007a5a;
+      --warn: #b54708;
+      --bad: #b42318;
+      --blue: #eef6ff;
+      --yellow: #fff7ed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: var(--soft);
+      color: var(--ink);
+    }
+    main {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 34px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .person {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+    }
+    .person-header {
+      background: var(--slack);
+      color: #fff;
+      padding: 14px 16px;
+      font-weight: 800;
+    }
+    .body { padding: 14px; }
+    .task {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      background: #fbfcfd;
+      line-height: 1.48;
+    }
+    .task-title {
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .field { margin: 6px 0; }
+    .label {
+      color: #52606d;
+      font-weight: 800;
+    }
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      margin: 2px 4px 2px 0;
+    }
+    .tag.ok { background: #ecfdf3; color: var(--ok); }
+    .tag.warn { background: var(--yellow); color: var(--warn); }
+    .tag.bad { background: #fef3f2; color: var(--bad); }
+    .tag.info { background: #eef2ff; color: #3730a3; }
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      background: var(--blue);
+      line-height: 1.55;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    button {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 10px;
+      font-weight: 800;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .primary {
+      background: var(--ok);
+      color: #fff;
+      border-color: var(--ok);
+    }
+    .thread {
+      display: none;
+      margin: 8px 0 0 18px;
+      padding-left: 12px;
+      border-left: 3px solid #e7ecf1;
+    }
+    .thread.show { display: block; }
+    .prompt {
+      white-space: pre-wrap;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 8px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>현재 예시 task 의존성 보드</h1>
+    <p class="subtitle">지금까지 만든 예시 task에 병렬 가능 여부, 의존성, 영향 가능성, 차단 조건을 붙인 화면입니다. 변경 요청이 생겼을 때 어떤 일을 계속할 수 있는지 판단하기 위한 구조입니다.</p>
+
+    <section class="grid">
+      <article class="person">
+        <div class="person-header">조수현</div>
+        <div class="body">
+          <div class="task">
+            <div class="task-title">하드웨어 변경 시 모델 실행 구조 영향 검토</div>
+            <div><span class="tag warn">조건부 가능</span><span class="tag info">2시간</span><span class="tag bad">협응도 🔴 상</span></div>
+            <div class="field"><span class="label">의존성:</span> 김조은의 ESP32/라즈베리파이 추천안 초안</div>
+            <div class="field"><span class="label">영향 가능성:</span> 배민성 데이터 송신 방식, 김조은 하드웨어 추천 기준</div>
+            <div class="field"><span class="label">차단 조건:</span> 하드웨어가 최종 확정되지 않으면 최종 구조 결정은 보류</div>
+            <div class="field"><span class="label">계속 가능한 일:</span> 라즈베리파이 기준/ESP32 기준 구조 후보 비교</div>
+            <div class="buttons">
+              <button class="primary" onclick="showThread('thread-suhyeon-1')">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button><button>회의 요청</button>
+            </div>
+            <div id="thread-suhyeon-1" class="thread">
+              <div class="field"><span class="label">task 스레드:</span> Subjector가 Codex 프롬프트를 생성합니다.</div>
+              <div class="prompt">[Codex 프롬프트]
+조수현님의 task입니다. 하드웨어 변경이 모델 실행 구조에 주는 영향을 검토하세요.
+의존성: 김조은님의 추천안 초안.
+차단 조건: 최종 하드웨어 확정 전에는 최종 구조를 확정하지 마세요.
+변경 영향도 A/B/C 규칙을 적용하세요.</div>
+              <div class="buttons"><button class="primary">프롬프트 복사</button></div>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">Subjector task 승인 기준 정리</div>
+            <div><span class="tag ok">독립 진행 가능</span><span class="tag info">1시간</span><span class="tag bad">협응도 🔴 상</span></div>
+            <div class="field"><span class="label">의존성:</span> 없음</div>
+            <div class="field"><span class="label">영향 가능성:</span> 모든 변경 요청/회의 요청 흐름</div>
+            <div class="field"><span class="label">차단 조건:</span> 없음</div>
+            <div class="field"><span class="label">계속 가능한 일:</span> 승인/찬성/반대/회의 요청 기준 문서화</div>
+            <div class="buttons">
+              <button class="primary" onclick="showThread('thread-suhyeon-2')">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button><button>회의 요청</button>
+            </div>
+            <div id="thread-suhyeon-2" class="thread">
+              <div class="field"><span class="label">task 스레드:</span> 독립 진행 가능한 Codex 프롬프트가 생성됩니다.</div>
+              <div class="prompt">[Codex 프롬프트]
+Subjector의 task 승인 기준을 정리하세요.
+이 task는 독립 진행 가능합니다.
+결과는 Slack에 붙여넣기 좋은 형식으로 작성하세요.</div>
+              <div class="buttons"><button class="primary">프롬프트 복사</button></div>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">OpenAI API billing 확인</div>
+            <div><span class="tag ok">독립 진행 가능</span><span class="tag info">30분</span><span class="tag ok">협응도 🟢 하</span></div>
+            <div class="field"><span class="label">의존성:</span> 없음</div>
+            <div class="field"><span class="label">영향 가능성:</span> 회의 전사 가능 여부</div>
+            <div class="field"><span class="label">차단 조건:</span> 결제 설정 불가 시 실제 전사 테스트 보류</div>
+            <div class="buttons">
+              <button class="primary">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="person">
+        <div class="person-header">김조은</div>
+        <div class="body">
+          <div class="task">
+            <div class="task-title">ESP32와 라즈베리파이 비교 후 추천안 작성</div>
+            <div><span class="tag warn">조건부 가능</span><span class="tag info">2시간</span><span class="tag bad">협응도 🔴 상</span></div>
+            <div class="field"><span class="label">의존성:</span> 부품 구매 가능 여부/가격 확인 결과가 있으면 더 정확함</div>
+            <div class="field"><span class="label">영향 가능성:</span> 조수현 모델 실행 구조, 배민성 데이터 송신 방식</div>
+            <div class="field"><span class="label">차단 조건:</span> 특정 하드웨어로 구현 확정은 영향받는 사람 동의 전 보류</div>
+            <div class="field"><span class="label">계속 가능한 일:</span> 기준별 비교표, 장단점, 추천 후보 작성</div>
+            <div class="buttons">
+              <button class="primary" onclick="showThread('thread-joeun-1')">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button><button>회의 요청</button>
+            </div>
+            <div id="thread-joeun-1" class="thread">
+              <div class="field"><span class="label">task 스레드:</span> 여기에 Codex 프롬프트가 생성됩니다.</div>
+              <div class="prompt">[Codex 프롬프트]
+조은님의 task입니다. ESP32와 라즈베리파이를 비교하고 추천안을 작성하세요.
+계속 가능한 일: 기준별 비교표, 장단점, 추천 후보 작성.
+차단 조건: 특정 하드웨어 최종 확정은 영향받는 사람 동의 전 보류.
+변경 영향도 A/B/C 규칙을 적용하세요.</div>
+              <div class="buttons"><button class="primary">프롬프트 복사</button></div>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">부품 구매 가능 여부와 가격 확인</div>
+            <div><span class="tag ok">독립 진행 가능</span><span class="tag info">1시간</span><span class="tag warn">협응도 🟡 중</span></div>
+            <div class="field"><span class="label">의존성:</span> 없음</div>
+            <div class="field"><span class="label">영향 가능성:</span> 하드웨어 추천안</div>
+            <div class="field"><span class="label">차단 조건:</span> 없음</div>
+            <div class="field"><span class="label">계속 가능한 일:</span> 구매처, 가격, 배송 가능성 조사</div>
+            <div class="buttons">
+              <button class="primary">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">센서 연결 방식 후보 메모</div>
+            <div><span class="tag warn">조건부 가능</span><span class="tag info">30분</span><span class="tag ok">협응도 🟢 하</span></div>
+            <div class="field"><span class="label">의존성:</span> ESP32/라즈베리파이 후보 범위</div>
+            <div class="field"><span class="label">영향 가능성:</span> 배민성 데이터 송신 테스트</div>
+            <div class="field"><span class="label">차단 조건:</span> 특정 하드웨어 전용 연결 방식 확정은 보류</div>
+            <div class="buttons">
+              <button class="primary">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="person">
+        <div class="person-header">배민성</div>
+        <div class="body">
+          <div class="task">
+            <div class="task-title">502, 503호 Wi-Fi ID와 연결 가능 여부 확인</div>
+            <div><span class="tag ok">독립 진행 가능</span><span class="tag info">2시간</span><span class="tag warn">협응도 🟡 중</span></div>
+            <div class="field"><span class="label">의존성:</span> 없음</div>
+            <div class="field"><span class="label">영향 가능성:</span> 데이터 송신 방식, 하드웨어 선택 근거</div>
+            <div class="field"><span class="label">차단 조건:</span> 없음</div>
+            <div class="field"><span class="label">계속 가능한 일:</span> 장소별 Wi-Fi ID, 신호 상태, 접속 가능 여부 확인</div>
+            <div class="buttons">
+              <button class="primary">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">ESP32 기준 데이터 송신 방식 조사</div>
+            <div><span class="tag warn">조건부 가능</span><span class="tag info">1시간</span><span class="tag bad">협응도 🔴 상</span></div>
+            <div class="field"><span class="label">의존성:</span> ESP32가 유력 후보라는 전제</div>
+            <div class="field"><span class="label">영향 가능성:</span> 조수현 모델 실행 구조, 김조은 하드웨어 추천안</div>
+            <div class="field"><span class="label">차단 조건:</span> 하드웨어가 라즈베리파이로 확정되면 방향 수정 필요</div>
+            <div class="field"><span class="label">계속 가능한 일:</span> ESP32 송신 방식 후보 조사, 단 최종 구현안 확정은 보류</div>
+            <div class="buttons">
+              <button class="primary" onclick="showThread('thread-minsung-2')">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button><button>회의 요청</button>
+            </div>
+            <div id="thread-minsung-2" class="thread">
+              <div class="field"><span class="label">task 스레드:</span> 조건부 진행 가능한 Codex 프롬프트가 생성됩니다.</div>
+              <div class="prompt">[Codex 프롬프트]
+민성님의 task입니다. ESP32 기준 데이터 송신 방식 후보를 조사하세요.
+단, 하드웨어 최종 확정 전에는 최종 구현안을 확정하지 마세요.
+변경 영향도 A/B/C 규칙을 적용하세요.</div>
+              <div class="buttons"><button class="primary">프롬프트 복사</button></div>
+            </div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">테스트 로그 형식 제안</div>
+            <div><span class="tag ok">독립 진행 가능</span><span class="tag info">30분</span><span class="tag ok">협응도 🟢 하</span></div>
+            <div class="field"><span class="label">의존성:</span> 없음</div>
+            <div class="field"><span class="label">영향 가능성:</span> 모든 테스트 결과 정리 방식</div>
+            <div class="field"><span class="label">차단 조건:</span> 없음</div>
+            <div class="buttons">
+              <button class="primary">수락 및 Codex 프롬프트 생성</button><button>완료</button><button>변경 요청</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="note">
+      핵심 규칙: 변경 요청이 걸린 task와 같은 결정에 의존하는 task는 최종 확정을 보류합니다. 하지만 독립 진행 가능한 조사/확인 task는 다른 Codex 세션에서 계속 진행할 수 있습니다.
+    </div>
+  </main>
+  <script>
+    function showThread(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle('show');
+    }
+  </script>
+</body>
+</html>

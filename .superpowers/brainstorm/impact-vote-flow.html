@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Impact Vote Flow</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #617080;
+      --line: #dce3ea;
+      --soft: #f5f6f8;
+      --slack: #4a154b;
+      --ok: #007a5a;
+      --danger: #b42318;
+      --warn: #fff7ed;
+      --blue: #eef6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: var(--soft);
+      color: var(--ink);
+    }
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 34px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+    }
+    .panel-header {
+      background: var(--slack);
+      color: #fff;
+      padding: 14px 18px;
+      font-weight: 800;
+    }
+    .message {
+      padding: 18px;
+      border-bottom: 1px solid #e7ecf1;
+    }
+    .message:last-child { border-bottom: 0; }
+    .thread {
+      margin: 0 18px 18px 42px;
+      padding-left: 16px;
+      border-left: 3px solid #e7ecf1;
+    }
+    .meta {
+      color: #697586;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .title {
+      font-weight: 800;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .field {
+      margin: 7px 0;
+      line-height: 1.5;
+    }
+    .label {
+      color: #52606d;
+      font-weight: 800;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    button {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 12px;
+      font-weight: 800;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .primary {
+      background: var(--ok);
+      color: #fff;
+      border-color: var(--ok);
+    }
+    .danger {
+      color: var(--danger);
+      border-color: #f1b4ae;
+    }
+    .hidden { display: none; }
+    .pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 12px;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .status-ok {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #ecfdf3;
+      color: #027a48;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .status-warn {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #fffaeb;
+      color: #b54708;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      background: var(--blue);
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>영향받는 사람 선택 흐름</h1>
+    <p class="subtitle">변경 요청이 올라왔을 때, 영향받는 사람이 “찬성” 또는 “반대”를 누르면 어떻게 보이는지 체험하는 목업입니다.</p>
+
+    <section class="panel">
+      <div class="panel-header">#in-process · 김조은 task 스레드</div>
+
+      <article class="message">
+        <div class="meta">김조은 · 변경 요청</div>
+        <div class="title">task 범위 변경 요청</div>
+        <div class="field"><span class="pill">변경 제안</span>ESP32 비교 task에 “부품 구매 가능 여부와 가격 확인”을 추가하고 싶습니다.</div>
+        <div class="field"><span class="pill">근거</span>시연 전까지 부품을 구할 수 없으면 하드웨어 추천이 의미가 없기 때문입니다.</div>
+      </article>
+
+      <div class="thread">
+        <article class="message">
+          <div class="meta">Subjector · 영향 분석</div>
+          <div class="title">영향받는 사람 선택 요청</div>
+          <div class="field"><span class="label">영향받는 사람:</span> @배민성, @조수현</div>
+          <div class="field"><span class="label">영향:</span> 배민성의 Wi-Fi 테스트 기준과 조수현의 모델 실행 구조 검토에 영향을 줄 수 있습니다.</div>
+          <div class="field"><span class="label">현재 상태:</span> <span id="voteStatus" class="status-warn">응답 대기</span></div>
+          <div class="buttons">
+            <button class="primary" onclick="agree()">찬성</button>
+            <button class="danger" onclick="disagree()">반대</button>
+            <button onclick="resetFlow()">처음으로</button>
+          </div>
+        </article>
+
+        <article id="agreeResult" class="message hidden">
+          <div class="meta">Subjector · 전원 동의</div>
+          <div class="title">변경 요청을 반영했습니다</div>
+          <div class="field"><span class="label">결과:</span> 영향받는 사람이 모두 변경에 동의했습니다.</div>
+          <div class="field"><span class="label">업데이트:</span> 김조은 task에 “부품 구매 가능 여부와 가격 확인”을 추가했습니다.</div>
+          <div class="field"><span class="label">기록:</span> 오늘 정리에서 변경 사유와 영향받은 task를 표시합니다.</div>
+        </article>
+
+        <article id="disagreeResult" class="message hidden">
+          <div class="meta">Subjector · 의견 불일치</div>
+          <div class="title">회의 요청 상태로 전환했습니다</div>
+          <div class="field"><span class="label">결과:</span> 영향받는 사람 중 한 명이 “반대”를 선택했습니다.</div>
+          <div class="field"><span class="label">상태:</span> task 변경은 아직 반영하지 않았습니다.</div>
+          <div class="field"><span class="label">회의 필요 이유:</span> 변경 시 김조은 task뿐 아니라 배민성/조수현의 작업 기준도 바뀔 수 있습니다.</div>
+          <div class="buttons">
+            <button class="primary">회의 요청 생성</button>
+            <button>변경 요청 보류</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <div class="note">
+      전원 동의 시에는 바로 반영됩니다. 누군가 반대하면 task는 바꾸지 않고 “회의 요청” 또는 “보류” 상태로 남깁니다.
+    </div>
+  </main>
+
+  <script>
+    function agree() {
+      document.getElementById('voteStatus').className = 'status-ok';
+      document.getElementById('voteStatus').innerText = '전원 동의';
+      document.getElementById('agreeResult').classList.remove('hidden');
+      document.getElementById('disagreeResult').classList.add('hidden');
+    }
+    function disagree() {
+      document.getElementById('voteStatus').className = 'status-warn';
+      document.getElementById('voteStatus').innerText = '의견 불일치';
+      document.getElementById('disagreeResult').classList.remove('hidden');
+      document.getElementById('agreeResult').classList.add('hidden');
+    }
+    function resetFlow() {
+      document.getElementById('voteStatus').className = 'status-warn';
+      document.getElementById('voteStatus').innerText = '응답 대기';
+      document.getElementById('agreeResult').classList.add('hidden');
+      document.getElementById('disagreeResult').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

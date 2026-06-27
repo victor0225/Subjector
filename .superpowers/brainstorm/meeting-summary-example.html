@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Meeting Summary Example</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: #f5f6f8;
+      color: #1f2933;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 34px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: #5b6876;
+      line-height: 1.55;
+    }
+    .thread {
+      background: #fff;
+      border: 1px solid #dce3ea;
+      border-radius: 8px;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+      overflow: hidden;
+    }
+    .thread-header {
+      background: #4a154b;
+      color: #fff;
+      padding: 14px 18px;
+      font-weight: 700;
+    }
+    .message {
+      padding: 18px;
+      border-bottom: 1px solid #e7ecf1;
+    }
+    .message:last-child {
+      border-bottom: 0;
+    }
+    .meta {
+      color: #697586;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    h2 {
+      font-size: 20px;
+      margin: 0 0 12px;
+    }
+    h3 {
+      font-size: 16px;
+      margin: 18px 0 8px;
+    }
+    ul {
+      margin: 8px 0 0 20px;
+      padding: 0;
+      line-height: 1.6;
+    }
+    .pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+    .task {
+      border: 1px solid #dce3ea;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      background: #fbfcfd;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    button {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 12px;
+      font-weight: 700;
+      color: #1f2933;
+    }
+    .primary {
+      background: #007a5a;
+      color: #fff;
+      border-color: #007a5a;
+    }
+    .danger {
+      color: #b42318;
+      border-color: #f1b4ae;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>실무형 회의 요약 예시</h1>
+    <p class="subtitle">Slack의 #회의-결과록 스레드에 올라갈 내용을 상상한 예시입니다. 전사 전문보다 짧지만, task 반영에 필요한 맥락은 남깁니다.</p>
+
+    <section class="thread">
+      <div class="thread-header">#회의-결과록 · 2026-06-27 회의 녹음 처리 결과</div>
+
+      <article class="message">
+        <div class="meta">Subjector · 전사 완료</div>
+        <h2>화자 이름 매핑</h2>
+        <ul>
+          <li>Speaker A → 조수현</li>
+          <li>Speaker B → 김조은</li>
+          <li>Speaker C → 배민성</li>
+        </ul>
+      </article>
+
+      <article class="message">
+        <div class="meta">Subjector · 회의 요약</div>
+        <h2>회의 핵심 요약</h2>
+        <p>오늘 회의는 하드웨어 선택, Wi-Fi 데이터 수집 방식, 다음 시연 전까지의 개인별 task 재배치를 중심으로 진행되었습니다. 가장 큰 결정 후보는 라즈베리파이 기반 설계를 ESP32 중심으로 바꿀지 여부입니다.</p>
+
+        <h3>주제 1. 하드웨어 방향</h3>
+        <ul>
+          <li><span class="pill">주장</span>김조은은 ESP32가 센서 연결과 전력 측면에서 현재 주제에 더 적합하다고 주장했습니다.</li>
+          <li><span class="pill">근거</span>라즈베리파이는 기능이 많지만, 이번 기능 검증에는 과하고 세팅 시간이 길 수 있습니다.</li>
+          <li><span class="pill">영향</span>배민성의 데이터 수집 방식과 조수현의 모델 실행 구조에 영향을 줍니다.</li>
+        </ul>
+
+        <h3>주제 2. Wi-Fi 정보 수집</h3>
+        <ul>
+          <li>강의실 502, 503호의 Wi-Fi ID와 연결 가능 여부 확인이 필요합니다.</li>
+          <li>수집 결과는 하드웨어 선택과 데이터 송신 방식 판단에 사용됩니다.</li>
+        </ul>
+
+        <h3>미결정 사항</h3>
+        <ul>
+          <li>ESP32로 변경할지 최종 승인 필요</li>
+          <li>시연 전까지 라즈베리파이 대안을 유지할지 여부</li>
+        </ul>
+      </article>
+
+      <article class="message">
+        <div class="meta">Subjector · task 변경 제안</div>
+        <h2>#in-process 반영 후보</h2>
+
+        <div class="task">
+          <strong>김조은</strong><br>
+          Task: ESP32와 라즈베리파이 5 8GB 비교 후 추천안 작성<br>
+          중요도: 상 · 협응 필요도: 상<br>
+          근거: 하드웨어 변경이 전체 구현 방식에 영향을 줌
+        </div>
+
+        <div class="task">
+          <strong>배민성</strong><br>
+          Task: 502, 503호 Wi-Fi ID와 연결 가능 여부 확인<br>
+          중요도: 중 · 협응 필요도: 하<br>
+          근거: 데이터 송신 가능성 확인 필요
+        </div>
+
+        <div class="task">
+          <strong>조수현</strong><br>
+          Task: 하드웨어 변경 시 모델 실행 구조 영향 검토<br>
+          중요도: 상 · 협응 필요도: 상<br>
+          근거: ESP32 변경 시 기존 실행 구조 수정 필요
+        </div>
+
+        <div class="buttons">
+          <button class="primary">승인하고 #in-process 반영</button>
+          <button>수정 후 반영</button>
+          <button class="danger">거절</button>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

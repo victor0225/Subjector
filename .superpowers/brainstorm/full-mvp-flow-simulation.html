@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector MVP Flow Simulation</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #617080;
+      --line: #dce3ea;
+      --soft: #f5f6f8;
+      --slack: #4a154b;
+      --ok: #007a5a;
+      --ok-soft: #ecfdf3;
+      --warn: #fff7ed;
+      --blue: #eef6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: var(--soft);
+      color: var(--ink);
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 30px 22px 44px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 22px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 18px;
+    }
+    .toolbar button {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .toolbar button.active {
+      background: var(--slack);
+      border-color: var(--slack);
+      color: #fff;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+    }
+    .panel-header {
+      background: var(--slack);
+      color: #fff;
+      padding: 14px 18px;
+      font-weight: 800;
+    }
+    .message {
+      padding: 17px 18px;
+      border-bottom: 1px solid #e7ecf1;
+    }
+    .message:last-child { border-bottom: 0; }
+    .meta {
+      color: #697586;
+      font-size: 13px;
+      margin-bottom: 9px;
+    }
+    .title {
+      font-weight: 800;
+      font-size: 18px;
+      margin: 0 0 9px;
+    }
+    .field {
+      margin: 7px 0;
+      line-height: 1.5;
+    }
+    .label {
+      color: #52606d;
+      font-weight: 800;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 13px;
+    }
+    button.action {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 12px;
+      font-weight: 800;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    button.primary {
+      background: var(--ok);
+      color: #fff;
+      border-color: var(--ok);
+    }
+    button.danger {
+      color: #b42318;
+      border-color: #f1b4ae;
+    }
+    .thread {
+      margin: 0 18px 16px 42px;
+      border-left: 3px solid #e7ecf1;
+      padding-left: 16px;
+    }
+    .hidden { display: none; }
+    .pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 12px;
+      font-weight: 800;
+      margin-right: 5px;
+    }
+    .status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--ok-soft);
+      color: #027a48;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .task {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      background: #fbfcfd;
+      line-height: 1.5;
+    }
+    .task.done {
+      background: #f7fffb;
+      border-color: #abefc6;
+    }
+    .pre {
+      white-space: pre-wrap;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+      line-height: 1.55;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      max-height: 390px;
+      overflow: auto;
+    }
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: var(--blue);
+      border: 1px solid #bfdbfe;
+      line-height: 1.55;
+    }
+    .warning {
+      background: var(--warn);
+      border-color: #fed7aa;
+    }
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Subjector MVP Flow Simulation</h1>
+    <p class="subtitle">오늘까지 확정한 흐름을 한 화면에서 눌러보는 시뮬레이션입니다. 실제 Slack/DB/API 동작이 아니라 설계 확인용 목업입니다.</p>
+
+    <div class="toolbar">
+      <button id="nav1" class="active" onclick="go(1)">1. 녹음 업로드</button>
+      <button id="nav2" onclick="go(2)">2. 화자 매핑</button>
+      <button id="nav3" onclick="go(3)">3. 요약/승인</button>
+      <button id="nav4" onclick="go(4)">4. #in-process</button>
+      <button id="nav5" onclick="go(5)">5. Codex handoff</button>
+      <button id="nav6" onclick="go(6)">6. 완료 처리</button>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="panel-header">#회의-결과록</div>
+
+        <article class="message">
+          <div class="meta">조수현 · iPhone 녹음 파일 업로드</div>
+          <div class="title">2026-06-27 회의 녹음.m4a</div>
+          <div class="field"><span class="label">상태:</span> <span id="recordingStatus">업로드됨</span></div>
+          <div class="field"><span class="label">처리:</span> OpenAI API로 전사와 Speaker A/B/C 분리</div>
+          <div class="buttons">
+            <button class="action primary" onclick="go(2)">전사 완료 상태 보기</button>
+          </div>
+        </article>
+
+        <div id="meetingStep2" class="thread hidden">
+          <article class="message">
+            <div class="meta">Subjector · 전사 완료</div>
+            <div class="title">화자 이름을 선택해주세요</div>
+            <div class="field"><span class="label">Speaker A:</span> 조수현</div>
+            <div class="field"><span class="label">Speaker B:</span> 김조은</div>
+            <div class="field"><span class="label">Speaker C:</span> 배민성</div>
+            <div class="buttons">
+              <button class="action primary" onclick="mapSpeakers()">이 매핑으로 진행</button>
+              <button class="action">수정</button>
+            </div>
+          </article>
+        </div>
+
+        <div id="meetingStep3" class="thread hidden">
+          <article class="message">
+            <div class="meta">Subjector · 전사 파일 첨부</div>
+            <div class="title">이름 반영 전사 전문</div>
+            <div class="field">첨부: <strong>2026-06-27-meeting-transcript.txt</strong></div>
+            <div class="field">Supabase에는 전문을 저장하지 않고, Slack 스레드에 파일로 남깁니다.</div>
+          </article>
+
+          <article class="message">
+            <div class="meta">Subjector · 실무형 회의 요약</div>
+            <div class="title">회의 핵심 요약</div>
+            <div class="field">오늘 회의는 하드웨어 선택, Wi-Fi 데이터 수집 방식, 다음 시연 전까지의 task 재배치를 중심으로 진행되었습니다.</div>
+            <div class="field"><span class="pill">주장</span>김조은은 ESP32가 센서 연결과 전력 측면에서 현재 주제에 더 적합하다고 주장했습니다.</div>
+            <div class="field"><span class="pill">근거</span>라즈베리파이는 기능이 많지만 이번 기능 검증에는 과하고 세팅 시간이 길 수 있습니다.</div>
+            <div class="field"><span class="pill">미결정</span>ESP32로 변경할지 최종 승인 필요</div>
+          </article>
+
+          <article class="message">
+            <div class="meta">Subjector · task 변경 제안</div>
+            <div class="title">#in-process 반영 후보</div>
+            <div class="task">
+              <strong>김조은</strong><br>
+              ESP32와 라즈베리파이 5 8GB 비교 후 추천안 작성<br>
+              중요도: 상 · 협응도: 상
+            </div>
+            <div class="task">
+              <strong>배민성</strong><br>
+              502, 503호 Wi-Fi ID와 연결 가능 여부 확인<br>
+              중요도: 중 · 협응도: 하
+            </div>
+            <div class="task">
+              <strong>조수현</strong><br>
+              하드웨어 변경 시 모델 실행 구조 영향 검토<br>
+              중요도: 상 · 협응도: 상
+            </div>
+            <div class="buttons">
+              <button class="action primary" onclick="approveTasks()">승인하고 #in-process 반영</button>
+              <button class="action">수정 후 반영</button>
+              <button class="action danger">거절</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">#in-process</div>
+
+        <article class="message">
+          <div class="meta">Subjector · 2026-06-27</div>
+          <div class="title">조수현 오늘의 task</div>
+          <div id="taskSuhyun" class="field">아직 오늘 task가 반영되지 않았습니다.</div>
+        </article>
+
+        <article class="message">
+          <div class="meta">Subjector · 2026-06-27</div>
+          <div class="title">김조은 오늘의 task</div>
+          <div id="taskJoeun" class="field">아직 오늘 task가 반영되지 않았습니다.</div>
+        </article>
+
+        <div id="joeunThread" class="thread hidden">
+          <article class="message">
+            <div class="meta">Subjector · task 스레드</div>
+            <div id="handoffPlaceholder">Codex 프롬프트가 아직 생성되지 않았습니다.</div>
+            <div id="codexPrompt" class="pre hidden">너는 김조은의 프로젝트 수행 도우미다.
+
+이 task는 2026-06-27 회의에서 생성되었다. 작업을 시작하기 전에 superpowers 플러그인을 사용해서 요구사항을 확인하고, 불명확한 결정은 한 번에 하나씩 질문해라.
+
+Task:
+ESP32와 라즈베리파이 5 8GB를 비교하고, 우리 졸업작품 프로젝트에 어떤 하드웨어가 더 적합한지 추천안을 작성한다.
+
+회의 맥락:
+- 하드웨어 선택은 데이터 수집 방식과 모델 실행 구조에 영향을 준다.
+- 라즈베리파이는 기능이 많지만 세팅 시간이 길 수 있다.
+- ESP32는 센서 연결과 전력 측면에서 더 적합할 가능성이 있다.
+
+해야 할 일:
+1. ESP32와 라즈베리파이 5 8GB를 전력, 센서 연결, 개발 난이도, 시연 안정성 기준으로 비교한다.
+2. 우리 프로젝트에서 어느 쪽이 더 적합한지 결론을 낸다.
+3. 변경 시 영향을 받는 사람과 task를 정리한다.
+4. Slack에 붙여넣을 수 있는 결과 요약을 작성한다.
+
+출력 형식:
+[수행 결과]
+- 무엇을 했는지:
+
+[결론]
+- 결정/추천:
+
+[근거]
+1.
+2.
+3.
+
+[영향받는 task]
+- 조수현:
+- 김조은:
+- 배민성:
+
+[추가로 필요한 결정]
+-
+
+[첨부/링크]
+-</div>
+            <div id="handoffButtons" class="buttons hidden">
+              <button class="action primary" onclick="copyPrompt()">프롬프트 복사</button>
+              <button class="action" onclick="go(6)">Codex 결과 붙여넣기 예시</button>
+            </div>
+            <div id="copyNote" class="field hidden"><span class="status">복사됨</span> Codex에 붙여넣고 진행하세요.</div>
+          </article>
+        </div>
+
+        <article class="message">
+          <div class="meta">Subjector · 2026-06-27</div>
+          <div class="title">배민성 오늘의 task</div>
+          <div id="taskMinsung" class="field">아직 오늘 task가 반영되지 않았습니다.</div>
+        </article>
+      </section>
+    </div>
+
+    <div id="completion" class="panel hidden" style="margin-top:18px">
+      <div class="panel-header">김조은 task 스레드 · Codex 결과 제출 후</div>
+      <article class="message">
+        <div class="meta">김조은 · Codex 결과 붙여넣기</div>
+        <div class="pre">[수행 결과]
+- ESP32와 라즈베리파이 5 8GB를 전력, 센서 연결, 구현 난이도, 시연 안정성 기준으로 비교했습니다.
+
+[결론]
+- 현재 MVP 시연 기준으로는 ESP32를 추천합니다.
+
+[근거]
+1. 센서 연결과 데이터 송신 중심의 기능 검증에는 ESP32가 더 직접적입니다.
+2. 전력 사용과 휴대성 측면에서 라즈베리파이보다 부담이 적습니다.
+3. 라즈베리파이는 모델 실행에는 유리하지만, 이번 task의 핵심은 센서/통신 검증이므로 과할 수 있습니다.
+
+[영향받는 task]
+- 조수현: 모델 실행 구조를 라즈베리파이 기준에서 분리해 검토해야 합니다.
+- 김조은: ESP32 기준 센서 연결 후보를 계속 정리합니다.
+- 배민성: Wi-Fi 연결 테스트를 ESP32 기준으로 확인해야 합니다.
+
+[추가로 필요한 결정]
+- 모델 실행을 로컬 라즈베리파이에서 할지, 외부 서버/노트북에서 할지 결정 필요
+
+[첨부/링크]
+- ESP32 공식 문서 링크 추가 예정</div>
+        <div class="buttons">
+          <button class="action primary" onclick="completeTask()">완료</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="note warning">
+      <strong>오늘 확정한 것:</strong> 조수현 노트북 1대에서 Subjector 봇 서버를 실행하고, 팀원들은 Slack에서 task를 받아 Codex + Superpowers로 수행합니다. Supabase에는 전사 전문이 아니라 요약, task, 상태, Slack 메시지 식별자만 저장합니다.
+    </div>
+  </main>
+
+  <script>
+    function setNav(step) {
+      for (let i = 1; i <= 6; i++) {
+        document.getElementById('nav' + i).classList.toggle('active', i === step);
+      }
+    }
+    function go(step) {
+      setNav(step);
+      if (step >= 2) {
+        document.getElementById('meetingStep2').classList.remove('hidden');
+        document.getElementById('recordingStatus').innerText = '전사 완료, 화자 매핑 대기';
+      }
+      if (step >= 3) {
+        document.getElementById('meetingStep3').classList.remove('hidden');
+        document.getElementById('recordingStatus').innerText = '요약과 task 변경 제안 생성됨';
+      }
+      if (step >= 4) {
+        renderTasks(false);
+      }
+      if (step >= 5) {
+        renderTasks(false);
+        document.getElementById('joeunThread').classList.remove('hidden');
+        document.getElementById('handoffPlaceholder').classList.add('hidden');
+        document.getElementById('codexPrompt').classList.remove('hidden');
+        document.getElementById('handoffButtons').classList.remove('hidden');
+      }
+      if (step >= 6) {
+        document.getElementById('completion').classList.remove('hidden');
+      }
+    }
+    function mapSpeakers() {
+      go(3);
+    }
+    function approveTasks() {
+      go(4);
+    }
+    function renderTasks(done) {
+      document.getElementById('taskSuhyun').innerHTML =
+        '<div class="task"><strong>하드웨어 변경 시 모델 실행 구조 영향 검토</strong><br>' +
+        '<span class="label">상태:</span> 반영됨, 수락 대기<br>' +
+        '<span class="label">회의 맥락:</span> ESP32 변경 시 기존 실행 구조 수정 필요<br>' +
+        '<span class="label">중요도:</span> 상 · <span class="label">협응도:</span> 상</div>';
+      document.getElementById('taskJoeun').innerHTML =
+        '<div class="task ' + (done ? 'done' : '') + '"><strong>ESP32와 라즈베리파이 비교 후 추천안 작성</strong><br>' +
+        '<span class="label">상태:</span> ' + (done ? '<span class="status">완료</span>' : '반영됨, 수락 대기') + '<br>' +
+        '<span class="label">회의 맥락:</span> 하드웨어 선택이 데이터 수집 방식과 모델 실행 구조에 영향을 줌<br>' +
+        '<span class="label">수행 도우미:</span> 전력, 센서 연결, 구현 난이도, 시연 안정성을 기준으로 비교<br>' +
+        '<span class="label">결정 필요:</span> ESP32로 변경할지 추천 근거 작성<br>' +
+        '<span class="label">중요도:</span> 상 · <span class="label">협응도:</span> 상' +
+        (done ? '<br><span class="label">완료 요약:</span> ESP32 추천. 전력/센서 연결/시연 안정성 측면에서 현재 프로젝트에 더 적합함.' : '') +
+        '<div class="buttons"><button class="action primary">수락</button><button class="action">완료</button><button class="action">변경 요청</button><button class="action">회의 요청</button><button class="action" onclick="go(5)">Codex에서 진행</button></div></div>';
+      document.getElementById('taskMinsung').innerHTML =
+        '<div class="task"><strong>502, 503호 Wi-Fi ID와 연결 가능 여부 확인</strong><br>' +
+        '<span class="label">상태:</span> 반영됨, 수락 대기<br>' +
+        '<span class="label">회의 맥락:</span> 데이터 송신 가능성 확인 필요<br>' +
+        '<span class="label">중요도:</span> 중 · <span class="label">협응도:</span> 하</div>';
+    }
+    async function copyPrompt() {
+      const text = document.getElementById('codexPrompt').innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        document.getElementById('copyNote').classList.remove('hidden');
+      } catch (error) {
+        document.getElementById('copyNote').classList.remove('hidden');
+        document.getElementById('copyNote').innerHTML = '<span class="status">복사 실패</span> 브라우저 권한 때문에 직접 선택해 복사하세요.';
+      }
+    }
+    function completeTask() {
+      renderTasks(true);
+      document.getElementById('completion').scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Codex Handoff Simulation</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: #f5f6f8;
+      color: #1f2933;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 34px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: #5b6876;
+      line-height: 1.55;
+    }
+    .slack {
+      background: #fff;
+      border: 1px solid #dce3ea;
+      border-radius: 8px;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+      overflow: hidden;
+    }
+    .header {
+      background: #4a154b;
+      color: #fff;
+      padding: 14px 18px;
+      font-weight: 700;
+    }
+    .message {
+      padding: 18px;
+      border-bottom: 1px solid #e7ecf1;
+    }
+    .message:last-child {
+      border-bottom: 0;
+    }
+    .thread {
+      margin: 0 18px 18px 42px;
+      border-left: 3px solid #e7ecf1;
+      padding-left: 16px;
+    }
+    .meta {
+      color: #697586;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .task-title {
+      font-weight: 800;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .field {
+      margin: 7px 0;
+      line-height: 1.5;
+    }
+    .label {
+      color: #52606d;
+      font-weight: 700;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    button {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 12px;
+      font-weight: 700;
+      color: #1f2933;
+      cursor: pointer;
+    }
+    .primary {
+      background: #007a5a;
+      color: #fff;
+      border-color: #007a5a;
+    }
+    .prompt {
+      display: none;
+      white-space: pre-wrap;
+      background: #f8fafc;
+      border: 1px solid #dce3ea;
+      border-radius: 8px;
+      padding: 14px;
+      line-height: 1.55;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 14px;
+    }
+    .prompt.show {
+      display: block;
+    }
+    .copy-note {
+      display: none;
+      color: #007a5a;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+    .copy-note.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Codex Handoff Simulation</h1>
+    <p class="subtitle">MVP에서는 Subjector 화면이 아니라 Slack task 스레드에 Codex용 프롬프트가 생성됩니다. 아래 버튼을 눌러 흐름을 시뮬레이션할 수 있습니다.</p>
+
+    <section class="slack">
+      <div class="header">#in-process · 김조은 오늘의 task</div>
+
+      <article class="message">
+        <div class="meta">Subjector · 2026-06-27</div>
+        <div class="task-title">ESP32와 라즈베리파이 비교 후 추천안 작성</div>
+        <div class="field"><span class="label">상태:</span> 반영됨, 수락 대기</div>
+        <div class="field"><span class="label">회의 맥락:</span> 하드웨어 선택이 데이터 수집 방식과 모델 실행 구조에 영향을 줍니다.</div>
+        <div class="field"><span class="label">수행 도우미:</span> 전력, 센서 연결, 구현 난이도, 시연 안정성을 기준으로 비교하세요.</div>
+        <div class="field"><span class="label">결정 필요:</span> ESP32로 변경할지, 라즈베리파이를 유지할지 추천 근거 작성</div>
+        <div class="field"><span class="label">중요도:</span> 상 · <span class="label">협응도:</span> 상</div>
+        <div class="buttons">
+          <button class="primary">수락</button>
+          <button>완료</button>
+          <button>변경 요청</button>
+          <button>회의 요청</button>
+          <button onclick="showPrompt()">Codex에서 진행</button>
+        </div>
+      </article>
+
+      <div class="thread">
+        <article class="message">
+          <div class="meta">Subjector · task 스레드</div>
+          <div id="placeholder">아직 Codex 프롬프트가 생성되지 않았습니다.</div>
+          <div id="prompt" class="prompt">너는 김조은의 프로젝트 수행 도우미다.
+
+이 task는 2026-06-27 회의에서 생성되었다. 작업을 시작하기 전에 superpowers 플러그인을 사용해서 요구사항을 확인하고, 불명확한 결정은 한 번에 하나씩 질문해라.
+
+Task:
+ESP32와 라즈베리파이 5 8GB를 비교하고, 우리 졸업작품 프로젝트에 어떤 하드웨어가 더 적합한지 추천안을 작성한다.
+
+회의 맥락:
+- 하드웨어 선택은 데이터 수집 방식과 모델 실행 구조에 영향을 준다.
+- 라즈베리파이는 기능이 많지만 세팅 시간이 길 수 있다.
+- ESP32는 센서 연결과 전력 측면에서 더 적합할 가능성이 있다.
+
+해야 할 일:
+1. ESP32와 라즈베리파이 5 8GB를 전력, 센서 연결, 개발 난이도, 시연 안정성 기준으로 비교한다.
+2. 우리 프로젝트에서 어느 쪽이 더 적합한지 결론을 낸다.
+3. 변경 시 영향을 받는 사람과 task를 정리한다.
+4. Slack에 붙여넣을 수 있는 결과 요약을 작성한다.
+
+완료 기준:
+- 추천 하드웨어 1개를 명시한다.
+- 추천 근거를 3개 이상 제시한다.
+- 다른 사람에게 영향이 있는 작업을 별도로 표시한다.
+
+출력 형식:
+추천안 / 근거 / 영향받는 task / 추가로 확인할 것</div>
+          <div class="buttons" id="copyButtons" style="display:none">
+            <button class="primary" onclick="copyPrompt()">프롬프트 복사</button>
+          </div>
+          <div id="copyNote" class="copy-note">복사했습니다. Codex에 붙여넣고 시작하세요.</div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function showPrompt() {
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('prompt').classList.add('show');
+      document.getElementById('copyButtons').style.display = 'flex';
+    }
+    async function copyPrompt() {
+      const text = document.getElementById('prompt').innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        document.getElementById('copyNote').classList.add('show');
+      } catch (error) {
+        alert('브라우저 권한 때문에 자동 복사에 실패했습니다. 프롬프트를 직접 선택해 복사해주세요.');
+      }
+    }
+  </script>
+</body>
+</html>

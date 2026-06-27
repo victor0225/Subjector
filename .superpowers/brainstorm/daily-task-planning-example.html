@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Daily Task Planning Example</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #617080;
+      --line: #dce3ea;
+      --soft: #f5f6f8;
+      --slack: #4a154b;
+      --ok: #007a5a;
+      --blue: #eef6ff;
+      --yellow: #fff7ed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: var(--soft);
+      color: var(--ink);
+    }
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 34px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .summary {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 18px;
+      line-height: 1.55;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .05);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .person {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+    }
+    .person-header {
+      background: var(--slack);
+      color: #fff;
+      padding: 14px 16px;
+      font-weight: 800;
+    }
+    .person-body {
+      padding: 14px;
+    }
+    .load {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--blue);
+      border: 1px solid #bfdbfe;
+      line-height: 1.45;
+    }
+    .task {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      background: #fbfcfd;
+      line-height: 1.48;
+    }
+    .task-title {
+      font-weight: 800;
+      margin-bottom: 7px;
+    }
+    .field {
+      margin: 6px 0;
+    }
+    .label {
+      color: #52606d;
+      font-weight: 800;
+    }
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 12px;
+      font-weight: 800;
+      margin: 2px 4px 2px 0;
+    }
+    .tag.ok {
+      background: #ecfdf3;
+      color: #027a48;
+    }
+    .tag.warn {
+      background: var(--yellow);
+      color: #b54708;
+    }
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      background: var(--yellow);
+      line-height: 1.55;
+    }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>수요일 오늘의 할 일 배정 예시</h1>
+    <p class="subtitle">사람당 5시간을 꽉 채우는 대신, 4시간 계획 + 1시간 버퍼로 잡은 예시입니다. 각 task는 Codex 작업, 현실 확인, 협응 부담을 같이 봅니다.</p>
+
+    <section class="summary">
+      <strong>배정 기준:</strong>
+      사람당 계획 작업량 4시간, 버퍼 1시간.
+      2시간 핵심 task 1개 + 1시간 보조 task 1개 + 30분 확인 task 1-2개를 기본 형태로 잡습니다.
+      협응도 상 task는 실제 시간보다 무겁게 계산합니다.
+    </section>
+
+    <section class="grid">
+      <article class="person">
+        <div class="person-header">조수현 · 계획 4시간 / 버퍼 1시간</div>
+        <div class="person-body">
+          <div class="load">오늘 목표: 하드웨어 변경이 전체 구조에 주는 영향을 판단하고, 팀 task 변경 승인 기준을 정리합니다.</div>
+
+          <div class="task">
+            <div class="task-title">1. 하드웨어 변경 시 모델 실행 구조 영향 검토</div>
+            <div><span class="tag">2시간</span><span class="tag">Codex 적합도 높음</span><span class="tag warn">협응도 상</span></div>
+            <div class="field"><span class="label">현실 확인:</span> 없음</div>
+            <div class="field"><span class="label">완료 기준:</span> ESP32 변경 시 모델 실행 위치, 데이터 흐름, 영향받는 task를 정리해 Slack에 제출</div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">2. Subjector task 승인 기준 정리</div>
+            <div><span class="tag">1시간</span><span class="tag">Codex 적합도 중간</span><span class="tag warn">협응도 상</span></div>
+            <div class="field"><span class="label">현실 확인:</span> 팀원 의견 필요 가능</div>
+            <div class="field"><span class="label">완료 기준:</span> 어떤 변경은 팀장 승인, 어떤 변경은 영향받는 사람 동의가 필요한지 기준 작성</div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">3. OpenAI API billing 확인</div>
+            <div><span class="tag">30분</span><span class="tag ok">현실 확인 있음</span><span class="tag">협응도 하</span></div>
+            <div class="field"><span class="label">완료 기준:</span> API 결제 설정 가능 여부와 테스트 호출 결과를 Slack에 기록</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="person">
+        <div class="person-header">김조은 · 계획 4시간 / 버퍼 1시간</div>
+        <div class="person-body">
+          <div class="load">오늘 목표: ESP32 변경 가능성을 판단할 수 있는 근거를 모으고 추천안을 제출합니다.</div>
+
+          <div class="task">
+            <div class="task-title">1. ESP32와 라즈베리파이 비교 후 추천안 작성</div>
+            <div><span class="tag">2시간</span><span class="tag">Codex 적합도 높음</span><span class="tag warn">협응도 상</span></div>
+            <div class="field"><span class="label">현실 확인:</span> 일부 필요</div>
+            <div class="field"><span class="label">완료 기준:</span> 전력, 센서 연결, 구현 난이도, 시연 안정성 기준 추천안 제출</div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">2. 부품 구매 가능 여부와 가격 확인</div>
+            <div><span class="tag">1시간</span><span class="tag ok">현실 확인 있음</span><span class="tag">협응도 중</span></div>
+            <div class="field"><span class="label">완료 기준:</span> 구매 가능한 후보 2개 이상, 가격, 배송 가능성을 Slack에 제출</div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">3. 센서 연결 방식 후보 메모</div>
+            <div><span class="tag">30분</span><span class="tag">Codex 적합도 중간</span><span class="tag">협응도 하</span></div>
+            <div class="field"><span class="label">완료 기준:</span> GPIO/I2C/UART 중 가능한 연결 후보를 간단히 정리</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="person">
+        <div class="person-header">배민성 · 계획 4시간 / 버퍼 1시간</div>
+        <div class="person-body">
+          <div class="load">오늘 목표: 실제 장소에서 네트워크와 데이터 송신 가능성을 확인해 하드웨어 선택 근거를 보완합니다.</div>
+
+          <div class="task">
+            <div class="task-title">1. 502, 503호 Wi-Fi ID와 연결 가능 여부 확인</div>
+            <div><span class="tag">2시간</span><span class="tag ok">현실 확인 있음</span><span class="tag">협응도 중</span></div>
+            <div class="field"><span class="label">완료 기준:</span> 각 강의실 Wi-Fi ID, 연결 가능 여부, 신호 상태를 Slack에 제출</div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">2. ESP32 기준 데이터 송신 방식 조사</div>
+            <div><span class="tag">1시간</span><span class="tag">Codex 적합도 높음</span><span class="tag warn">협응도 상</span></div>
+            <div class="field"><span class="label">현실 확인:</span> Wi-Fi 확인 결과와 연결</div>
+            <div class="field"><span class="label">완료 기준:</span> ESP32에서 가능한 송신 방식과 필요한 조건 정리</div>
+          </div>
+
+          <div class="task">
+            <div class="task-title">3. 테스트 로그 형식 제안</div>
+            <div><span class="tag">30분</span><span class="tag">Codex 적합도 높음</span><span class="tag">협응도 하</span></div>
+            <div class="field"><span class="label">완료 기준:</span> Slack에 붙여넣을 수 있는 테스트 로그 템플릿 작성</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="note">
+      Subjector는 task 시간이 4시간을 넘으면 “오늘 안에 과함”으로 표시하고, 협응도 상 task가 많으면 한 사람에게 몰리지 않도록 조정합니다.
+    </div>
+  </main>
+</body>
+</html>

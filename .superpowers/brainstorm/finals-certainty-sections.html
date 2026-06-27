@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Finals Certainty Sections</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #617080;
+      --line: #dce3ea;
+      --soft: #f5f6f8;
+      --slack: #4a154b;
+      --ok: #007a5a;
+      --warn: #b54708;
+      --bad: #b42318;
+      --blue: #eef6ff;
+      --yellow: #fff7ed;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, "Malgun Gothic", sans-serif; background: var(--soft); color: var(--ink); }
+    main { max-width: 1120px; margin: 0 auto; padding: 34px 24px 48px; }
+    h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+    .subtitle { margin: 0 0 24px; color: var(--muted); line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    .panel { background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: 0 8px 22px rgba(31,41,51,.06); }
+    .panel-header { background: var(--slack); color: #fff; padding: 14px 18px; font-weight: 800; }
+    .message { padding: 18px; border-bottom: 1px solid #e7ecf1; }
+    .message:last-child { border-bottom: 0; }
+    .meta { color: #697586; font-size: 13px; margin-bottom: 10px; }
+    .title { font-weight: 800; font-size: 18px; margin-bottom: 10px; }
+    .section { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 12px 0; background: #fbfcfd; line-height: 1.55; }
+    .section.ok { border-color: #abefc6; background: #f7fffb; }
+    .section.wait { border-color: #fed7aa; background: var(--yellow); }
+    .section.open { border-color: #bfdbfe; background: var(--blue); }
+    .label { font-weight: 800; color: #52606d; }
+    .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; margin-right: 6px; }
+    .pill.ok { background: #ecfdf3; color: var(--ok); }
+    .pill.wait { background: #fffaeb; color: var(--warn); }
+    .pill.open { background: #eef2ff; color: #3730a3; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    button { border: 1px solid #cbd5df; border-radius: 6px; background: #fff; padding: 8px 12px; font-weight: 800; color: var(--ink); cursor: pointer; }
+    .primary { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .note { margin-top: 18px; padding: 14px 16px; border: 1px solid #bfdbfe; border-radius: 8px; background: var(--blue); line-height: 1.55; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>#finals 확실성 구분 예시</h1>
+    <p class="subtitle">암묵적 합의 추정을 그냥 미결정에 둘지, 별도 확인 대기 섹션에 둘지 비교하는 화면입니다.</p>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-header">1번. 미결정에 함께 둠</div>
+        <div class="message">
+          <div class="meta">#finals · 하드웨어</div>
+          <div class="title">하드웨어 누적 결과</div>
+          <div class="section ok">
+            <span class="pill ok">확정 결정</span><br>
+            ESP32를 우선 검토 대상으로 삼는다.
+          </div>
+          <div class="section open">
+            <span class="pill open">미결정</span><br>
+            라즈베리파이는 대안으로만 남기고 구현 기준은 ESP32로 옮기는 흐름으로 보입니다.<br>
+            모델 실행 위치는 아직 확정되지 않았습니다.
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">2번. 확인 대기 섹션을 따로 둠</div>
+        <div class="message">
+          <div class="meta">#finals · 하드웨어</div>
+          <div class="title">하드웨어 누적 결과</div>
+          <div class="section ok">
+            <span class="pill ok">확정 결정</span><br>
+            ESP32를 우선 검토 대상으로 삼는다.
+          </div>
+          <div class="section wait">
+            <span class="pill wait">확인 대기</span><br>
+            라즈베리파이는 대안으로만 남기고 구현 기준은 ESP32로 옮기는 흐름으로 보입니다.<br>
+            <span class="label">근거:</span> 이후 논의가 ESP32 기준 데이터 송신 방식으로 이어졌습니다.<br>
+            <span class="label">확인 대상:</span> 조수현님, 김조은님, 배민성님
+            <div class="buttons">
+              <button class="primary">확정으로 반영</button>
+              <button>미결정으로 유지</button>
+            </div>
+          </div>
+          <div class="section open">
+            <span class="pill open">미결정</span><br>
+            모델 실행 위치를 ESP32/라즈베리파이/노트북 중 어디로 둘지 결정되지 않았습니다.
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="note">
+      차이: 1번은 단순하지만 “확인만 받으면 확정될 내용”이 일반 미결정과 섞입니다. 2번은 확인 대기 항목이 따로 보여서 팀이 무엇을 확인해야 하는지 명확합니다.
+    </div>
+  </main>
+</body>
+</html>

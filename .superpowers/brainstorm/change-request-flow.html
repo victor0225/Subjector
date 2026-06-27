@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Change Request Flow</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #617080;
+      --line: #dce3ea;
+      --soft: #f5f6f8;
+      --slack: #4a154b;
+      --ok: #007a5a;
+      --danger: #b42318;
+      --blue: #eef6ff;
+      --yellow: #fff7ed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: var(--soft);
+      color: var(--ink);
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 34px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+    }
+    .panel-header {
+      background: var(--slack);
+      color: #fff;
+      padding: 14px 18px;
+      font-weight: 800;
+    }
+    .message {
+      padding: 18px;
+      border-bottom: 1px solid #e7ecf1;
+    }
+    .message:last-child { border-bottom: 0; }
+    .thread {
+      margin: 0 18px 18px 42px;
+      padding-left: 16px;
+      border-left: 3px solid #e7ecf1;
+    }
+    .meta {
+      color: #697586;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .title {
+      font-weight: 800;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .field {
+      margin: 7px 0;
+      line-height: 1.5;
+    }
+    .label {
+      color: #52606d;
+      font-weight: 800;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    button {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 12px;
+      font-weight: 800;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .primary {
+      background: var(--ok);
+      color: #fff;
+      border-color: var(--ok);
+    }
+    .highlight {
+      border-color: #f59e0b;
+      background: #fffbeb;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, .18);
+    }
+    .danger {
+      color: var(--danger);
+      border-color: #f1b4ae;
+    }
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      background: var(--blue);
+      line-height: 1.55;
+    }
+    .warning {
+      background: var(--yellow);
+      border-color: #fed7aa;
+    }
+    .modal {
+      display: none;
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      padding: 14px;
+    }
+    .modal.show { display: block; }
+    .input {
+      min-height: 72px;
+      width: 100%;
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 10px;
+      line-height: 1.45;
+      color: #3b4754;
+    }
+    .hidden { display: none; }
+    .pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 12px;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>변경 요청 버튼 위치와 흐름</h1>
+    <p class="subtitle">변경 요청 버튼은 #회의-결과록이 아니라, #in-process의 각 개인 task 안에 있습니다. 담당자가 자기 task를 보다가 “이 task를 바꿔야겠다” 싶을 때 누릅니다.</p>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-header">#in-process · 김조은 오늘의 task</div>
+
+        <div class="message">
+          <div class="meta">Subjector · 2026-06-27</div>
+          <div class="title">ESP32와 라즈베리파이 비교 후 추천안 작성</div>
+          <div class="field"><span class="label">상태:</span> 반영됨, 수락 대기</div>
+          <div class="field"><span class="label">회의 맥락:</span> 하드웨어 선택이 데이터 수집 방식과 모델 실행 구조에 영향을 줍니다.</div>
+          <div class="field"><span class="label">수행 도우미:</span> 전력, 센서 연결, 구현 난이도, 시연 안정성을 기준으로 비교하세요.</div>
+          <div class="field"><span class="label">결정 필요:</span> ESP32로 변경할지, 라즈베리파이를 유지할지 추천 근거 작성</div>
+          <div class="field"><span class="label">중요도:</span> 상 · <span class="label">협응도:</span> 상</div>
+          <div class="buttons">
+            <button class="primary">수락</button>
+            <button>완료</button>
+            <button class="highlight" onclick="showRequest()">변경 요청</button>
+            <button>회의 요청</button>
+            <button>Codex에서 진행</button>
+          </div>
+
+          <div id="requestModal" class="modal">
+            <div class="title">변경 요청 작성</div>
+            <div class="field"><span class="label">변경하고 싶은 내용</span></div>
+            <div class="input">ESP32 비교 task에 “실제 부품 구매 가능 여부와 가격 확인”을 추가하고 싶습니다.</div>
+            <div class="field"><span class="label">근거</span></div>
+            <div class="input">시연 전까지 부품을 구할 수 없으면 하드웨어 추천이 의미가 없기 때문입니다.</div>
+            <div class="buttons">
+              <button class="primary" onclick="submitRequest()">변경 요청 제출</button>
+              <button>취소</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="taskThread" class="thread hidden">
+          <div class="message">
+            <div class="meta">김조은 · 변경 요청</div>
+            <div class="field"><span class="pill">변경 제안</span>task에 “부품 구매 가능 여부와 가격 확인”을 추가하고 싶습니다.</div>
+            <div class="field"><span class="pill">근거</span>시연 전까지 부품을 구할 수 없으면 추천이 의미가 없습니다.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">#회의-결과록 · Subjector 승인 흐름</div>
+
+        <div id="waiting" class="message">
+          <div class="meta">Subjector</div>
+          <div class="title">아직 변경 요청이 없습니다</div>
+          <div class="field">왼쪽의 <strong>변경 요청</strong> 버튼을 눌러 흐름을 확인해보세요.</div>
+        </div>
+
+        <div id="approval" class="message hidden">
+          <div class="meta">Subjector · 변경 요청 분석</div>
+          <div class="title">#in-process 반영 후보</div>
+          <div class="field"><span class="label">요청자:</span> 김조은</div>
+          <div class="field"><span class="label">요청 내용:</span> ESP32 비교 task에 부품 구매 가능 여부와 가격 확인을 추가</div>
+          <div class="field"><span class="label">영향 분석:</span> 김조은 task 범위가 넓어지고, 조수현의 하드웨어 결정 검토에도 도움이 됩니다.</div>
+          <div class="field"><span class="label">중요도:</span> 중 · <span class="label">협응도:</span> 중</div>
+          <div class="field"><span class="label">반영 후 task:</span> ESP32와 라즈베리파이 비교 + 부품 구매 가능 여부/가격 확인 후 추천안 작성</div>
+          <div class="buttons">
+            <button class="primary" onclick="approve()">조수현 승인하고 반영</button>
+            <button>수정 후 반영</button>
+            <button class="danger">거절</button>
+          </div>
+        </div>
+
+        <div id="approved" class="message hidden">
+          <div class="meta">Subjector · 반영 완료</div>
+          <div class="title">#in-process task를 업데이트했습니다</div>
+          <div class="field"><span class="label">김조은 task:</span> ESP32와 라즈베리파이 비교 + 부품 구매 가능 여부/가격 확인 후 추천안 작성</div>
+        </div>
+      </article>
+    </section>
+
+    <div class="note warning">
+      <strong>#회의-결과록 텍스트 변경 제안과의 차이:</strong>
+      #회의-결과록에 직접 글을 올리는 방식은 팀 전체 변경 제안에 가깝고, 이 버튼은 이미 배정된 개인 task를 담당자가 수행 중에 조정하고 싶을 때 쓰는 흐름입니다. 둘 다 마지막에는 조수현 승인 후 #in-process에 반영됩니다.
+    </div>
+  </main>
+
+  <script>
+    function showRequest() {
+      document.getElementById('requestModal').classList.add('show');
+    }
+    function submitRequest() {
+      document.getElementById('taskThread').classList.remove('hidden');
+      document.getElementById('waiting').classList.add('hidden');
+      document.getElementById('approval').classList.remove('hidden');
+    }
+    function approve() {
+      document.getElementById('approved').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

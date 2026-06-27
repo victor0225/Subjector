@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Task Button Options</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: #f5f6f8;
+      color: #1f2933;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 34px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: #5b6876;
+      line-height: 1.55;
+    }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .panel {
+      background: #fff;
+      border: 1px solid #dce3ea;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(31, 41, 51, .06);
+    }
+    .panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #dce3ea;
+      background: #fbfcfd;
+      font-weight: 700;
+    }
+    .panel-body {
+      padding: 16px;
+    }
+    .slack-message {
+      border-left: 4px solid #4a154b;
+      background: #fff;
+      padding: 14px 14px 16px;
+    }
+    .meta {
+      color: #697586;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .task-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .field {
+      margin: 7px 0;
+      line-height: 1.45;
+    }
+    .label {
+      color: #52606d;
+      font-weight: 700;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    button {
+      border: 1px solid #cbd5df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 12px;
+      font-weight: 700;
+      color: #1f2933;
+    }
+    .primary {
+      background: #007a5a;
+      color: #fff;
+      border-color: #007a5a;
+    }
+    .danger {
+      color: #b42318;
+      border-color: #f1b4ae;
+    }
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      line-height: 1.55;
+    }
+    ul {
+      margin: 10px 0 0 20px;
+      padding: 0;
+      line-height: 1.6;
+    }
+    @media (max-width: 840px) {
+      .compare {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Task Button Options</h1>
+    <p class="subtitle">Slack의 Block Kit 버튼처럼 보이도록 만든 비교용 목업입니다. 실제 구현 화면이 아니라 결정용 예시입니다.</p>
+
+    <section class="compare">
+      <article class="panel">
+        <div class="panel-header">1번. MVP 최소 버튼</div>
+        <div class="panel-body">
+          <div class="slack-message">
+            <div class="meta">#in-process · 2026-06-27 · 김조은 task</div>
+            <div class="task-title">라즈베리파이 vs ESP32 모델 비교</div>
+            <div class="field"><span class="label">상태:</span> 반영됨</div>
+            <div class="field"><span class="label">중요도:</span> 상</div>
+            <div class="field"><span class="label">협응 필요도:</span> 상</div>
+            <div class="field"><span class="label">회의 맥락:</span> 하드웨어 선택이 다른 센서 작업에 영향을 줌</div>
+            <div class="buttons">
+              <button class="primary">수락</button>
+              <button>완료</button>
+            </div>
+          </div>
+          <ul>
+            <li>각 개인은 자기 task를 수락하고 완료 처리합니다.</li>
+            <li>상태 관리가 단순해서 3일 MVP에 안정적입니다.</li>
+            <li>변경 요청, 회의 요청, Codex 위임은 첫 버전에서 빠집니다.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">2번. Codex handoff 포함 버튼</div>
+        <div class="panel-body">
+          <div class="slack-message">
+            <div class="meta">#in-process · 2026-06-27 · 김조은 task</div>
+            <div class="task-title">라즈베리파이 vs ESP32 모델 비교</div>
+            <div class="field"><span class="label">상태:</span> 반영됨</div>
+            <div class="field"><span class="label">중요도:</span> 상</div>
+            <div class="field"><span class="label">협응 필요도:</span> 상</div>
+            <div class="field"><span class="label">수행 도우미:</span> 각 모델 장단점과 선택 기준을 Subjector가 정리</div>
+            <div class="buttons">
+              <button class="primary">수락</button>
+              <button>완료</button>
+              <button>변경 요청</button>
+              <button>회의 요청</button>
+              <button>Codex에서 진행</button>
+            </div>
+          </div>
+          <ul>
+            <li>원본 워드의 제출, 회의 열기, Codex 위임 흐름에 더 가깝습니다.</li>
+            <li>협응도 높은 task에서 변경 요청과 회의 요청을 자연스럽게 다룰 수 있습니다.</li>
+            <li>Codex 버튼은 회의 맥락, 결정사항, 근거, 필요한 자료, 완료 기준을 묶은 상세 작업 패킷을 만듭니다.</li>
+            <li>버튼이 많아서 Slack 상태 관리와 권한 처리가 커집니다.</li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <div class="note">
+      <strong>원본 워드와의 충돌 체크:</strong>
+      1번은 3일 MVP에는 안전하지만, 원본에 있던 "회의 열기", "제출", "Codex에서 진행" 버튼이 빠집니다.
+      2번은 원본 아이디어와 더 잘 맞고, 특히 "Codex에서 진행"을 MVP 핵심으로 유지합니다.
+    </div>
+  </main>
+</body>
+</html>

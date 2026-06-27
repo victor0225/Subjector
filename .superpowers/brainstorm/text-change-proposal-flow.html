@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Text Change Proposal Flow</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #617080;
+      --line: #dce3ea;
+      --soft: #f5f6f8;
+      --slack: #4a154b;
+      --ok: #007a5a;
+      --bad: #b42318;
+      --blue: #eef6ff;
+      --yellow: #fff7ed;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, "Malgun Gothic", sans-serif; background: var(--soft); color: var(--ink); }
+    main { max-width: 1120px; margin: 0 auto; padding: 34px 24px 48px; }
+    h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+    .subtitle { margin: 0 0 24px; color: var(--muted); line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    .panel { background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: 0 8px 22px rgba(31,41,51,.06); }
+    .panel-header { background: var(--slack); color: #fff; padding: 14px 18px; font-weight: 800; }
+    .message { padding: 18px; border-bottom: 1px solid #e7ecf1; }
+    .message:last-child { border-bottom: 0; }
+    .thread { margin: 0 18px 18px 42px; padding-left: 16px; border-left: 3px solid #e7ecf1; }
+    .meta { color: #697586; font-size: 13px; margin-bottom: 10px; }
+    .title { font-weight: 800; font-size: 18px; margin-bottom: 10px; }
+    .field { margin: 7px 0; line-height: 1.5; }
+    .label { color: #52606d; font-weight: 800; }
+    .box { background: #fbfcfd; border: 1px solid var(--line); border-radius: 8px; padding: 12px; line-height: 1.55; margin-top: 10px; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    button { border: 1px solid #cbd5df; border-radius: 6px; background: #fff; padding: 8px 12px; font-weight: 800; color: var(--ink); cursor: pointer; }
+    .primary { background: var(--ok); color: #fff; border-color: var(--ok); }
+    .danger { color: var(--bad); border-color: #f1b4ae; }
+    .hidden { display: none; }
+    .status-ok { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #ecfdf3; color: var(--ok); font-size: 12px; font-weight: 800; }
+    .status-warn { display: inline-block; padding: 3px 8px; border-radius: 999px; background: var(--yellow); color: #b54708; font-size: 12px; font-weight: 800; }
+    .note { margin-top: 18px; padding: 14px 16px; border: 1px solid #bfdbfe; border-radius: 8px; background: var(--blue); line-height: 1.55; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>#회의-결과록 텍스트 변경 제안 흐름</h1>
+    <p class="subtitle">3명 누구나 변경 제안을 올릴 수 있고, 영향받는 사람 전원이 찬성하면 조수현 최종 승인 없이 #in-process에 반영됩니다.</p>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-header">#회의-결과록</div>
+        <div class="message">
+          <div class="meta">김조은 · 텍스트 변경 제안</div>
+          <div class="title">ESP32 변경 제안</div>
+          <div class="box">[변경 제안]<br>라즈베리파이 대신 ESP32 중심으로 진행하는 쪽이 좋겠습니다.<br><br>[주장]<br>ESP32가 센서 연결과 전력 측면에서 현재 주제에 더 적합합니다.<br><br>[근거]<br>라즈베리파이는 모델 실행에는 좋지만 이번 시연에는 과하고 세팅 시간이 길 수 있습니다.</div>
+        </div>
+
+        <div class="thread">
+          <div class="message">
+            <div class="meta">Subjector Bot · 즉시 분석</div>
+            <div class="title">변경 제안으로 판단했습니다</div>
+            <div class="field"><span class="label">요약:</span> 하드웨어 방향을 ESP32 중심으로 변경하는 제안입니다.</div>
+            <div class="field"><span class="label">영향받는 사람:</span> @조수현, @배민성</div>
+            <div class="field"><span class="label">영향:</span> 모델 실행 구조와 Wi-Fi/데이터 송신 테스트 기준이 바뀔 수 있습니다.</div>
+            <div class="field"><span class="label">중요도:</span> 🔴 상 · <span class="label">협응도:</span> 🔴 상</div>
+            <div class="field"><span class="label">상태:</span> <span id="voteState" class="status-warn">찬성/반대 대기</span></div>
+            <div class="buttons">
+              <button class="primary" onclick="agree()">찬성</button>
+              <button class="danger" onclick="disagree()">반대</button>
+            </div>
+          </div>
+
+          <div id="agreeResult" class="message hidden">
+            <div class="meta">Subjector Bot · 전원 찬성</div>
+            <div class="title">#in-process에 변경을 반영했습니다</div>
+            <div class="field">조수현 최종 승인 없이, 영향받는 사람 전원 찬성으로 반영되었습니다.</div>
+            <div class="field"><span class="label">반영 내용:</span> 하드웨어 관련 task가 ESP32 검토 기준으로 업데이트됩니다.</div>
+          </div>
+
+          <div id="disagreeResult" class="message hidden">
+            <div class="meta">Subjector Bot · 반대 의견 발생</div>
+            <div class="title">회의 요청 상태로 전환했습니다</div>
+            <div class="field">반대가 있어 #in-process에는 아직 반영하지 않았습니다.</div>
+            <div class="field">Subjector가 찬성/반대 이유를 모아 회의 안건 초안을 작성합니다.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">#in-process 반영 결과</div>
+        <div class="message">
+          <div class="meta">Subjector Bot · 변경 전</div>
+          <div class="title">조수현 오늘의 task</div>
+          <div class="field">하드웨어 변경 시 모델 실행 구조 영향 검토</div>
+          <div class="field"><span class="label">상태:</span> 반영 대기</div>
+        </div>
+        <div id="updatedTask" class="message hidden">
+          <div class="meta">Subjector Bot · 변경 후</div>
+          <div class="title">조수현 오늘의 task 업데이트</div>
+          <div class="field"><span class="label">task:</span> ESP32 중심 변경 시 모델 실행 구조 영향 검토</div>
+          <div class="field"><span class="label">회의/변경 맥락:</span> #회의-결과록의 ESP32 변경 제안에서 생성됨</div>
+          <div class="field"><span class="label">차단 조건:</span> 최종 하드웨어 확정 전까지 최종 구조 결정은 보류</div>
+        </div>
+      </article>
+    </section>
+
+    <div class="note">
+      이 흐름은 회의가 조수현 없이 진행된 경우도 지원합니다. 영향받는 사람이 모두 찬성하면 반영되고, 반대가 있으면 회의 요청으로 넘어갑니다.
+    </div>
+  </main>
+
+  <script>
+    function agree() {
+      document.getElementById('voteState').className = 'status-ok';
+      document.getElementById('voteState').innerText = '전원 찬성';
+      document.getElementById('agreeResult').classList.remove('hidden');
+      document.getElementById('disagreeResult').classList.add('hidden');
+      document.getElementById('updatedTask').classList.remove('hidden');
+    }
+    function disagree() {
+      document.getElementById('voteState').className = 'status-warn';
+      document.getElementById('voteState').innerText = '반대 의견 있음';
+      document.getElementById('disagreeResult').classList.remove('hidden');
+      document.getElementById('agreeResult').classList.add('hidden');
+      document.getElementById('updatedTask').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

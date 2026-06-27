@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Scope Map</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: #f6f7f9;
+      color: #1f2933;
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0 0 24px;
+      color: #617080;
+      line-height: 1.55;
+    }
+    .panel {
+      background: #fff;
+      border: 1px solid #dde3ea;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(31, 41, 51, .06);
+    }
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #dde3ea;
+      font-weight: 700;
+      background: #fbfcfd;
+    }
+    .panel-body {
+      padding: 18px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .box {
+      min-height: 112px;
+      padding: 16px;
+      border: 1px solid #d7dee7;
+      border-radius: 8px;
+      background: #f9fbfc;
+      line-height: 1.55;
+    }
+    .box strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #111827;
+    }
+    .options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 22px;
+    }
+    .option {
+      background: #fff;
+      border: 1px solid #d8e0e8;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .option.recommended {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+    }
+    .letter {
+      display: inline-flex;
+      width: 28px;
+      height: 28px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: #e8eef8;
+      color: #1d4ed8;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .option h2 {
+      font-size: 18px;
+      margin: 0 0 8px;
+    }
+    .option p {
+      margin: 0;
+      color: #52606d;
+      line-height: 1.55;
+    }
+    @media (max-width: 800px) {
+      .grid-3, .grid-2, .options {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Subjector Scope Map</h1>
+    <p class="subtitle">워드 파일 기준으로 기능을 겹치지 않게 나눈 첫 지도입니다. 제작 기간 3일 조건에서는 A를 먼저 잡되, C 형태의 얇은 전체 루프가 최종 목표가 됩니다.</p>
+
+    <section class="panel">
+      <div class="panel-header">Core Loop</div>
+      <div class="panel-body">
+        <div class="grid-3">
+          <div class="box"><strong>1. 회의 기록</strong>오프라인 녹음 업로드<br>화자 구분 전사<br>Slack Huddle AI Notes 유사 스크립트</div>
+          <div class="box"><strong>2. 회의 이해</strong>주장, 근거, 맥락 정리<br>주제별 묶음<br>결정/변경사항 추출</div>
+          <div class="box"><strong>3. 태스크 반영</strong>개인별 task 생성/변경<br>협응 필요도/중요도<br>의견 충돌 시 회의 유도</div>
+        </div>
+        <div class="grid-2">
+          <div class="box"><strong>4. Slack 실행 화면</strong>채널 글 + 스레드 UI<br>제출, 회의 열기, Codex에서 진행</div>
+          <div class="box"><strong>5. 하루 요약</strong>사람별 오늘 한 일<br>중요도 상/중/하 정렬<br>모두에게 공유</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="options">
+      <div class="option recommended">
+        <div class="letter">A</div>
+        <h2>회의 기록부터</h2>
+        <p>녹음 업로드, 전사, 회의 요약, task 추출까지 먼저 검증합니다. 지금 선택한 출발점입니다.</p>
+      </div>
+      <div class="option">
+        <div class="letter">B</div>
+        <h2>태스크 운영부터</h2>
+        <p>Slack에서 오늘 할 일, 결정, 제출, 요약의 실사용 루프를 만듭니다. 3일 버전에서는 최소 기능으로 포함합니다.</p>
+      </div>
+      <div class="option">
+        <div class="letter">C</div>
+        <h2>얇은 전체 루프</h2>
+        <p>전사 성능은 확인 과정을 붙이고, 회의에서 태스크와 하루 요약까지 end-to-end로 연결합니다.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

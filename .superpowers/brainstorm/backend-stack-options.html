@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Backend Stack Options</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#617080; --line:#dce3ea; --soft:#f5f6f8; --slack:#4a154b; --ok:#007a5a; --blue:#eef6ff; --yellow:#fff7ed; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Arial,"Malgun Gothic",sans-serif; background:var(--soft); color:var(--ink); }
+    main { max-width:1180px; margin:0 auto; padding:34px 24px 48px; }
+    h1 { margin:0 0 8px; font-size:30px; letter-spacing:0; }
+    .subtitle { margin:0 0 24px; color:var(--muted); line-height:1.55; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:8px; overflow:hidden; box-shadow:0 8px 22px rgba(31,41,51,.06); }
+    .panel-header { background:var(--slack); color:#fff; padding:14px 18px; font-weight:800; }
+    .body { padding:16px; }
+    .flow { display:grid; gap:10px; margin:12px 0; }
+    .step { border:1px solid var(--line); border-radius:8px; padding:12px; background:#fbfcfd; line-height:1.5; }
+    .step strong { display:block; margin-bottom:4px; }
+    .tag { display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px; font-weight:800; margin:2px 4px 2px 0; background:#eef2ff; color:#3730a3; }
+    .tag.ok { background:#ecfdf3; color:var(--ok); }
+    .tag.warn { background:var(--yellow); color:#b54708; }
+    .proscons { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .box { border:1px solid var(--line); border-radius:8px; padding:12px; background:#fbfcfd; line-height:1.55; }
+    .box h3 { margin:0 0 8px; font-size:16px; }
+    ul { margin:0 0 0 18px; padding:0; line-height:1.6; }
+    .note { margin-top:18px; padding:14px 16px; border:1px solid #bfdbfe; border-radius:8px; background:var(--blue); line-height:1.55; }
+    @media (max-width:900px) { .grid,.proscons { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Subjector 서버 기술 선택</h1>
+    <p class="subtitle">둘 다 가능하지만, Slack 봇 중심인지 AI 파일 처리 중심인지에 따라 자연스러운 선택이 달라집니다.</p>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-header">1번. Node.js + Slack Bolt.js</div>
+        <div class="body">
+          <div><span class="tag ok">Slack 봇에 특화</span><span class="tag ok">버튼/모달 쉬움</span><span class="tag">Render 배포 쉬움</span></div>
+          <div class="flow">
+            <div class="step"><strong>Slack 이벤트 수신</strong>파일 업로드, 텍스트 메시지, 버튼 클릭을 Bolt.js가 받습니다.</div>
+            <div class="step"><strong>버튼/모달 처리</strong>찬성/반대, 변경 요청, 화자 매핑 모달을 Slack 방식에 맞게 구현하기 쉽습니다.</div>
+            <div class="step"><strong>AI 처리 호출</strong>OpenAI API를 호출하고 결과를 Slack에 다시 씁니다.</div>
+            <div class="step"><strong>오디오 분할</strong>ffmpeg 같은 도구를 서버에서 실행하거나 라이브러리로 처리합니다.</div>
+          </div>
+          <div class="proscons">
+            <div class="box"><h3>장점</h3><ul><li>Slack 봇 공식 패턴에 가깝습니다.</li><li>버튼/모달/이벤트 처리가 자연스럽습니다.</li><li>3일 MVP에 빠릅니다.</li></ul></div>
+            <div class="box"><h3>주의</h3><ul><li>오디오 처리 코드는 별도 라이브러리/ffmpeg가 필요합니다.</li><li>Python보다 데이터 처리 감각은 조금 덜 편할 수 있습니다.</li></ul></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">2번. Python + FastAPI</div>
+        <div class="body">
+          <div><span class="tag ok">AI/파일 처리 친숙</span><span class="tag">API 서버 깔끔</span><span class="tag warn">Slack 직접 구현 증가</span></div>
+          <div class="flow">
+            <div class="step"><strong>Slack 이벤트 수신</strong>FastAPI endpoint로 직접 받고 검증합니다.</div>
+            <div class="step"><strong>버튼/모달 처리</strong>Slack payload, ack, modal 응답을 직접 더 많이 다룹니다.</div>
+            <div class="step"><strong>AI 처리 호출</strong>OpenAI, 오디오 분할, 텍스트 처리 코드는 Python으로 편합니다.</div>
+            <div class="step"><strong>배포</strong>Render에 Python web service로 배포합니다.</div>
+          </div>
+          <div class="proscons">
+            <div class="box"><h3>장점</h3><ul><li>오디오/텍스트 처리에 익숙한 생태계가 많습니다.</li><li>AI 파이프라인을 쓰기 편합니다.</li></ul></div>
+            <div class="box"><h3>주의</h3><ul><li>Slack 버튼/모달 구현을 더 직접 챙겨야 합니다.</li><li>MVP 핵심이 Slack UX라면 시간이 더 걸릴 수 있습니다.</li></ul></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="note">
+      추천: Subjector MVP는 Slack 버튼, 모달, 스레드, DM이 핵심이므로 Node.js + Slack Bolt.js가 더 잘 맞습니다. 오디오 분할은 ffmpeg를 붙여 해결하고, AI 처리는 OpenAI API 호출로 처리합니다.
+    </div>
+  </main>
+</body>
+</html>

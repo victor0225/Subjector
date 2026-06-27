@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subjector Change Detail Request Options</title>
+  <style>
+    :root {
+      --ink: #1f2933; --muted: #617080; --line: #dce3ea; --soft: #f5f6f8;
+      --slack: #4a154b; --ok: #007a5a; --blue: #eef6ff; --yellow: #fff7ed;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, "Malgun Gothic", sans-serif; background: var(--soft); color: var(--ink); }
+    main { max-width: 1180px; margin: 0 auto; padding: 34px 24px 48px; }
+    h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+    .subtitle { margin: 0 0 24px; color: var(--muted); line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    .panel { background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: 0 8px 22px rgba(31,41,51,.06); }
+    .panel-header { background: var(--slack); color: #fff; padding: 14px 18px; font-weight: 800; }
+    .message { padding: 18px; border-bottom: 1px solid #e7ecf1; }
+    .message:last-child { border-bottom: 0; }
+    .thread { margin: 0 18px 18px 42px; padding-left: 16px; border-left: 3px solid #e7ecf1; }
+    .meta { color: #697586; font-size: 13px; margin-bottom: 10px; }
+    .title { font-weight: 800; font-size: 18px; margin-bottom: 10px; }
+    .field { margin: 7px 0; line-height: 1.5; }
+    .label { color: #52606d; font-weight: 800; }
+    .box { background: #fbfcfd; border: 1px solid var(--line); border-radius: 8px; padding: 12px; line-height: 1.55; margin-top: 10px; }
+    .question { background: var(--yellow); border-color: #fed7aa; }
+    .modal { border: 1px solid #cbd5df; border-radius: 8px; background: #fff; box-shadow: 0 14px 32px rgba(31,41,51,.18); padding: 16px; margin-top: 12px; }
+    .input { border: 1px solid #cbd5df; border-radius: 6px; background: #fff; min-height: 58px; padding: 10px; color: #52606d; line-height: 1.45; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    button { border: 1px solid #cbd5df; border-radius: 6px; background: #fff; padding: 8px 12px; font-weight: 800; color: var(--ink); }
+    .primary { background: var(--ok); color: #fff; border-color: var(--ok); }
+    .note { margin-top: 18px; padding: 14px 16px; border: 1px solid #bfdbfe; border-radius: 8px; background: var(--blue); line-height: 1.55; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>중요 변경 보완 요청 방식 비교</h1>
+    <p class="subtitle">“라즈베리파이에서 ESP32로 변경함”처럼 짧지만 중요한 변경 제안이 올라왔을 때, 추가 정보를 어떻게 받을지 비교합니다.</p>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-header">1번. 스레드 답글로 보완</div>
+        <div class="message">
+          <div class="meta">조수현 · #회의-결과록</div>
+          <div class="title">라즈베리파이에서 ESP32로 변경함</div>
+        </div>
+        <div class="thread">
+          <div class="message">
+            <div class="meta">Subjector Bot</div>
+            <div class="box question">
+              <div class="title">추가 정보가 필요합니다</div>
+              <div class="field">이 변경은 중요도 🔴 상 / 협응도 🔴 상으로 판단되었습니다.</div>
+              <div class="field">task 반영 전에 아래 내용을 답글로 작성해주세요.</div>
+              <div class="field">1. 변경 이유/근거</div>
+              <div class="field">2. 영향받을 수 있는 task 또는 사람</div>
+              <div class="field">3. 기존 라즈베리파이 관련 task를 보류/폐기/대체할지</div>
+              <div class="field">4. 오늘 task에 바로 반영해야 하는지</div>
+            </div>
+          </div>
+          <div class="message">
+            <div class="meta">조수현 · 답글</div>
+            <div class="box">근거는 ESP32가 센서 연결에 좋기 때문이고, 모델 실행 구조랑 Wi-Fi 테스트에 영향 있을 듯. 라즈베리파이는 대안으로 남기자.</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">2번. Slack 모달로 필수 입력</div>
+        <div class="message">
+          <div class="meta">조수현 · #회의-결과록</div>
+          <div class="title">라즈베리파이에서 ESP32로 변경함</div>
+        </div>
+        <div class="thread">
+          <div class="message">
+            <div class="meta">Subjector Bot</div>
+            <div class="box question">
+              <div class="title">중요 변경으로 판단했습니다</div>
+              <div class="field">필수 항목을 입력해야 task에 반영할 수 있습니다.</div>
+              <div class="buttons"><button class="primary">추가 정보 입력</button></div>
+            </div>
+
+            <div class="modal">
+              <div class="title">변경 제안 보완</div>
+              <div class="field"><span class="label">변경 이유/근거 · 필수</span></div>
+              <div class="input">ESP32가 센서 연결과 전력 측면에서 더 적합합니다.</div>
+              <div class="field"><span class="label">영향받을 수 있는 task 또는 사람 · 필수</span></div>
+              <div class="input">조수현 모델 실행 구조, 배민성 데이터 송신 테스트</div>
+              <div class="field"><span class="label">기존 방향 처리 · 필수</span></div>
+              <div class="input">라즈베리파이는 대안으로 유지합니다.</div>
+              <div class="field"><span class="label">오늘 task 반영 여부 · 필수</span></div>
+              <div class="input">오늘 task에 바로 반영해야 합니다.</div>
+              <div class="buttons"><button class="primary">제출</button><button>취소</button></div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="note">
+      1번은 자연스럽지만 누락/모호함이 생길 수 있습니다. 2번은 조금 딱딱하지만 중요 변경에서 필요한 정보를 빠뜨리지 않게 해줍니다.
+    </div>
+  </main>
+</body>
+</html>
