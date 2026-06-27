@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 import { formatDisplayName, getUserBySlackId } from '../config.js';
 import { handleDmCommand } from '../domain/dmCommands.js';
 import { createDefaultHealthStatus, renderHealthPage } from '../domain/health.js';
+import {
+  TASK_ACTION_CALLBACK_ID,
+  buildTaskActionModalView,
+  extractTaskActionSubmissionText,
+  parseTaskActionMetadata
+} from '../domain/taskActions.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
 import { buildTextMessageBlocks } from './blocks.js';
@@ -95,6 +101,88 @@ function registerDmHandlers(app, config, logger, inProcessService) {
   });
 }
 
+export async function handleTaskActionButton({ ack, body, client, logger = console, inProcessService }) {
+  await ack();
+
+  const actionPayload = body.actions[0];
+  const metadata = parseTaskActionMetadata(actionPayload.value);
+  const taskTitle = await inProcessService.getTaskTitle(metadata.taskId);
+
+  await client.views.open({
+    trigger_id: body.trigger_id,
+    view: buildTaskActionModalView({
+      actionId: metadata.actionId,
+      taskId: metadata.taskId,
+      assigneeUserKey: metadata.assigneeUserKey,
+      taskTitle
+    })
+  });
+
+  logger.info?.(`Task action modal opened: ${metadata.actionId}`);
+}
+
+export async function handleTaskActionViewSubmission({ ack, body, view, config, logger = console, inProcessService }) {
+  const metadata = parseTaskActionMetadata(view.private_metadata);
+  const submittedBy = getUserBySlackId(config.users, body.user.id);
+
+  if (!submittedBy) {
+    await ack({
+      response_action: 'errors',
+      errors: {
+        task_action_input: '등록되지 않은 사용자입니다.'
+      }
+    });
+    return;
+  }
+
+  const rawText = extractTaskActionSubmissionText(view);
+  if (!rawText) {
+    await ack({
+      response_action: 'errors',
+      errors: {
+        task_action_input: '내용을 입력해 주세요.'
+      }
+    });
+    return;
+  }
+
+  await inProcessService.handleTaskActionSubmission({
+    actionId: metadata.actionId,
+    taskId: metadata.taskId,
+    assigneeUserKey: metadata.assigneeUserKey,
+    submittedByUserKey: submittedBy.key,
+    rawText
+  });
+
+  logger.info?.(`Task action submitted: ${metadata.actionId}`);
+  await ack();
+}
+
+function registerTaskActionHandlers(app, config, logger, inProcessService) {
+  for (const actionId of ['task_complete', 'task_stop_today', 'task_change_request']) {
+    app.action(actionId, async ({ ack, body, client }) => {
+      await handleTaskActionButton({
+        ack,
+        body,
+        client,
+        logger,
+        inProcessService
+      });
+    });
+  }
+
+  app.view(TASK_ACTION_CALLBACK_ID, async ({ ack, body, view }) => {
+    await handleTaskActionViewSubmission({
+      ack,
+      body,
+      view,
+      config,
+      logger,
+      inProcessService
+    });
+  });
+}
+
 export function createSlackApp({ config, logger = console, deferInitialization = false, inProcessService = null }) {
   const receiver = new ExpressReceiver({
     signingSecret: config.slack.signingSecret
@@ -118,6 +206,7 @@ export function createSlackApp({ config, logger = console, deferInitialization =
   });
 
   registerDmHandlers(app, config, logger, service);
+  registerTaskActionHandlers(app, config, logger, service);
 
   return { app, receiver };
 }

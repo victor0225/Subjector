@@ -1,6 +1,7 @@
 const OPEN_TASK_STATUSES = [
   '미시작',
   '수락',
+  '완료',
   '오늘은 여기까지',
   '미정리',
   '변경 요청 중',
@@ -16,6 +17,7 @@ function throwIfError(result, context) {
 function mapTask(row) {
   return {
     id: row.id,
+    assigneeUserKey: row.assignee_user_key,
     title: row.title,
     status: row.status,
     importance: row.importance,
@@ -80,6 +82,57 @@ export function createSupabaseStore(supabase) {
     return mapSlackMessage(result.data);
   }
 
+  async function getTaskById(taskId) {
+    const result = await supabase
+      .from('tasks')
+      .select('id,assignee_user_key,title,status,importance,coordination,source_type,context,created_at')
+      .eq('id', taskId)
+      .maybeSingle();
+
+    throwIfError(result, 'Failed to get task');
+    return mapTask(result.data);
+  }
+
+  async function submitTaskResult({ taskId, resultType, rawText, submittedByUserKey }) {
+    const result = await supabase
+      .from('task_results')
+      .insert({
+        task_id: taskId,
+        result_type: resultType,
+        raw_text: rawText,
+        submitted_by_user_key: submittedByUserKey
+      });
+
+    throwIfError(result, 'Failed to submit task result');
+  }
+
+  async function createChangeRequest({ taskId, proposerUserKey, rawText }) {
+    const result = await supabase
+      .from('change_requests')
+      .insert({
+        task_id: taskId,
+        proposer_user_key: proposerUserKey,
+        status: '투표 중',
+        raw_text: rawText
+      });
+
+    throwIfError(result, 'Failed to create change request');
+  }
+
+  async function updateTaskStatus({ taskId, status, completedAt = null }) {
+    const update = { status };
+    if (completedAt) {
+      update.completed_at = completedAt;
+    }
+
+    const result = await supabase
+      .from('tasks')
+      .update(update)
+      .eq('id', taskId);
+
+    throwIfError(result, 'Failed to update task status');
+  }
+
   async function upsertSlackMessage({ purpose, channelId, messageTs, threadTs }) {
     const result = await supabase
       .from('slack_messages')
@@ -99,6 +152,10 @@ export function createSupabaseStore(supabase) {
     startWorkSession,
     listOpenTasksForUser,
     findSlackMessage,
+    getTaskById,
+    submitTaskResult,
+    createChangeRequest,
+    updateTaskStatus,
     upsertSlackMessage
   };
 }

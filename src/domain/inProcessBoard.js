@@ -1,4 +1,5 @@
 import { formatDisplayName } from './users.js';
+import { buildTaskActionValue } from './taskActions.js';
 
 function mrkdwn(text) {
   return {
@@ -14,6 +15,14 @@ function section(text) {
   };
 }
 
+function plainText(text) {
+  return {
+    type: 'plain_text',
+    text,
+    emoji: true
+  };
+}
+
 function taskContextSource(task) {
   return task?.context?.source ?? task?.sourceType ?? '기록 없음';
 }
@@ -26,6 +35,37 @@ function formatTask(task, index) {
     `   - 조율: ${task.coordination}`,
     `   - 맥락: ${taskContextSource(task)}`
   ].join('\n');
+}
+
+function taskActionButton({ actionId, text, task, user, style }) {
+  const button = {
+    type: 'button',
+    action_id: actionId,
+    text: plainText(text),
+    value: buildTaskActionValue({
+      actionId,
+      taskId: task.id,
+      assigneeUserKey: user.key
+    })
+  };
+
+  if (style) {
+    button.style = style;
+  }
+
+  return button;
+}
+
+function taskActionsBlock({ task, user }) {
+  return {
+    type: 'actions',
+    block_id: `task_actions_${task.id}`,
+    elements: [
+      taskActionButton({ actionId: 'task_complete', text: '완료', task, user, style: 'primary' }),
+      taskActionButton({ actionId: 'task_stop_today', text: '오늘은 여기까지', task, user }),
+      taskActionButton({ actionId: 'task_change_request', text: '변경 요청', task, user, style: 'danger' })
+    ]
+  };
 }
 
 export function buildInProcessMessagePurpose(user) {
@@ -58,8 +98,18 @@ export function buildInProcessBoardMessage({ user, tasks = [], workDate = format
 
   const text = [header, body].join('\n\n');
 
+  const blocks = tasks.length === 0
+    ? [section(text)]
+    : [
+        section(header),
+        ...tasks.flatMap((task, index) => [
+          section(formatTask(task, index)),
+          taskActionsBlock({ task, user })
+        ])
+      ];
+
   return {
     text,
-    blocks: [section(text)]
+    blocks
   };
 }

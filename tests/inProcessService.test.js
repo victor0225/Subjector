@@ -32,6 +32,27 @@ function createFakeStore({ existingMessage = null, tasks = [] } = {}) {
     },
     async upsertSlackMessage(input) {
       calls.push(['upsertSlackMessage', input]);
+    },
+    async getTaskById(taskId) {
+      calls.push(['getTaskById', taskId]);
+      return {
+        id: taskId,
+        assigneeUserKey: 'suhyeon',
+        title: '센서 후보 정리',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: {}
+      };
+    },
+    async submitTaskResult(input) {
+      calls.push(['submitTaskResult', input]);
+    },
+    async createChangeRequest(input) {
+      calls.push(['createChangeRequest', input]);
+    },
+    async updateTaskStatus(input) {
+      calls.push(['updateTaskStatus', input]);
     }
   };
 }
@@ -106,8 +127,86 @@ test('handleStartWork updates an existing #in-process message', async () => {
 
   assert.equal(result.action, 'updated');
   assert.equal(result.taskCount, 1);
+  assert.match(result.dmText, /업데이트했습니다/);
   assert.equal(slackClient.calls[0][0], 'update');
   assert.equal(slackClient.calls[0][1].ts, '1700000000.000001');
   assert.match(slackClient.calls[0][1].text, /센서 후보 정리/);
   assert.equal(store.calls.some(([name]) => name === 'upsertSlackMessage'), false);
+});
+
+test('handleTaskActionSubmission stores completed task output and refreshes the board', async () => {
+  const store = createFakeStore({ existingMessage: { channelId: 'C_IN_PROCESS', messageTs: '1700000000.000001' } });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskActionSubmission({
+    actionId: 'task_complete',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: '[완료 제출 결과]'
+  });
+
+  assert.equal(result.status, '완료');
+  assert.match(result.responseText, /완료로 변경했습니다/);
+  assert.deepEqual(store.calls.find(([name]) => name === 'submitTaskResult')[1], {
+    taskId: 'task-1',
+    resultType: '완료',
+    rawText: '[완료 제출 결과]',
+    submittedByUserKey: 'suhyeon'
+  });
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '완료');
+  assert.equal(slackClient.calls.at(-1)[0], 'update');
+});
+
+test('handleTaskActionSubmission stores stop-for-today output', async () => {
+  const store = createFakeStore({ existingMessage: { channelId: 'C_IN_PROCESS', messageTs: '1700000000.000001' } });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskActionSubmission({
+    actionId: 'task_stop_today',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: '[오늘의 진행 상태]'
+  });
+
+  assert.equal(result.status, '오늘은 여기까지');
+  assert.equal(store.calls.find(([name]) => name === 'submitTaskResult')[1].resultType, '오늘은 여기까지');
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '오늘은 여기까지');
+});
+
+test('handleTaskActionSubmission stores change request output', async () => {
+  const store = createFakeStore({ existingMessage: { channelId: 'C_IN_PROCESS', messageTs: '1700000000.000001' } });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskActionSubmission({
+    actionId: 'task_change_request',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: '[변경 요청]'
+  });
+
+  assert.equal(result.status, '변경 요청 중');
+  assert.equal(store.calls.find(([name]) => name === 'createChangeRequest')[1].rawText, '[변경 요청]');
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '변경 요청 중');
 });

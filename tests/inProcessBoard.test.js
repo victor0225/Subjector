@@ -57,3 +57,36 @@ test('buildInProcessBoardMessage includes assigned task summaries', () => {
   assert.match(message.text, /🟡 중/);
   assert.match(message.text, /회의 결과록 2026-06-28/);
 });
+
+test('buildInProcessBoardMessage attaches the three task action buttons', () => {
+  const message = buildInProcessBoardMessage({
+    user,
+    workDate: '2026-06-28',
+    tasks: [
+      {
+        id: 'task-1',
+        title: '센서 후보 정리',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+
+  const actions = message.blocks.find((block) => block.type === 'actions');
+
+  assert.ok(actions);
+  assert.deepEqual(actions.elements.map((element) => element.action_id), [
+    'task_complete',
+    'task_stop_today',
+    'task_change_request'
+  ]);
+  assert.deepEqual(actions.elements.map((element) => element.text.text), [
+    '완료',
+    '오늘은 여기까지',
+    '변경 요청'
+  ]);
+  assert.ok(actions.elements.every((element) => element.value.includes('task-1')));
+  assert.ok(actions.elements.every((element) => element.value.includes('suhyeon')));
+});

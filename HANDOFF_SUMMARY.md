@@ -103,7 +103,12 @@ Implemented:
   - Subjector Bot replies to DM commands `출근` and `퇴근`.
   - `출근` is now wired to create or update the user's `#in-process` task area.
   - If the user has no assigned tasks, `#in-process` shows "현재 배정된 task가 없습니다."
-  - `#finals`, real daily-summary updates, and task action buttons are not wired yet.
+  - Task action buttons are wired for task rows shown in `#in-process`: `완료`, `오늘은 여기까지`, `변경 요청`.
+  - Each task button opens a Slack modal with one large text box.
+  - `완료` stores a `task_results` row and changes task status to `완료`.
+  - `오늘은 여기까지` stores a `task_results` row and changes task status to `오늘은 여기까지`.
+  - `변경 요청` stores a `change_requests` row and changes task status to `변경 요청 중`.
+  - `#finals`, real daily-summary updates, voting, and OpenAI impact analysis are not wired yet.
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
@@ -118,24 +123,25 @@ Implemented:
   - `tests/inProcessService.test.js`
   - `tests/slackApp.test.js`
   - `tests/supabaseStore.test.js`
+  - `tests/taskActions.test.js`
 
 Verification:
 
-- `pnpm test` passes: 44 tests, 0 failures.
+- `pnpm test` passes: 57 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.
 
 Not yet implemented:
 
-- Slack action workflows beyond the `출근` DM and basic `#in-process` board update.
-- Broader Supabase persistence workflows beyond work-session start and `#in-process` message tracking.
+- Slack workflows beyond `출근`, basic `#in-process` board update, and first task action modal submissions.
+- Slack vote/approval workflows for change requests.
+- Broader Supabase persistence workflows beyond work-session start, task result submission, change request creation, and `#in-process` message tracking.
 - Real OpenAI calls.
 - Meeting audio pipeline.
 - Full `#in-process` update lifecycle.
 - Change-request voting workflow.
 - `#finals` preview persistence/update workflow.
-- Render deployment.
 
 Current MVP statuses:
 

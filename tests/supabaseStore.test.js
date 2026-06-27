@@ -31,6 +31,14 @@ function createFakeSupabase({ tableData = {}, singleData = {}, errors = {} } = {
         calls.push([table, 'maybeSingle']);
         return Promise.resolve({ data: singleData[table] ?? null, error: errors[table] ?? null });
       },
+      insert(row) {
+        calls.push([table, 'insert', row]);
+        return Promise.resolve({ data: null, error: errors[table] ?? null });
+      },
+      update(row) {
+        calls.push([table, 'update', row]);
+        return builder;
+      },
       upsert(row, options) {
         calls.push([table, 'upsert', row, options]);
         return Promise.resolve({ data: null, error: errors[table] ?? null });
@@ -94,6 +102,7 @@ test('listOpenTasksForUser reads open tasks and maps database columns', async ()
   assert.equal(tasks[0].context.source, '회의 결과록');
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'assignee_user_key'));
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[2] === 'status'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[3].includes('완료')));
 });
 
 test('findSlackMessage maps the latest stored Slack message', async () => {
@@ -118,6 +127,80 @@ test('findSlackMessage maps the latest stored Slack message', async () => {
     messageTs: '1700000000.000001',
     threadTs: '1700000000.000001'
   });
+});
+
+test('getTaskById reads task ownership for action submissions', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      tasks: {
+        id: 'task-1',
+        assignee_user_key: 'suhyeon',
+        title: '센서 후보 정리',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        source_type: 'manual',
+        context: {},
+        created_at: '2026-06-28T01:00:00.000Z'
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const task = await store.getTaskById('task-1');
+
+  assert.equal(task.id, 'task-1');
+  assert.equal(task.assigneeUserKey, 'suhyeon');
+  assert.equal(task.title, '센서 후보 정리');
+});
+
+test('submitTaskResult inserts a raw Codex result', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.submitTaskResult({
+    taskId: 'task-1',
+    resultType: '완료',
+    rawText: '[완료 제출 결과]',
+    submittedByUserKey: 'suhyeon'
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'task_results' && call[1] === 'insert');
+  assert.equal(insert[2].task_id, 'task-1');
+  assert.equal(insert[2].result_type, '완료');
+  assert.equal(insert[2].submitted_by_user_key, 'suhyeon');
+});
+
+test('createChangeRequest inserts a task change request', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.createChangeRequest({
+    taskId: 'task-1',
+    proposerUserKey: 'suhyeon',
+    rawText: '[변경 요청]'
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'change_requests' && call[1] === 'insert');
+  assert.equal(insert[2].task_id, 'task-1');
+  assert.equal(insert[2].proposer_user_key, 'suhyeon');
+  assert.equal(insert[2].status, '투표 중');
+});
+
+test('updateTaskStatus updates task status and completion timestamp', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.updateTaskStatus({
+    taskId: 'task-1',
+    status: '완료',
+    completedAt: '2026-06-28T02:00:00.000Z'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'update');
+  assert.equal(update[2].status, '완료');
+  assert.equal(update[2].completed_at, '2026-06-28T02:00:00.000Z');
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'id'));
 });
 
 test('upsertSlackMessage stores purpose and Slack timestamp', async () => {

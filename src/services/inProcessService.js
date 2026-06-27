@@ -1,18 +1,12 @@
 import { buildInProcessBoardMessage, buildInProcessMessagePurpose, formatKstDate } from '../domain/inProcessBoard.js';
+import { taskActionFromActionId } from '../domain/taskActions.js';
 import { formatDisplayName } from '../domain/users.js';
 
-export function createInProcessService({ store, slackClient, config, clock = () => new Date() }) {
-  async function handleStartWork({ user }) {
-    const now = clock();
+export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date() }) {
+  async function renderBoard({ user, now = clock() }) {
     const workDate = formatKstDate(now);
     const channelId = config.channels.inProcess;
     const purpose = buildInProcessMessagePurpose(user);
-
-    await store.startWorkSession({
-      userKey: user.key,
-      workDate,
-      startedAt: now.toISOString()
-    });
 
     const tasks = await store.listOpenTasksForUser(user.key);
     const message = buildInProcessBoardMessage({
@@ -36,8 +30,7 @@ export function createInProcessService({ store, slackClient, config, clock = () 
 
       return {
         action: 'updated',
-        taskCount: tasks.length,
-        dmText: `${formatDisplayName(user)}, 출근 확인했습니다. #in-process의 오늘 task 영역을 업데이트했습니다.`
+        taskCount: tasks.length
       };
     }
 
@@ -56,12 +49,79 @@ export function createInProcessService({ store, slackClient, config, clock = () 
 
     return {
       action: 'posted',
-      taskCount: tasks.length,
-      dmText: `${formatDisplayName(user)}, 출근 확인했습니다. #in-process에 오늘 task 영역을 만들었습니다.`
+      taskCount: tasks.length
     };
   }
 
+  async function handleStartWork({ user }) {
+    const now = clock();
+    const workDate = formatKstDate(now);
+
+    await store.startWorkSession({
+      userKey: user.key,
+      workDate,
+      startedAt: now.toISOString()
+    });
+
+    const result = await renderBoard({ user, now });
+    const verb = result.action === 'updated' ? '업데이트했습니다' : '만들었습니다';
+
+    return {
+      ...result,
+      dmText: `${formatDisplayName(user)}, 출근 확인했습니다. #in-process에 오늘 task 영역을 ${verb}.`
+    };
+  }
+
+  async function handleTaskActionSubmission({ actionId, taskId, assigneeUserKey, submittedByUserKey, rawText }) {
+    const action = taskActionFromActionId(actionId);
+    if (!action) {
+      throw new Error(`Unknown task action: ${actionId}`);
+    }
+
+    const now = clock();
+    const task = await store.getTaskById(taskId);
+    const ownerKey = task?.assigneeUserKey ?? assigneeUserKey;
+
+    if (actionId === 'task_change_request') {
+      await store.createChangeRequest({
+        taskId,
+        proposerUserKey: submittedByUserKey,
+        rawText
+      });
+    } else {
+      await store.submitTaskResult({
+        taskId,
+        resultType: action.resultType,
+        rawText,
+        submittedByUserKey
+      });
+    }
+
+    await store.updateTaskStatus({
+      taskId,
+      status: action.status,
+      completedAt: action.status === '완료' ? now.toISOString() : null
+    });
+
+    const owner = users.find((candidate) => candidate.key === ownerKey);
+    if (owner) {
+      await renderBoard({ user: owner, now });
+    }
+
+    return {
+      status: action.status,
+      responseText: `${formatDisplayName(owner)}, task 상태를 ${action.status}로 변경했습니다.`
+    };
+  }
+
+  async function getTaskTitle(taskId) {
+    const task = await store.getTaskById(taskId);
+    return task?.title ?? 'task';
+  }
+
   return {
-    handleStartWork
+    handleStartWork,
+    handleTaskActionSubmission,
+    getTaskTitle
   };
 }
