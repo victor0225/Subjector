@@ -14,7 +14,7 @@ test('normalizeCommand trims text and collapses whitespace', () => {
   assert.equal(normalizeCommand('  finals   업데이트  '), 'finals 업데이트');
 });
 
-test('출근 creates start-work response and requests #in-process update', () => {
+test('출근 confirms the command without promising pending #in-process updates', () => {
   const result = handleDmCommand({
     text: '출근',
     user: config.users[0],
@@ -22,12 +22,14 @@ test('출근 creates start-work response and requests #in-process update', () =>
   });
 
   assert.equal(result.type, 'start_work');
-  assert.equal(result.updateInProcess, true);
+  assert.equal(result.updateInProcess, false);
   assert.match(result.text, /수현님/);
-  assert.match(result.text, /오늘 할 일/);
+  assert.match(result.text, /출근 명령을 확인했습니다/);
+  assert.match(result.text, /다음 구현 단계/);
+  assert.doesNotMatch(result.text, /반영하겠습니다/);
 });
 
-test('퇴근 creates end-work summary response without blocking missing tasks', () => {
+test('퇴근 confirms the command without promising pending daily summary generation', () => {
   const result = handleDmCommand({
     text: '퇴근',
     user: config.users[1],
@@ -35,9 +37,10 @@ test('퇴근 creates end-work summary response without blocking missing tasks', 
   });
 
   assert.equal(result.type, 'end_work');
-  assert.equal(result.createDailySummary, true);
+  assert.equal(result.createDailySummary, false);
   assert.match(result.text, /조은님/);
-  assert.match(result.text, /오늘 한 일 요약/);
+  assert.match(result.text, /퇴근 명령을 확인했습니다/);
+  assert.match(result.text, /다음 구현 단계/);
 });
 
 test('finals 업데이트 is allowed for lead user', () => {
@@ -48,7 +51,9 @@ test('finals 업데이트 is allowed for lead user', () => {
   });
 
   assert.equal(result.type, 'force_finals_preview');
-  assert.equal(result.createFinalsPreview, true);
+  assert.equal(result.createFinalsPreview, false);
+  assert.match(result.text, /명령을 확인했습니다/);
+  assert.match(result.text, /다음 구현 단계/);
 });
 
 test('finals 업데이트 is rejected for non-lead user', () => {

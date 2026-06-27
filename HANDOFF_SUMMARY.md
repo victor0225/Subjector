@@ -98,6 +98,11 @@ Implemented:
   - Use `Start Command: pnpm start`.
   - Do not include `corepack enable` in the Render build command.
   - Setup guide: `docs/setup/render-setup.md`
+- Slack/Render smoke test:
+  - Render `/health` loads and shows configured services as 정상.
+  - Subjector Bot replies to DM commands `출근` and `퇴근`.
+  - `#in-process`, `#finals`, and real daily-summary updates are not wired yet.
+  - Current DM responses intentionally say those updates are next implementation steps, not completed side effects.
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
