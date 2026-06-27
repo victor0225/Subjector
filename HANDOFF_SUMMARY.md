@@ -19,6 +19,7 @@ Day 1 implementation plan:
 GitHub repository:
 
 - `https://github.com/victor0225/Subjector.git`
+- Remote branch `origin/main` is connected and the initial Day 1 foundation was pushed in commit `d2d6193`.
 
 Most current visual simulation:
 
@@ -43,7 +44,7 @@ Latest operating model:
 
 ## Current Implementation Status
 
-Day 1 foundation scaffold is implemented locally and ready to connect to real Slack, Supabase, OpenAI, and Render credentials.
+Day 1 foundation scaffold is implemented and pushed to GitHub. It is ready to connect to real Slack, Supabase, OpenAI, and Render credentials.
 
 Implemented:
 
@@ -876,14 +877,13 @@ No additional MVP product decisions are currently open.
 
 Next steps:
 
-1. Commit and push the Day 1 foundation to `https://github.com/victor0225/Subjector.git`.
-2. User creates/connects the real accounts and credentials:
+1. User creates/connects the real accounts and credentials:
    - Slack app install using `slack/manifest.yaml`.
    - Supabase project and schema migration.
    - OpenAI API billing/key readiness.
    - Render service connected to the GitHub repository.
-3. Fill Render/local environment variables from `.env.example`.
-4. Continue implementation in order:
+2. Fill Render/local environment variables from `.env.example`.
+3. Continue implementation in order:
    - Real Slack install verification and `/health` checks.
    - Supabase persistence layer.
    - `#in-process` task board lifecycle.
