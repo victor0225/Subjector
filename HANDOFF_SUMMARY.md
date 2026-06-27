@@ -83,7 +83,10 @@ Implemented:
   - Supabase project was created by the user.
   - Supabase project URL and server-side secret key were collected in the local ignored file `references.txt`.
   - Do not commit or quote the Supabase server-side secret key.
-  - Remaining manual step: run `supabase/migrations/0001_initial.sql` in Supabase SQL Editor and seed the three users.
+  - `supabase/migrations/0001_initial.sql` was run in Supabase SQL Editor.
+  - Three user rows were seeded in Supabase: 조수현/김조은/배민성.
+  - Local smoke check with `@supabase/supabase-js` successfully read 3 users from the remote `users` table.
+  - 배민성 has `display_name = "민성"` in Supabase, so Subjector can say `민성님`.
 - Supabase setup files:
   - `supabase/migrations/0001_initial.sql` creates the MVP schema.
   - All MVP tables have Row Level Security enabled with no public policies.
