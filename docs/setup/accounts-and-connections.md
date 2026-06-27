@@ -49,6 +49,12 @@ Needed:
 - Supabase project.
 - Project URL.
 - Service role key for the server.
+- Database schema created from `supabase/migrations/0001_initial.sql`.
+- User rows inserted for 조수현, 김조은, and 배민성.
+
+Detailed setup guide:
+
+- `docs/setup/supabase-setup.md`
 
 Store only in Render/local `.env`:
 

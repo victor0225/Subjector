@@ -1,3 +1,5 @@
+create extension if not exists pgcrypto;
+
 create table if not exists users (
   key text primary key,
   slack_id text not null unique,
@@ -124,3 +126,62 @@ create table if not exists processing_events (
   message text,
   created_at timestamptz not null default now()
 );
+
+alter table users enable row level security;
+alter table slack_messages enable row level security;
+alter table meetings enable row level security;
+alter table tasks enable row level security;
+alter table codex_prompts enable row level security;
+alter table task_results enable row level security;
+alter table change_requests enable row level security;
+alter table change_votes enable row level security;
+alter table daily_work_sessions enable row level security;
+alter table finals_updates enable row level security;
+alter table processing_events enable row level security;
+
+create index if not exists idx_slack_messages_purpose on slack_messages(purpose);
+create index if not exists idx_meetings_status on meetings(status);
+create index if not exists idx_tasks_assignee_status on tasks(assignee_user_key, status);
+create index if not exists idx_change_requests_status on change_requests(status);
+create index if not exists idx_daily_work_sessions_date on daily_work_sessions(work_date);
+create index if not exists idx_processing_events_created_at on processing_events(created_at desc);
+
+create or replace function set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists meetings_set_updated_at on meetings;
+create trigger meetings_set_updated_at
+before update on meetings
+for each row
+execute function set_updated_at();
+
+drop trigger if exists tasks_set_updated_at on tasks;
+create trigger tasks_set_updated_at
+before update on tasks
+for each row
+execute function set_updated_at();
+
+drop trigger if exists change_requests_set_updated_at on change_requests;
+create trigger change_requests_set_updated_at
+before update on change_requests
+for each row
+execute function set_updated_at();
+
+drop trigger if exists daily_work_sessions_set_updated_at on daily_work_sessions;
+create trigger daily_work_sessions_set_updated_at
+before update on daily_work_sessions
+for each row
+execute function set_updated_at();
+
+drop trigger if exists finals_updates_set_updated_at on finals_updates;
+create trigger finals_updates_set_updated_at
+before update on finals_updates
+for each row
+execute function set_updated_at();

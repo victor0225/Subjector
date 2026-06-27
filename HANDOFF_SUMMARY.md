@@ -79,6 +79,10 @@ Implemented:
   - Do not commit or quote the token/signing secret.
   - Use `display_name: "민성"` for 배민성 even if the Slack display name is `Corvus Gold`, so Subjector says `민성님`.
   - Use `display_name: "조은"` for 김조은 unless the user explicitly changes it.
+- Supabase setup files:
+  - `supabase/migrations/0001_initial.sql` creates the MVP schema.
+  - All MVP tables have Row Level Security enabled with no public policies.
+  - `docs/setup/supabase-setup.md` explains project creation, SQL execution, user seed rows, and required env values.
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
@@ -88,10 +92,11 @@ Implemented:
   - `tests/blocks.test.js`
   - `tests/slackEvents.test.js`
   - `tests/slackManifest.test.js`
+  - `tests/supabaseMigration.test.js`
 
 Verification:
 
-- `pnpm test` passes: 27 tests, 0 failures.
+- `pnpm test` passes: 31 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.
@@ -99,7 +104,7 @@ Verification:
 Not yet implemented:
 
 - Real Slack workspace install/config.
-- Real Supabase schema and persistence.
+- Remote Supabase project creation/schema application and persistence wiring.
 - Real OpenAI calls.
 - Meeting audio pipeline.
 - Full `#in-process` update lifecycle.
@@ -349,6 +354,9 @@ Access/security:
 - Supabase dashboard is accessed only by project/admin account holders.
 - Subjector server uses Supabase credentials stored in Render environment variables.
 - Supabase keys must never be exposed in Slack messages or `/health`.
+- Remote Supabase setup guide: `docs/setup/supabase-setup.md`
+- The initial schema enables Row Level Security on every MVP table.
+- The MVP creates no public table policies; access is through the server-side service role/secret key.
 
 ## `#in-process` Task Message Style
 
