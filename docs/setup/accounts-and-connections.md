@@ -87,6 +87,19 @@ Needed:
 - Starter instance kept on during MVP.
 - Environment variables copied from `.env.example`.
 
+Detailed setup guide:
+
+- `docs/setup/render-setup.md`
+
+Use:
+
+```text
+Build Command: pnpm install --frozen-lockfile
+Start Command: pnpm start
+```
+
+Do not include `corepack enable` in the Render build command.
+
 Expected health URL:
 
 ```text

@@ -91,6 +91,13 @@ Implemented:
   - `supabase/migrations/0001_initial.sql` creates the MVP schema.
   - All MVP tables have Row Level Security enabled with no public policies.
   - `docs/setup/supabase-setup.md` explains project creation, SQL execution, user seed rows, and required env values.
+- Render setup progress:
+  - Initial Render deploy failed with `Internal Error: EROFS: read-only file system, unlink '/usr/bin/pnpm'`.
+  - Root cause: the build command included `corepack enable`, which tried to modify Render's system `pnpm` shim.
+  - Use `Build Command: pnpm install --frozen-lockfile`.
+  - Use `Start Command: pnpm start`.
+  - Do not include `corepack enable` in the Render build command.
+  - Setup guide: `docs/setup/render-setup.md`
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
