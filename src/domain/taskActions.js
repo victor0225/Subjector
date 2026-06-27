@@ -25,7 +25,7 @@ const TASK_ACTIONS = {
     status: '변경 요청 중',
     resultType: '변경 요청',
     inputLabel: '변경 요청 초안',
-    placeholder: 'Codex가 작성한 변경 요청 초안, 주장, 근거를 붙여넣어 주세요.'
+    placeholder: 'Codex가 작성한 변경 요청 초안을 붙여넣어 주세요. 포함: [변경 제안] [주장] [근거]'
   }
 };
 

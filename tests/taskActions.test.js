@@ -51,3 +51,19 @@ test('buildTaskActionModalView customizes prompt labels for each action', () => 
   assert.match(stopView.blocks[1].label.text, /오늘의 진행 상태/);
   assert.match(changeView.blocks[1].label.text, /변경 요청 초안/);
 });
+
+test('change request modal asks for the Codex draft structure', () => {
+  const view = buildTaskActionModalView({
+    actionId: 'task_change_request',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    taskTitle: '센서 후보 정리'
+  });
+
+  const placeholder = view.blocks[1].element.placeholder.text;
+
+  assert.match(placeholder, /Codex가 작성한 변경 요청 초안/);
+  assert.match(placeholder, /\[변경 제안\]/);
+  assert.match(placeholder, /\[주장\]/);
+  assert.match(placeholder, /\[근거\]/);
+});
