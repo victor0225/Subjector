@@ -101,8 +101,9 @@ Implemented:
 - Slack/Render smoke test:
   - Render `/health` loads and shows configured services as 정상.
   - Subjector Bot replies to DM commands `출근` and `퇴근`.
-  - `#in-process`, `#finals`, and real daily-summary updates are not wired yet.
-  - Current DM responses intentionally say those updates are next implementation steps, not completed side effects.
+  - `출근` is now wired to create or update the user's `#in-process` task area.
+  - If the user has no assigned tasks, `#in-process` shows "현재 배정된 task가 없습니다."
+  - `#finals`, real daily-summary updates, and task action buttons are not wired yet.
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
@@ -113,18 +114,22 @@ Implemented:
   - `tests/slackEvents.test.js`
   - `tests/slackManifest.test.js`
   - `tests/supabaseMigration.test.js`
+  - `tests/inProcessBoard.test.js`
+  - `tests/inProcessService.test.js`
+  - `tests/slackApp.test.js`
+  - `tests/supabaseStore.test.js`
 
 Verification:
 
-- `pnpm test` passes: 31 tests, 0 failures.
+- `pnpm test` passes: 44 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.
 
 Not yet implemented:
 
-- Real Slack workspace install/config.
-- Remote Supabase project creation/schema application and persistence wiring.
+- Slack action workflows beyond the `출근` DM and basic `#in-process` board update.
+- Broader Supabase persistence workflows beyond work-session start and `#in-process` message tracking.
 - Real OpenAI calls.
 - Meeting audio pipeline.
 - Full `#in-process` update lifecycle.

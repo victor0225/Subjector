@@ -14,7 +14,7 @@ test('normalizeCommand trims text and collapses whitespace', () => {
   assert.equal(normalizeCommand('  finals   업데이트  '), 'finals 업데이트');
 });
 
-test('출근 confirms the command without promising pending #in-process updates', () => {
+test('출근 requests #in-process update', () => {
   const result = handleDmCommand({
     text: '출근',
     user: config.users[0],
@@ -22,11 +22,9 @@ test('출근 confirms the command without promising pending #in-process updates'
   });
 
   assert.equal(result.type, 'start_work');
-  assert.equal(result.updateInProcess, false);
+  assert.equal(result.updateInProcess, true);
   assert.match(result.text, /수현님/);
-  assert.match(result.text, /출근 명령을 확인했습니다/);
-  assert.match(result.text, /다음 구현 단계/);
-  assert.doesNotMatch(result.text, /반영하겠습니다/);
+  assert.match(result.text, /#in-process/);
 });
 
 test('퇴근 confirms the command without promising pending daily summary generation', () => {
