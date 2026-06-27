@@ -7,8 +7,15 @@ This guide sets up the Slack app needed for the MVP.
 1. Go to Slack API app creation.
 2. Create a new app from manifest.
 3. Use `slack/manifest.yaml` from this repository.
-4. Replace every `https://subjector.onrender.com` URL later if Render uses a different URL.
-5. Install the app to the workspace.
+4. Keep `https://subjector.onrender.com` if Render will use that service URL.
+5. If Render uses a different URL, replace every `https://subjector.onrender.com` URL in the manifest before importing or update the URLs in Slack later.
+6. Install the app to the workspace.
+
+Important:
+
+- Slack can create and install the app before Render is live.
+- Event delivery and button clicks will not work until `https://subjector.onrender.com/slack/events` is reachable.
+- For the MVP, use Render instead of ngrok unless deliberately doing a temporary local-only test.
 
 ## Bot Scopes
 
@@ -17,6 +24,7 @@ The MVP manifest requests only the scopes needed for:
 - Reading messages in connected public channels.
 - Reading DMs sent to the bot.
 - Reading uploaded meeting files.
+- Uploading transcript/result files back into Slack threads.
 - Posting messages, replies, and updates.
 - Opening/sending DMs.
 - Listing/joining required public channels during setup.
@@ -45,6 +53,9 @@ SLACK_BOT_TOKEN=xoxb-...
 SLACK_SIGNING_SECRET=...
 ```
 
+The signing secret is found in the Slack app's Basic Information page.
+The bot token is found after installation in OAuth & Permissions.
+
 Then collect channel IDs and user IDs:
 
 ```text
@@ -56,7 +67,7 @@ USERS_JSON=[{"key":"suhyeon","slack_id":"U...","full_name":"조수현","display_
 
 ## First Manual Test
 
-After `.env` is filled and the server is running:
+After `.env` is filled and the server is running on the same public URL configured in Slack:
 
 1. Open a DM with `Subjector Bot`.
 2. Send:
@@ -94,3 +105,11 @@ Expected reply:
 ```text
 수현님, #finals 업데이트 미리보기를 생성하겠습니다.
 ```
+
+If the bot does not reply:
+
+- Confirm the app is installed to the workspace.
+- Confirm the bot was invited to the required channel if the test is channel-based.
+- Confirm `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET` are copied correctly.
+- Confirm Render is running and `/health` loads with the configured PIN.
+- Confirm Slack Event Subscriptions request URL is verified.

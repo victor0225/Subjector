@@ -70,6 +70,9 @@ Implemented:
 - Slack app shell:
   - `src/slack/app.js`
   - `src/server.js`
+- Slack app manifest:
+  - App Home Messages tab enabled for `출근`/`퇴근` DM usage.
+  - `files:read` and `files:write` included for meeting audio reads and transcript/result uploads.
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
@@ -78,10 +81,11 @@ Implemented:
   - `tests/health.test.js`
   - `tests/blocks.test.js`
   - `tests/slackEvents.test.js`
+  - `tests/slackManifest.test.js`
 
 Verification:
 
-- `pnpm test` passes: 25 tests, 0 failures.
+- `pnpm test` passes: 27 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.

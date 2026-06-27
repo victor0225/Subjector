@@ -3,6 +3,9 @@ display_information:
   description: Meeting-to-task coordination bot for Subjector
   background_color: "#4A154B"
 features:
+  app_home:
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
   bot_user:
     display_name: Subjector Bot
     always_online: true
@@ -14,6 +17,7 @@ oauth_config:
       - channels:read
       - chat:write
       - files:read
+      - files:write
       - im:history
       - im:read
       - im:write
