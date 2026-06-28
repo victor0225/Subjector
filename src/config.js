@@ -8,13 +8,14 @@ const REQUIRED_ENV = [
   'SLACK_SIGNING_SECRET',
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
-  'OPENAI_API_KEY',
   'MEETING_CHANNEL_ID',
   'IN_PROCESS_CHANNEL_ID',
   'FINALS_CHANNEL_ID',
   'LEAD_USER_KEY',
   'USERS_JSON'
 ];
+
+const EVALUATION_PROVIDERS = new Set(['openai', 'gemini']);
 
 export { formatDisplayName, getUserByKey, getUserBySlackId };
 
@@ -41,6 +42,16 @@ export function loadConfigFromEnv(env = process.env) {
     throw new Error(`Missing required env: ${missing.join(', ')}`);
   }
 
+  const evaluationProvider = (env.AI_EVALUATION_PROVIDER?.trim().toLowerCase() || 'openai');
+  if (!EVALUATION_PROVIDERS.has(evaluationProvider)) {
+    throw new Error('AI_EVALUATION_PROVIDER must be one of: openai, gemini');
+  }
+
+  const selectedProviderKey = evaluationProvider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY';
+  if (!env[selectedProviderKey] || env[selectedProviderKey].trim() === '') {
+    throw new Error(`Missing required env: ${selectedProviderKey}`);
+  }
+
   const port = Number.parseInt(env.PORT, 10);
   if (!Number.isInteger(port) || port <= 0) {
     throw new Error('PORT must be a positive integer');
@@ -65,9 +76,16 @@ export function loadConfigFromEnv(env = process.env) {
       url: env.SUPABASE_URL.trim(),
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY.trim()
     },
+    ai: {
+      evaluationProvider
+    },
     openai: {
-      apiKey: env.OPENAI_API_KEY.trim(),
+      apiKey: env.OPENAI_API_KEY?.trim() || '',
       evaluationModel: env.OPENAI_EVALUATION_MODEL?.trim() || 'gpt-5.2'
+    },
+    gemini: {
+      apiKey: env.GEMINI_API_KEY?.trim() || '',
+      evaluationModel: env.GEMINI_EVALUATION_MODEL?.trim() || 'gemini-3.5-flash'
     },
     channels: {
       meeting: env.MEETING_CHANNEL_ID.trim(),

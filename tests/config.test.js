@@ -47,7 +47,9 @@ test('loadConfigFromEnv builds app config from environment values', () => {
   assert.equal(config.channels.finals, 'C3');
   assert.equal(config.leadUserKey, 'suhyeon');
   assert.equal(config.users.length, 3);
+  assert.equal(config.ai.evaluationProvider, 'openai');
   assert.equal(config.openai.evaluationModel, 'gpt-5.2');
+  assert.equal(config.gemini.evaluationModel, 'gemini-3.5-flash');
 });
 
 test('loadConfigFromEnv allows overriding the OpenAI evaluation model', () => {
@@ -69,6 +71,52 @@ test('loadConfigFromEnv allows overriding the OpenAI evaluation model', () => {
   });
 
   assert.equal(config.openai.evaluationModel, 'gpt-5.2-mini');
+});
+
+test('loadConfigFromEnv supports Gemini task evaluation provider', () => {
+  const config = loadConfigFromEnv({
+    PORT: '3333',
+    BASE_URL: 'https://subjector.onrender.com',
+    HEALTH_PIN: '2468',
+    SLACK_BOT_TOKEN: 'xoxb-token',
+    SLACK_SIGNING_SECRET: 'secret',
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+    AI_EVALUATION_PROVIDER: 'gemini',
+    GEMINI_API_KEY: 'gemini-key',
+    GEMINI_EVALUATION_MODEL: 'gemini-3.5-flash-lite',
+    MEETING_CHANNEL_ID: 'C1',
+    IN_PROCESS_CHANNEL_ID: 'C2',
+    FINALS_CHANNEL_ID: 'C3',
+    LEAD_USER_KEY: 'suhyeon',
+    USERS_JSON: usersJson
+  });
+
+  assert.equal(config.ai.evaluationProvider, 'gemini');
+  assert.equal(config.gemini.apiKey, 'gemini-key');
+  assert.equal(config.gemini.evaluationModel, 'gemini-3.5-flash-lite');
+  assert.equal(config.openai.apiKey, '');
+});
+
+test('loadConfigFromEnv requires the selected task evaluation provider key', () => {
+  assert.throws(
+    () => loadConfigFromEnv({
+      PORT: '3333',
+      BASE_URL: 'https://subjector.onrender.com',
+      HEALTH_PIN: '2468',
+      SLACK_BOT_TOKEN: 'xoxb-token',
+      SLACK_SIGNING_SECRET: 'secret',
+      SUPABASE_URL: 'https://example.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+      AI_EVALUATION_PROVIDER: 'gemini',
+      MEETING_CHANNEL_ID: 'C1',
+      IN_PROCESS_CHANNEL_ID: 'C2',
+      FINALS_CHANNEL_ID: 'C3',
+      LEAD_USER_KEY: 'suhyeon',
+      USERS_JSON: usersJson
+    }),
+    /GEMINI_API_KEY/
+  );
 });
 
 test('loadConfigFromEnv reports missing required variables', () => {

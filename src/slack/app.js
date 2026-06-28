@@ -10,8 +10,8 @@ import {
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
 import { createInProcessService } from '../services/inProcessService.js';
-import { createOpenAiTaskEvaluator } from '../services/openaiTaskEvaluator.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
+import { createTaskEvaluator } from '../services/taskEvaluatorFactory.js';
 import { buildFinalsPreviewBlocks, buildTextMessageBlocks } from './blocks.js';
 import { isDirectUserMessage } from './events.js';
 
@@ -24,8 +24,10 @@ function buildBootHealthStatus(config) {
       message: config.supabase?.url ? 'configured' : 'missing env'
     },
     openai: {
-      ok: Boolean(config.openai?.apiKey),
-      message: config.openai?.apiKey ? 'configured' : 'missing env'
+      ok: config.ai?.evaluationProvider !== 'openai' || Boolean(config.openai?.apiKey),
+      message: config.ai?.evaluationProvider === 'openai'
+        ? (config.openai?.apiKey ? 'configured for evaluation' : 'missing env')
+        : 'not selected for evaluation'
     },
     channels: {
       meeting: { ok: Boolean(config.channels?.meeting), message: config.channels?.meeting ? '#회의-결과록 configured' : 'missing channel id' },
@@ -394,10 +396,7 @@ export function createSlackApp({ config, logger = console, deferInitialization =
     slackClient: app.client,
     config,
     logger,
-    taskEvaluator: createOpenAiTaskEvaluator({
-      apiKey: config.openai.apiKey,
-      model: config.openai.evaluationModel
-    })
+    taskEvaluator: createTaskEvaluator({ config })
   });
 
   registerDmHandlers(app, config, logger, service);
