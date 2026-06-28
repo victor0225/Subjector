@@ -86,6 +86,36 @@ function createFakeStore({ existingMessage = null, tasks = [] } = {}) {
     async listDailyChangeRequestsForUser(input) {
       calls.push(['listDailyChangeRequestsForUser', input]);
       return [];
+    },
+    async listAllTasks(input) {
+      calls.push(['listAllTasks', input]);
+      return [
+        {
+          id: 'task-1',
+          title: '센서 후보 정리',
+          status: '완료',
+          importance: '🔴 상',
+          coordination: '🟡 중'
+        }
+      ];
+    },
+    async listAllTaskResults(input) {
+      calls.push(['listAllTaskResults', input]);
+      return [
+        {
+          taskId: 'task-1',
+          taskTitle: '센서 후보 정리',
+          resultType: '완료',
+          rawText: '[결론]\n- ESP32 우선 추천'
+        }
+      ];
+    },
+    async listAllChangeRequests(input) {
+      calls.push(['listAllChangeRequests', input]);
+      return [];
+    },
+    async createFinalsPreview(input) {
+      calls.push(['createFinalsPreview', input]);
     }
   };
 }
@@ -269,4 +299,27 @@ test('handleEndWork stores the end time and returns a daily summary', async () =
   });
   assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].fromIso, '2026-06-27T15:00:00.000Z');
   assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].toIso, '2026-06-28T15:00:00.000Z');
+});
+
+test('handleFinalsPreview stores a cumulative preview and returns a DM message', async () => {
+  const store = createFakeStore();
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleFinalsPreview({ user });
+
+  assert.match(result.dmText, /#finals 누적 업데이트 미리보기/);
+  assert.match(result.dmText, /센서 후보 정리/);
+  assert.match(result.dmText, /ESP32 우선 추천/);
+  const previewCall = store.calls.find(([name]) => name === 'createFinalsPreview');
+  assert.equal(previewCall[1].workDate, '2026-06-28');
+  assert.equal(previewCall[1].preview.workDate, '2026-06-28');
+  assert.ok(store.calls.some(([name]) => name === 'listAllTasks'));
+  assert.ok(store.calls.some(([name]) => name === 'listAllTaskResults'));
+  assert.ok(store.calls.some(([name]) => name === 'listAllChangeRequests'));
 });

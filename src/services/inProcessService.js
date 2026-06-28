@@ -1,4 +1,5 @@
 import { buildDailySummaryMessage } from '../domain/dailySummary.js';
+import { buildFinalsPreviewMessage, buildFinalsPreviewRecord } from '../domain/finalsSummary.js';
 import { buildInProcessBoardMessage, buildInProcessMessagePurpose, formatKstDate } from '../domain/inProcessBoard.js';
 import { taskActionFromActionId } from '../domain/taskActions.js';
 import { formatDisplayName } from '../domain/users.js';
@@ -116,6 +117,31 @@ export function createInProcessService({ store, slackClient, config, users = con
     };
   }
 
+  async function handleFinalsPreview({ user }) {
+    const now = clock();
+    const workDate = formatKstDate(now);
+    const [tasks, results, changeRequests] = await Promise.all([
+      store.listAllTasks({ limit: 100 }),
+      store.listAllTaskResults({ limit: 100 }),
+      store.listAllChangeRequests({ limit: 100 })
+    ]);
+    const preview = buildFinalsPreviewRecord({
+      workDate,
+      tasks,
+      results,
+      changeRequests
+    });
+
+    await store.createFinalsPreview({
+      workDate,
+      preview
+    });
+
+    return {
+      dmText: buildFinalsPreviewMessage(preview)
+    };
+  }
+
   async function handleTaskActionSubmission({ actionId, taskId, assigneeUserKey, submittedByUserKey, rawText }) {
     const action = taskActionFromActionId(actionId);
     if (!action) {
@@ -166,6 +192,7 @@ export function createInProcessService({ store, slackClient, config, users = con
   return {
     handleStartWork,
     handleEndWork,
+    handleFinalsPreview,
     handleTaskActionSubmission,
     getTaskTitle
   };

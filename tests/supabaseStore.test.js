@@ -169,6 +169,32 @@ test('listDailyTasksForUser reads task states for a user summary', async () => {
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[2] === 'status'));
 });
 
+test('listAllTasks reads cumulative task states for finals preview', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      tasks: [
+        {
+          id: 'task-1',
+          title: '센서 후보 정리',
+          status: '완료',
+          importance: '🔴 상',
+          coordination: '🟡 중',
+          source_type: 'manual',
+          context: {},
+          created_at: '2026-06-28T01:00:00.000Z'
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const tasks = await store.listAllTasks({ limit: 50 });
+
+  assert.equal(tasks[0].title, '센서 후보 정리');
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'order' && call[2] === 'created_at'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'limit' && call[2] === 50));
+});
+
 test('findSlackMessage maps the latest stored Slack message', async () => {
   const supabase = createFakeSupabase({
     singleData: {
@@ -265,6 +291,31 @@ test('listDailyTaskResultsForUser reads Codex outputs submitted today', async ()
   assert.ok(supabase.calls.some((call) => call[0] === 'task_results' && call[1] === 'lt' && call[2] === 'created_at'));
 });
 
+test('listAllTaskResults reads cumulative Codex outputs for finals preview', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      task_results: [
+        {
+          task_id: 'task-1',
+          result_type: '완료',
+          raw_text: '[완료 제출 결과]',
+          created_at: '2026-06-28T02:00:00.000Z',
+          tasks: {
+            title: '센서 후보 정리'
+          }
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const results = await store.listAllTaskResults({ limit: 50 });
+
+  assert.equal(results[0].taskTitle, '센서 후보 정리');
+  assert.equal(results[0].resultType, '완료');
+  assert.ok(supabase.calls.some((call) => call[0] === 'task_results' && call[1] === 'limit' && call[2] === 50));
+});
+
 test('createChangeRequest inserts a task change request', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);
@@ -308,6 +359,49 @@ test('listDailyChangeRequestsForUser reads change requests proposed today', asyn
   assert.equal(requests[0].taskTitle, 'UI 흐름 검토');
   assert.equal(requests[0].status, '투표 중');
   assert.ok(supabase.calls.some((call) => call[0] === 'change_requests' && call[1] === 'eq' && call[2] === 'proposer_user_key'));
+});
+
+test('listAllChangeRequests reads cumulative change history for finals preview', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      change_requests: [
+        {
+          task_id: 'task-2',
+          status: '투표 중',
+          raw_text: '[변경 제안]',
+          created_at: '2026-06-28T03:00:00.000Z',
+          tasks: {
+            title: 'UI 흐름 검토'
+          }
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const requests = await store.listAllChangeRequests({ limit: 50 });
+
+  assert.equal(requests[0].taskTitle, 'UI 흐름 검토');
+  assert.equal(requests[0].status, '투표 중');
+  assert.ok(supabase.calls.some((call) => call[0] === 'change_requests' && call[1] === 'limit' && call[2] === 50));
+});
+
+test('createFinalsPreview stores a pending finals preview', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.createFinalsPreview({
+    workDate: '2026-06-28',
+    preview: {
+      workDate: '2026-06-28',
+      confirmed: ['센서 후보 정리']
+    }
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'finals_updates' && call[1] === 'insert');
+  assert.equal(insert[2].work_date, '2026-06-28');
+  assert.equal(insert[2].status, '미리보기');
+  assert.equal(insert[2].preview.confirmed[0], '센서 후보 정리');
 });
 
 test('updateTaskStatus updates task status and completion timestamp', async () => {

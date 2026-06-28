@@ -46,8 +46,8 @@ export function handleDmCommand({ text, user, config }) {
 
     return {
       type: 'force_finals_preview',
-      text: `${displayName}, finals 업데이트 명령을 확인했습니다. #finals 미리보기 생성은 다음 구현 단계에서 연결됩니다.`,
-      createFinalsPreview: false
+      text: `${displayName}, finals 업데이트 명령을 확인했습니다. #finals 누적 업데이트 미리보기를 생성하겠습니다.`,
+      createFinalsPreview: true
     };
   }
 

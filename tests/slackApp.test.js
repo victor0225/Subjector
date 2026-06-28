@@ -126,6 +126,61 @@ test('handleDirectDmMessage reports daily summary failures to the user', async (
   assert.match(replies[0].text, /Render 로그/);
 });
 
+test('handleDirectDmMessage sends a finals preview for lead finals update commands', async () => {
+  const replies = [];
+  const serviceCalls = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      user: 'U1',
+      text: 'finals 업데이트'
+    },
+    say: async (payload) => replies.push(payload),
+    config,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleFinalsPreview(input) {
+        serviceCalls.push(input);
+        return {
+          dmText: '#finals 누적 업데이트 미리보기\n아직 #finals에는 반영하지 않았습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].user.key, 'suhyeon');
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /#finals 누적 업데이트 미리보기/);
+});
+
+test('handleDirectDmMessage reports finals preview failures to the lead', async () => {
+  const replies = [];
+  const errors = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      user: 'U1',
+      text: 'finals 업데이트'
+    },
+    say: async (payload) => replies.push(payload),
+    config,
+    logger: { info() {}, error(error) { errors.push(error); } },
+    inProcessService: {
+      async handleFinalsPreview() {
+        throw new Error('finals failed');
+      }
+    }
+  });
+
+  assert.equal(errors.length, 1);
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /#finals 미리보기 생성에 실패했습니다/);
+  assert.match(replies[0].text, /Render 로그/);
+});
+
 test('handleTaskActionButton opens the matching Slack modal', async () => {
   let acked = false;
   const opened = [];

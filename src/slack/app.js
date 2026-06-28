@@ -99,6 +99,22 @@ export async function handleDirectDmMessage({ message, say, config, logger = con
     }
   }
 
+  if (response.createFinalsPreview && inProcessService) {
+    try {
+      const result = await inProcessService.handleFinalsPreview({ user });
+      await say({
+        text: result.dmText,
+        blocks: buildTextMessageBlocks(result.dmText)
+      });
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, #finals 미리보기 생성에 실패했습니다. Render 로그를 확인한 뒤 다시 'finals 업데이트'를 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
   await say({
     text: response.text,
     blocks: buildTextMessageBlocks(response.text)

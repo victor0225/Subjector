@@ -125,6 +125,17 @@ export function createSupabaseStore(supabase) {
     return result.data.map(mapTask);
   }
 
+  async function listAllTasks({ limit = 100 } = {}) {
+    const result = await supabase
+      .from('tasks')
+      .select('id,title,status,importance,coordination,source_type,context,created_at')
+      .order('created_at', { ascending: true })
+      .limit(limit);
+
+    throwIfError(result, 'Failed to list all tasks');
+    return result.data.map(mapTask);
+  }
+
   async function findSlackMessage({ purpose, channelId }) {
     const result = await supabase
       .from('slack_messages')
@@ -176,6 +187,17 @@ export function createSupabaseStore(supabase) {
     return result.data.map(mapTaskResult);
   }
 
+  async function listAllTaskResults({ limit = 100 } = {}) {
+    const result = await supabase
+      .from('task_results')
+      .select('task_id,result_type,raw_text,created_at,tasks(title)')
+      .order('created_at', { ascending: true })
+      .limit(limit);
+
+    throwIfError(result, 'Failed to list all task results');
+    return result.data.map(mapTaskResult);
+  }
+
   async function createChangeRequest({ taskId, proposerUserKey, rawText }) {
     const result = await supabase
       .from('change_requests')
@@ -200,6 +222,29 @@ export function createSupabaseStore(supabase) {
 
     throwIfError(result, 'Failed to list daily change requests');
     return result.data.map(mapChangeRequest);
+  }
+
+  async function listAllChangeRequests({ limit = 100 } = {}) {
+    const result = await supabase
+      .from('change_requests')
+      .select('task_id,status,raw_text,created_at,tasks(title)')
+      .order('created_at', { ascending: true })
+      .limit(limit);
+
+    throwIfError(result, 'Failed to list all change requests');
+    return result.data.map(mapChangeRequest);
+  }
+
+  async function createFinalsPreview({ workDate, preview }) {
+    const result = await supabase
+      .from('finals_updates')
+      .insert({
+        work_date: workDate,
+        status: '미리보기',
+        preview
+      });
+
+    throwIfError(result, 'Failed to create finals preview');
   }
 
   async function updateTaskStatus({ taskId, status, completedAt = null }) {
@@ -237,12 +282,16 @@ export function createSupabaseStore(supabase) {
     listOpenTasksForUser,
     markAcceptedTasksUnresolvedForUser,
     listDailyTasksForUser,
+    listAllTasks,
     findSlackMessage,
     getTaskById,
     submitTaskResult,
     listDailyTaskResultsForUser,
+    listAllTaskResults,
     createChangeRequest,
     listDailyChangeRequestsForUser,
+    listAllChangeRequests,
+    createFinalsPreview,
     updateTaskStatus,
     upsertSlackMessage
   };

@@ -49,9 +49,9 @@ test('finals 업데이트 is allowed for lead user', () => {
   });
 
   assert.equal(result.type, 'force_finals_preview');
-  assert.equal(result.createFinalsPreview, false);
+  assert.equal(result.createFinalsPreview, true);
   assert.match(result.text, /명령을 확인했습니다/);
-  assert.match(result.text, /다음 구현 단계/);
+  assert.match(result.text, /미리보기/);
 });
 
 test('finals 업데이트 is rejected for non-lead user', () => {
