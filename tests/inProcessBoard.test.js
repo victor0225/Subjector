@@ -93,7 +93,7 @@ test('buildInProcessBoardMessage attaches the four MVP task action buttons', () 
   assert.ok(actions.elements.every((element) => element.value.includes('suhyeon')));
 });
 
-test('buildInProcessBoardMessage hides the accept button after task acceptance', () => {
+test('buildInProcessBoardMessage replaces accept button with prompt copy after task acceptance', () => {
   const message = buildInProcessBoardMessage({
     user,
     workDate: '2026-06-28',
@@ -113,8 +113,17 @@ test('buildInProcessBoardMessage hides the accept button after task acceptance',
 
   assert.match(message.text, /🟡 `수락`/);
   assert.deepEqual(actions.elements.map((element) => element.action_id), [
+    'copy_codex_prompt',
     'task_complete',
     'task_stop_today',
     'task_change_request'
   ]);
+  assert.deepEqual(actions.elements.map((element) => element.text.text), [
+    'Codex 프롬프트 보기/복사',
+    '완료',
+    '오늘은 여기까지',
+    '변경 요청'
+  ]);
+  assert.equal(actions.elements[0].value, 'task-1');
+  assert.equal(actions.elements.some((element) => element.action_id === 'task_accept_generate_prompt'), false);
 });

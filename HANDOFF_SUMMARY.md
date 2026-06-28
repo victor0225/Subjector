@@ -110,7 +110,7 @@ Implemented:
   - `변경 요청` stores a `change_requests` row and changes task status to `변경 요청 중`.
   - `수락 및 Codex 프롬프트 생성` now changes task status to `수락`, stores `accepted_at`, generates the Subjector Codex prompt, posts it in the user's `#in-process` board thread with `프롬프트 보기/복사` above the prompt body, and stores the prompt in `codex_prompts`.
   - `프롬프트 보기/복사` is handled by Slack interactivity. It immediately acknowledges the button and sends the user an ephemeral copyable prompt body. Slack cannot directly copy text to the clipboard from a server-side button.
-  - Accepted tasks no longer show the `수락 및 Codex 프롬프트 생성` button again.
+  - Accepted tasks no longer show the `수락 및 Codex 프롬프트 생성` button again. Instead, they show `Codex 프롬프트 보기/복사`, which retrieves the stored prompt without creating a duplicate prompt.
   - Task statuses in `#in-process` are displayed as red/yellow/green Slack-friendly badges.
   - If a stored `#in-process` board message was manually deleted and Slack returns `message_not_found`, Subjector recreates the board message and stores the new Slack timestamp on the next board refresh.
   - `퇴근` now records the user's end-of-work session, changes still-accepted tasks to `미정리`, refreshes the user's `#in-process` board, gathers today's task results/change requests, and sends a DM daily summary.

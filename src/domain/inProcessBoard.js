@@ -70,6 +70,15 @@ function taskActionButton({ actionId, text, task, user, style }) {
   return button;
 }
 
+function codexPromptCopyButton(task) {
+  return {
+    type: 'button',
+    action_id: 'copy_codex_prompt',
+    text: plainText('Codex 프롬프트 보기/복사'),
+    value: task.id
+  };
+}
+
 function taskActionsBlock({ task, user }) {
   const elements = [
     taskActionButton({ actionId: 'task_complete', text: '완료', task, user }),
@@ -81,6 +90,8 @@ function taskActionsBlock({ task, user }) {
     elements.unshift(
       taskActionButton({ actionId: 'task_accept_generate_prompt', text: '수락 및 Codex 프롬프트 생성', task, user, style: 'primary' })
     );
+  } else {
+    elements.unshift(codexPromptCopyButton(task));
   }
 
   return {
