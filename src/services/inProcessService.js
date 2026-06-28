@@ -2,6 +2,7 @@ import { buildCodexPrompt } from '../domain/codexPrompt.js';
 import { buildDailySummaryMessage } from '../domain/dailySummary.js';
 import { buildFinalsChannelMessage, buildFinalsPreviewMessage, buildFinalsPreviewRecord } from '../domain/finalsSummary.js';
 import { buildInProcessBoardMessage, buildInProcessMessagePurpose, formatKstDate } from '../domain/inProcessBoard.js';
+import { buildEvaluationFeedbackMessage, normalizeTaskEvaluation } from '../domain/taskEvaluation.js';
 import { taskActionFromActionId } from '../domain/taskActions.js';
 import { formatDisplayName } from '../domain/users.js';
 import { buildCodexPromptBlocks, buildCodexPromptCopyBlocks, buildTextMessageBlocks } from '../slack/blocks.js';
@@ -33,7 +34,7 @@ function isSlackMessageNotFound(error) {
     || error?.message === 'message_not_found';
 }
 
-export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date() }) {
+export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date(), taskEvaluator = null }) {
   async function postBoardMessage({ channelId, message, purpose }) {
     const posted = await slackClient.chat.postMessage({
       channel: channelId,
@@ -354,6 +355,21 @@ export function createInProcessService({ store, slackClient, config, users = con
     const now = clock();
     const task = await store.getTaskById(taskId);
     const ownerKey = task?.assigneeUserKey ?? assigneeUserKey;
+    let evaluation = null;
+    let finalStatus = action.status;
+
+    if (taskEvaluator && ['task_complete', 'task_stop_today'].includes(actionId)) {
+      evaluation = normalizeTaskEvaluation(await taskEvaluator.evaluateSubmission({
+        actionId,
+        actionLabel: action.label,
+        task,
+        rawText
+      }));
+
+      if (actionId === 'task_complete' && evaluation.blocksCompletion) {
+        finalStatus = '보완 필요';
+      }
+    }
 
     if (actionId === 'task_change_request') {
       await store.createChangeRequest({
@@ -362,28 +378,49 @@ export function createInProcessService({ store, slackClient, config, users = con
         rawText
       });
     } else {
-      await store.submitTaskResult({
+      const resultInput = {
         taskId,
         resultType: action.resultType,
         rawText,
         submittedByUserKey
-      });
+      };
+      if (evaluation) {
+        resultInput.parsedSummary = evaluation;
+      }
+
+      await store.submitTaskResult(resultInput);
     }
 
-    await store.updateTaskStatus({
+    const statusInput = {
       taskId,
-      status: action.status,
-      completedAt: action.status === '완료' ? now.toISOString() : null
-    });
+      status: finalStatus
+    };
+    if (finalStatus === '완료') {
+      statusInput.completedAt = now.toISOString();
+    }
+
+    await store.updateTaskStatus(statusInput);
 
     const owner = users.find((candidate) => candidate.key === ownerKey);
     if (owner) {
       await renderBoard({ user: owner, now });
     }
 
+    if (evaluation) {
+      return {
+        status: finalStatus,
+        responseText: buildEvaluationFeedbackMessage({
+          actionLabel: action.label,
+          taskTitle: task?.title ?? 'task',
+          finalStatus,
+          evaluation
+        })
+      };
+    }
+
     return {
-      status: action.status,
-      responseText: `${formatDisplayName(owner)}, task 상태를 ${action.status}로 변경했습니다.`
+      status: finalStatus,
+      responseText: `${formatDisplayName(owner)}, task 상태를 ${finalStatus}로 변경했습니다.`
     };
   }
 

@@ -15,7 +15,8 @@ test('buildDailySummaryMessage summarizes completed, stopped, unresolved, and ch
     tasks: [
       { id: 'task-1', title: '센서 후보 정리', status: '완료', importance: '🔴 상', coordination: '🟡 중' },
       { id: 'task-2', title: 'UI 흐름 검토', status: '오늘은 여기까지', importance: '🟡 중', coordination: '🟡 중' },
-      { id: 'task-3', title: '데이터 수집 기준 정리', status: '미정리', importance: '🟡 중', coordination: '🔴 상' }
+      { id: 'task-3', title: '데이터 수집 기준 정리', status: '미정리', importance: '🟡 중', coordination: '🔴 상' },
+      { id: 'task-4', title: '검수 기준 보완', status: '보완 필요', importance: '🔴 상', coordination: '🟡 중' }
     ],
     results: [
       { taskId: 'task-1', taskTitle: '센서 후보 정리', resultType: '완료', rawText: '[완료 제출 결과]\n[결론]\n- ESP32 우선 추천' },
@@ -35,6 +36,8 @@ test('buildDailySummaryMessage summarizes completed, stopped, unresolved, and ch
   assert.match(message, /와이어프레임 1차 확인/);
   assert.match(message, /미정리\/남은 task/);
   assert.match(message, /데이터 수집 기준 정리/);
+  assert.match(message, /검수 기준 보완/);
+  assert.match(message, /보완 필요/);
   assert.match(message, /변경 요청/);
   assert.match(message, /승인 버튼 문구 변경/);
 });

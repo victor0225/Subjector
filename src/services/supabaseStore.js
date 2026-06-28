@@ -3,6 +3,7 @@ const OPEN_TASK_STATUSES = [
   '수락',
   '완료',
   '오늘은 여기까지',
+  '보완 필요',
   '미정리',
   '변경 요청 중',
   '회의 필요'
@@ -54,6 +55,7 @@ function mapTaskResult(row) {
     taskTitle: row.tasks?.title ?? 'task',
     resultType: row.result_type,
     rawText: row.raw_text,
+    parsedSummary: row.parsed_summary ?? {},
     createdAt: row.created_at
   };
 }
@@ -208,14 +210,15 @@ export function createSupabaseStore(supabase) {
     return mapTask(result.data);
   }
 
-  async function submitTaskResult({ taskId, resultType, rawText, submittedByUserKey }) {
+  async function submitTaskResult({ taskId, resultType, rawText, submittedByUserKey, parsedSummary = {} }) {
     const result = await supabase
       .from('task_results')
       .insert({
         task_id: taskId,
         result_type: resultType,
         raw_text: rawText,
-        submitted_by_user_key: submittedByUserKey
+        submitted_by_user_key: submittedByUserKey,
+        parsed_summary: parsedSummary
       });
 
     throwIfError(result, 'Failed to submit task result');
@@ -250,7 +253,7 @@ export function createSupabaseStore(supabase) {
   async function listDailyTaskResultsForUser({ userKey, fromIso, toIso }) {
     const result = await supabase
       .from('task_results')
-      .select('task_id,result_type,raw_text,created_at,tasks(title)')
+      .select('task_id,result_type,raw_text,parsed_summary,created_at,tasks(title)')
       .eq('submitted_by_user_key', userKey)
       .gte('created_at', fromIso)
       .lt('created_at', toIso)
@@ -263,7 +266,7 @@ export function createSupabaseStore(supabase) {
   async function listAllTaskResults({ limit = 100 } = {}) {
     const result = await supabase
       .from('task_results')
-      .select('task_id,result_type,raw_text,created_at,tasks(title)')
+      .select('task_id,result_type,raw_text,parsed_summary,created_at,tasks(title)')
       .order('created_at', { ascending: true })
       .limit(limit);
 

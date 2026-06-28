@@ -150,6 +150,7 @@ test('listOpenTasksForUser reads open tasks and maps database columns', async ()
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'assignee_user_key'));
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[2] === 'status'));
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[3].includes('완료')));
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[3].includes('보완 필요')));
 });
 
 test('markAcceptedTasksUnresolvedForUser changes accepted tasks to unresolved', async () => {
@@ -273,13 +274,18 @@ test('submitTaskResult inserts a raw Codex result', async () => {
     taskId: 'task-1',
     resultType: '완료',
     rawText: '[완료 제출 결과]',
-    submittedByUserKey: 'suhyeon'
+    submittedByUserKey: 'suhyeon',
+    parsedSummary: {
+      verdict: 'sufficient',
+      score: 92
+    }
   });
 
   const insert = supabase.calls.find((call) => call[0] === 'task_results' && call[1] === 'insert');
   assert.equal(insert[2].task_id, 'task-1');
   assert.equal(insert[2].result_type, '완료');
   assert.equal(insert[2].submitted_by_user_key, 'suhyeon');
+  assert.equal(insert[2].parsed_summary.verdict, 'sufficient');
 });
 
 test('createCodexPrompt inserts a generated prompt with Slack location', async () => {
@@ -332,6 +338,7 @@ test('listDailyTaskResultsForUser reads Codex outputs submitted today', async ()
           task_id: 'task-1',
           result_type: '완료',
           raw_text: '[완료 제출 결과]',
+          parsed_summary: { verdict: 'sufficient' },
           created_at: '2026-06-28T02:00:00.000Z',
           tasks: {
             title: '센서 후보 정리'
@@ -350,6 +357,7 @@ test('listDailyTaskResultsForUser reads Codex outputs submitted today', async ()
 
   assert.equal(results[0].taskTitle, '센서 후보 정리');
   assert.equal(results[0].resultType, '완료');
+  assert.equal(results[0].parsedSummary.verdict, 'sufficient');
   assert.ok(supabase.calls.some((call) => call[0] === 'task_results' && call[1] === 'gte' && call[2] === 'created_at'));
   assert.ok(supabase.calls.some((call) => call[0] === 'task_results' && call[1] === 'lt' && call[2] === 'created_at'));
 });
@@ -362,6 +370,7 @@ test('listAllTaskResults reads cumulative Codex outputs for finals preview', asy
           task_id: 'task-1',
           result_type: '완료',
           raw_text: '[완료 제출 결과]',
+          parsed_summary: { verdict: 'sufficient' },
           created_at: '2026-06-28T02:00:00.000Z',
           tasks: {
             title: '센서 후보 정리'

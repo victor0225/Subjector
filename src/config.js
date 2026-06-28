@@ -66,7 +66,8 @@ export function loadConfigFromEnv(env = process.env) {
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY.trim()
     },
     openai: {
-      apiKey: env.OPENAI_API_KEY.trim()
+      apiKey: env.OPENAI_API_KEY.trim(),
+      evaluationModel: env.OPENAI_EVALUATION_MODEL?.trim() || 'gpt-5.2'
     },
     channels: {
       meeting: env.MEETING_CHANNEL_ID.trim(),

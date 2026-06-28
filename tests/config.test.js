@@ -47,6 +47,28 @@ test('loadConfigFromEnv builds app config from environment values', () => {
   assert.equal(config.channels.finals, 'C3');
   assert.equal(config.leadUserKey, 'suhyeon');
   assert.equal(config.users.length, 3);
+  assert.equal(config.openai.evaluationModel, 'gpt-5.2');
+});
+
+test('loadConfigFromEnv allows overriding the OpenAI evaluation model', () => {
+  const config = loadConfigFromEnv({
+    PORT: '3333',
+    BASE_URL: 'https://subjector.onrender.com',
+    HEALTH_PIN: '2468',
+    SLACK_BOT_TOKEN: 'xoxb-token',
+    SLACK_SIGNING_SECRET: 'secret',
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+    OPENAI_API_KEY: 'sk-key',
+    OPENAI_EVALUATION_MODEL: 'gpt-5.2-mini',
+    MEETING_CHANNEL_ID: 'C1',
+    IN_PROCESS_CHANNEL_ID: 'C2',
+    FINALS_CHANNEL_ID: 'C3',
+    LEAD_USER_KEY: 'suhyeon',
+    USERS_JSON: usersJson
+  });
+
+  assert.equal(config.openai.evaluationModel, 'gpt-5.2-mini');
 });
 
 test('loadConfigFromEnv reports missing required variables', () => {

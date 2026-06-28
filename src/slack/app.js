@@ -10,6 +10,7 @@ import {
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
 import { createInProcessService } from '../services/inProcessService.js';
+import { createOpenAiTaskEvaluator } from '../services/openaiTaskEvaluator.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
 import { buildFinalsPreviewBlocks, buildTextMessageBlocks } from './blocks.js';
 import { isDirectUserMessage } from './events.js';
@@ -216,7 +217,7 @@ export async function handleCodexPromptCopyButton({ ack, body, client, logger = 
   }
 }
 
-export async function handleTaskActionViewSubmission({ ack, body, view, config, logger = console, inProcessService }) {
+export async function handleTaskActionViewSubmission({ ack, body, view, client = null, config, logger = console, inProcessService }) {
   const metadata = parseTaskActionMetadata(view.private_metadata);
   const submittedBy = getUserBySlackId(config.users, body.user.id);
 
@@ -241,16 +242,40 @@ export async function handleTaskActionViewSubmission({ ack, body, view, config, 
     return;
   }
 
-  await inProcessService.handleTaskActionSubmission({
-    actionId: metadata.actionId,
-    taskId: metadata.taskId,
-    assigneeUserKey: metadata.assigneeUserKey,
-    submittedByUserKey: submittedBy.key,
-    rawText
-  });
-
-  logger.info?.(`Task action submitted: ${metadata.actionId}`);
   await ack();
+
+  try {
+    const result = await inProcessService.handleTaskActionSubmission({
+      actionId: metadata.actionId,
+      taskId: metadata.taskId,
+      assigneeUserKey: metadata.assigneeUserKey,
+      submittedByUserKey: submittedBy.key,
+      rawText
+    });
+
+    logger.info?.(`Task action submitted: ${metadata.actionId}`);
+
+    if (client && result?.responseText) {
+      await client.chat.postEphemeral({
+        channel: config.channels.inProcess,
+        user: body.user.id,
+        text: result.responseText,
+        blocks: buildTextMessageBlocks(result.responseText)
+      });
+    }
+  } catch (error) {
+    logger.error?.(error);
+
+    if (client) {
+      const text = 'task 제출을 처리하지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.';
+      await client.chat.postEphemeral({
+        channel: config.channels.inProcess,
+        user: body.user.id,
+        text,
+        blocks: buildTextMessageBlocks(text)
+      });
+    }
+  }
 }
 
 export async function handleFinalsApproveButton({ ack, body, client, config, logger = console, inProcessService }) {
@@ -325,11 +350,12 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
     });
   }
 
-  app.view(TASK_ACTION_CALLBACK_ID, async ({ ack, body, view }) => {
+  app.view(TASK_ACTION_CALLBACK_ID, async ({ ack, body, view, client }) => {
     await handleTaskActionViewSubmission({
       ack,
       body,
       view,
+      client,
       config,
       logger,
       inProcessService
@@ -367,7 +393,11 @@ export function createSlackApp({ config, logger = console, deferInitialization =
     })),
     slackClient: app.client,
     config,
-    logger
+    logger,
+    taskEvaluator: createOpenAiTaskEvaluator({
+      apiKey: config.openai.apiKey,
+      model: config.openai.evaluationModel
+    })
   });
 
   registerDmHandlers(app, config, logger, service);

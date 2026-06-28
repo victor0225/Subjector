@@ -477,3 +477,63 @@ test('handleTaskActionViewSubmission stores modal input through the in-process s
   assert.equal(serviceCalls[0].submittedByUserKey, 'suhyeon');
   assert.equal(serviceCalls[0].rawText, '[완료 제출 결과]');
 });
+
+test('handleTaskActionViewSubmission acknowledges before evaluation and sends ephemeral feedback', async () => {
+  let acked = false;
+  const events = [];
+
+  await handleTaskActionViewSubmission({
+    ack: async (payload) => {
+      acked = true;
+      events.push(['ack', payload]);
+    },
+    body: {
+      user: { id: 'U1' }
+    },
+    view: {
+      private_metadata: JSON.stringify({
+        actionId: 'task_complete',
+        taskId: 'task-1',
+        assigneeUserKey: 'suhyeon'
+      }),
+      state: {
+        values: {
+          task_action_input: {
+            raw_text: {
+              value: '[완료 제출 결과]'
+            }
+          }
+        }
+      }
+    },
+    client: {
+      chat: {
+        async postEphemeral(input) {
+          events.push(['postEphemeral', input]);
+        }
+      }
+    },
+    config: {
+      ...config,
+      channels: {
+        inProcess: 'C_IN_PROCESS'
+      }
+    },
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleTaskActionSubmission(input) {
+        events.push(['service', { ackedBeforeService: acked, input }]);
+        return {
+          status: '보완 필요',
+          responseText: '*센서 후보 정리* 완료 제출 검수 결과입니다.'
+        };
+      }
+    }
+  });
+
+  assert.deepEqual(events.map((event) => event[0]), ['ack', 'service', 'postEphemeral']);
+  assert.equal(events[1][1].ackedBeforeService, true);
+  assert.equal(events[2][1].channel, 'C_IN_PROCESS');
+  assert.equal(events[2][1].user, 'U1');
+  assert.match(events[2][1].text, /검수 결과/);
+});

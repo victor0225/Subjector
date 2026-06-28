@@ -47,7 +47,7 @@ export function buildDailySummaryMessage({ user, workDate, tasks = [], results =
   const displayName = formatDisplayName(user);
   const completedTasks = tasks.filter((task) => task.status === '완료');
   const stoppedTasks = tasks.filter((task) => task.status === '오늘은 여기까지');
-  const unresolvedTasks = tasks.filter((task) => ['미정리', '수락', '변경 요청 중', '회의 필요'].includes(task.status));
+  const unresolvedTasks = tasks.filter((task) => ['미정리', '수락', '보완 필요', '변경 요청 중', '회의 필요'].includes(task.status));
 
   const completedRows = resultRows(results, '완료', completedTasks);
   const stoppedRows = resultRows(results, '오늘은 여기까지', stoppedTasks);

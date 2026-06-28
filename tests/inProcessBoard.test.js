@@ -127,3 +127,22 @@ test('buildInProcessBoardMessage replaces accept button with prompt copy after t
   assert.equal(actions.elements[0].value, 'task-1');
   assert.equal(actions.elements.some((element) => element.action_id === 'task_accept_generate_prompt'), false);
 });
+
+test('buildInProcessBoardMessage highlights needs-revision tasks as red', () => {
+  const message = buildInProcessBoardMessage({
+    user,
+    workDate: '2026-06-28',
+    tasks: [
+      {
+        id: 'task-1',
+        title: '센서 후보 정리',
+        status: '보완 필요',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+
+  assert.match(message.text, /🔴 `보완 필요`/);
+});
