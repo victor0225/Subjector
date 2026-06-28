@@ -15,6 +15,16 @@ function kstDayRange(workDate) {
   };
 }
 
+function allUsersEndedWork({ users, sessions }) {
+  const endedUserKeys = new Set(
+    sessions
+      .filter((session) => session.endedAt)
+      .map((session) => session.userKey)
+  );
+
+  return users.every((user) => endedUserKeys.has(user.key));
+}
+
 export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date() }) {
   async function renderBoard({ user, now = clock() }) {
     const workDate = formatKstDate(now);
@@ -85,41 +95,7 @@ export function createInProcessService({ store, slackClient, config, users = con
     };
   }
 
-  async function handleEndWork({ user }) {
-    const now = clock();
-    const workDate = formatKstDate(now);
-    const { fromIso, toIso } = kstDayRange(workDate);
-
-    await store.endWorkSession({
-      userKey: user.key,
-      workDate,
-      endedAt: now.toISOString()
-    });
-
-    await store.markAcceptedTasksUnresolvedForUser({
-      userKey: user.key
-    });
-
-    const [tasks, results, changeRequests] = await Promise.all([
-      store.listDailyTasksForUser({ userKey: user.key }),
-      store.listDailyTaskResultsForUser({ userKey: user.key, fromIso, toIso }),
-      store.listDailyChangeRequestsForUser({ userKey: user.key, fromIso, toIso })
-    ]);
-
-    return {
-      dmText: buildDailySummaryMessage({
-        user,
-        workDate,
-        tasks,
-        results,
-        changeRequests
-      })
-    };
-  }
-
-  async function handleFinalsPreview({ user }) {
-    const now = clock();
-    const workDate = formatKstDate(now);
+  async function createFinalsPreviewForWorkDate(workDate) {
     const [tasks, results, changeRequests] = await Promise.all([
       store.listAllTasks({ limit: 100 }),
       store.listAllTaskResults({ limit: 100 }),
@@ -140,6 +116,66 @@ export function createInProcessService({ store, slackClient, config, users = con
     return {
       dmText: buildFinalsPreviewMessage(preview)
     };
+  }
+
+  async function maybeCreateAutomaticFinalsPreview({ workDate }) {
+    const sessions = await store.listEndedWorkSessionsForDate({ workDate });
+    if (!allUsersEndedWork({ users, sessions })) {
+      return null;
+    }
+
+    const existingFinalsUpdate = await store.getFinalsUpdateForDate({ workDate });
+    if (existingFinalsUpdate) {
+      return null;
+    }
+
+    const result = await createFinalsPreviewForWorkDate(workDate);
+    const leadUser = users.find((candidate) => candidate.key === config.leadUserKey);
+
+    return {
+      finalsPreviewDmText: result.dmText,
+      leadUser
+    };
+  }
+
+  async function handleEndWork({ user }) {
+    const now = clock();
+    const workDate = formatKstDate(now);
+    const { fromIso, toIso } = kstDayRange(workDate);
+
+    await store.endWorkSession({
+      userKey: user.key,
+      workDate,
+      endedAt: now.toISOString()
+    });
+
+    await store.markAcceptedTasksUnresolvedForUser({
+      userKey: user.key
+    });
+
+    const [tasks, results, changeRequests] = await Promise.all([
+      store.listDailyTasksForUser({ userKey: user.key }),
+      store.listDailyTaskResultsForUser({ userKey: user.key, fromIso, toIso }),
+      store.listDailyChangeRequestsForUser({ userKey: user.key, fromIso, toIso })
+    ]);
+    const automaticFinals = await maybeCreateAutomaticFinalsPreview({ workDate });
+
+    return {
+      dmText: buildDailySummaryMessage({
+        user,
+        workDate,
+        tasks,
+        results,
+        changeRequests
+      }),
+      ...(automaticFinals ?? {})
+    };
+  }
+
+  async function handleFinalsPreview({ user }) {
+    const now = clock();
+    const workDate = formatKstDate(now);
+    return createFinalsPreviewForWorkDate(workDate);
   }
 
   async function handleFinalsApproval({ approvedByUserKey }) {

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createInProcessService } from '../src/services/inProcessService.js';
 
 const config = {
+  leadUserKey: 'suhyeon',
   channels: {
     inProcess: 'C_IN_PROCESS',
     finals: 'C_FINALS'
@@ -15,7 +16,26 @@ const user = {
   displayName: '수현'
 };
 
-function createFakeStore({ existingMessage = null, tasks = [] } = {}) {
+const joeun = {
+  key: 'joeun',
+  fullName: '김조은',
+  displayName: '조은'
+};
+
+const minsung = {
+  key: 'minsung',
+  fullName: '배민성',
+  displayName: '민성'
+};
+
+const allUsers = [user, joeun, minsung];
+
+function createFakeStore({
+  existingMessage = null,
+  tasks = [],
+  endedSessions = [],
+  finalsUpdateForDate = null
+} = {}) {
   const calls = [];
 
   return {
@@ -134,6 +154,14 @@ function createFakeStore({ existingMessage = null, tasks = [] } = {}) {
     },
     async approveFinalsUpdate(input) {
       calls.push(['approveFinalsUpdate', input]);
+    },
+    async listEndedWorkSessionsForDate(input) {
+      calls.push(['listEndedWorkSessionsForDate', input]);
+      return endedSessions;
+    },
+    async getFinalsUpdateForDate(input) {
+      calls.push(['getFinalsUpdateForDate', input]);
+      return finalsUpdateForDate;
     }
   };
 }
@@ -317,6 +345,80 @@ test('handleEndWork stores the end time and returns a daily summary', async () =
   });
   assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].fromIso, '2026-06-27T15:00:00.000Z');
   assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].toIso, '2026-06-28T15:00:00.000Z');
+});
+
+test('handleEndWork creates a finals preview when all users have ended work and no preview exists', async () => {
+  const store = createFakeStore({
+    endedSessions: [
+      { userKey: 'suhyeon', workDate: '2026-06-28', endedAt: '2026-06-28T10:00:00.000Z' },
+      { userKey: 'joeun', workDate: '2026-06-28', endedAt: '2026-06-28T11:00:00.000Z' },
+      { userKey: 'minsung', workDate: '2026-06-28', endedAt: '2026-06-28T12:00:00.000Z' }
+    ]
+  });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: allUsers,
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleEndWork({ user: minsung });
+
+  assert.match(result.dmText, /민성님, 오늘 한 일 요약입니다/);
+  assert.match(result.finalsPreviewDmText, /#finals 누적 업데이트 미리보기/);
+  assert.equal(result.leadUser.key, 'suhyeon');
+  assert.equal(store.calls.find(([name]) => name === 'getFinalsUpdateForDate')[1].workDate, '2026-06-28');
+  assert.equal(store.calls.find(([name]) => name === 'createFinalsPreview')[1].workDate, '2026-06-28');
+});
+
+test('handleEndWork does not create a finals preview until every user has ended work', async () => {
+  const store = createFakeStore({
+    endedSessions: [
+      { userKey: 'suhyeon', workDate: '2026-06-28', endedAt: '2026-06-28T10:00:00.000Z' },
+      { userKey: 'minsung', workDate: '2026-06-28', endedAt: '2026-06-28T12:00:00.000Z' }
+    ]
+  });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: allUsers,
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleEndWork({ user: minsung });
+
+  assert.equal(result.finalsPreviewDmText, undefined);
+  assert.equal(store.calls.some(([name]) => name === 'createFinalsPreview'), false);
+});
+
+test('handleEndWork does not create a duplicate finals preview for the same date', async () => {
+  const store = createFakeStore({
+    endedSessions: [
+      { userKey: 'suhyeon', workDate: '2026-06-28', endedAt: '2026-06-28T10:00:00.000Z' },
+      { userKey: 'joeun', workDate: '2026-06-28', endedAt: '2026-06-28T11:00:00.000Z' },
+      { userKey: 'minsung', workDate: '2026-06-28', endedAt: '2026-06-28T12:00:00.000Z' }
+    ],
+    finalsUpdateForDate: {
+      id: 'finals-1',
+      workDate: '2026-06-28',
+      status: '미리보기',
+      preview: {}
+    }
+  });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: allUsers,
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleEndWork({ user: minsung });
+
+  assert.equal(result.finalsPreviewDmText, undefined);
+  assert.equal(store.calls.some(([name]) => name === 'createFinalsPreview'), false);
 });
 
 test('handleFinalsPreview stores a cumulative preview and returns a DM message', async () => {

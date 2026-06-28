@@ -14,6 +14,15 @@ const config = {
   ]
 };
 
+const teamConfig = {
+  leadUserKey: 'suhyeon',
+  users: [
+    { key: 'suhyeon', slackId: 'U1', fullName: '조수현', displayName: '수현' },
+    { key: 'joeun', slackId: 'U2', fullName: '김조은', displayName: '조은' },
+    { key: 'minsung', slackId: 'U3', fullName: '배민성', displayName: '민성' }
+  ]
+};
+
 test('handleDirectDmMessage updates #in-process for 출근 commands', async () => {
   const replies = [];
   const serviceCalls = [];
@@ -99,6 +108,50 @@ test('handleDirectDmMessage sends a daily summary for 퇴근 commands', async ()
   assert.equal(serviceCalls[0].user.key, 'suhyeon');
   assert.equal(replies.length, 1);
   assert.match(replies[0].text, /오늘 한 일 요약/);
+});
+
+test('handleDirectDmMessage sends an automatic finals preview to the lead after everyone ends work', async () => {
+  const replies = [];
+  const openedDms = [];
+  const postedMessages = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      user: 'U3',
+      text: '퇴근'
+    },
+    say: async (payload) => replies.push(payload),
+    client: {
+      conversations: {
+        open: async (input) => {
+          openedDms.push(input);
+          return { channel: { id: 'D_LEAD' } };
+        }
+      },
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleEndWork(input) {
+        return {
+          dmText: `${input.user.displayName}님, 오늘 한 일 요약입니다.`,
+          finalsPreviewDmText: '#finals 누적 업데이트 미리보기\n아직 #finals에는 반영하지 않았습니다.',
+          leadUser: teamConfig.users[0]
+        };
+      }
+    }
+  });
+
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /민성님, 오늘 한 일 요약입니다/);
+  assert.equal(openedDms[0].users, 'U1');
+  assert.equal(postedMessages[0].channel, 'D_LEAD');
+  assert.match(postedMessages[0].text, /#finals 누적 업데이트 미리보기/);
+  assert.equal(postedMessages[0].blocks[1].elements[0].action_id, 'finals_approve_latest');
 });
 
 test('handleDirectDmMessage reports daily summary failures to the user', async () => {

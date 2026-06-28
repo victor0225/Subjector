@@ -47,7 +47,7 @@ function registerHealthRoute(receiver, config) {
   });
 }
 
-export async function handleDirectDmMessage({ message, say, config, logger = console, inProcessService }) {
+export async function handleDirectDmMessage({ message, say, client = null, config, logger = console, inProcessService }) {
   if (!isDirectUserMessage(message)) {
     return;
   }
@@ -90,6 +90,13 @@ export async function handleDirectDmMessage({ message, say, config, logger = con
         text: result.dmText,
         blocks: buildTextMessageBlocks(result.dmText)
       });
+      if (result.finalsPreviewDmText && result.leadUser && client) {
+        await sendFinalsPreviewToLead({
+          client,
+          leadUser: result.leadUser,
+          text: result.finalsPreviewDmText
+        });
+      }
       return;
     } catch (error) {
       logger.error?.(error);
@@ -121,11 +128,24 @@ export async function handleDirectDmMessage({ message, say, config, logger = con
   });
 }
 
+async function sendFinalsPreviewToLead({ client, leadUser, text }) {
+  const opened = await client.conversations.open({
+    users: leadUser.slackId
+  });
+
+  await client.chat.postMessage({
+    channel: opened.channel.id,
+    text,
+    blocks: buildFinalsPreviewBlocks(text)
+  });
+}
+
 function registerDmHandlers(app, config, logger, inProcessService) {
-  app.message(async ({ message, say }) => {
+  app.message(async ({ message, say, client }) => {
     await handleDirectDmMessage({
       message,
       say,
+      client,
       config,
       logger,
       inProcessService

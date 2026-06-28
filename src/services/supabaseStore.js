@@ -40,6 +40,14 @@ function mapSlackMessage(row) {
   };
 }
 
+function mapWorkSession(row) {
+  return {
+    userKey: row.user_key,
+    workDate: row.work_date,
+    endedAt: row.ended_at
+  };
+}
+
 function mapTaskResult(row) {
   return {
     taskId: row.task_id,
@@ -68,6 +76,7 @@ function mapFinalsPreview(row) {
   return {
     id: row.id,
     workDate: row.work_date,
+    status: row.status,
     preview: row.preview ?? {},
     createdAt: row.created_at
   };
@@ -100,6 +109,17 @@ export function createSupabaseStore(supabase) {
       });
 
     throwIfError(result, 'Failed to end work session');
+  }
+
+  async function listEndedWorkSessionsForDate({ workDate }) {
+    const result = await supabase
+      .from('daily_work_sessions')
+      .select('user_key,work_date,ended_at')
+      .eq('work_date', workDate)
+      .order('ended_at', { ascending: true });
+
+    throwIfError(result, 'Failed to list ended work sessions');
+    return result.data.map(mapWorkSession).filter((session) => session.endedAt);
   }
 
   async function listOpenTasksForUser(userKey) {
@@ -273,6 +293,19 @@ export function createSupabaseStore(supabase) {
     return mapFinalsPreview(result.data);
   }
 
+  async function getFinalsUpdateForDate({ workDate }) {
+    const result = await supabase
+      .from('finals_updates')
+      .select('id,work_date,status,preview,created_at')
+      .eq('work_date', workDate)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfError(result, 'Failed to get finals update for date');
+    return mapFinalsPreview(result.data);
+  }
+
   async function approveFinalsUpdate({ id, approvedByUserKey, approvedAt }) {
     const result = await supabase
       .from('finals_updates')
@@ -318,6 +351,7 @@ export function createSupabaseStore(supabase) {
   return {
     startWorkSession,
     endWorkSession,
+    listEndedWorkSessionsForDate,
     listOpenTasksForUser,
     markAcceptedTasksUnresolvedForUser,
     listDailyTasksForUser,
@@ -332,6 +366,7 @@ export function createSupabaseStore(supabase) {
     listAllChangeRequests,
     createFinalsPreview,
     getLatestFinalsPreview,
+    getFinalsUpdateForDate,
     approveFinalsUpdate,
     updateTaskStatus,
     upsertSlackMessage

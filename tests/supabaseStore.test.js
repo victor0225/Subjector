@@ -103,6 +103,27 @@ test('endWorkSession upserts by user and work date with ended time', async () =>
   assert.equal(upsert[3].onConflict, 'user_key,work_date');
 });
 
+test('listEndedWorkSessionsForDate reads ended sessions for a work date', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      daily_work_sessions: [
+        {
+          user_key: 'suhyeon',
+          work_date: '2026-06-28',
+          ended_at: '2026-06-28T10:00:00.000Z'
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const sessions = await store.listEndedWorkSessionsForDate({ workDate: '2026-06-28' });
+
+  assert.equal(sessions[0].userKey, 'suhyeon');
+  assert.equal(sessions[0].endedAt, '2026-06-28T10:00:00.000Z');
+  assert.ok(supabase.calls.some((call) => call[0] === 'daily_work_sessions' && call[1] === 'eq' && call[2] === 'work_date' && call[3] === '2026-06-28'));
+});
+
 test('listOpenTasksForUser reads open tasks and maps database columns', async () => {
   const supabase = createFakeSupabase({
     tableData: {
@@ -426,6 +447,30 @@ test('getLatestFinalsPreview reads the latest pending preview', async () => {
   assert.equal(preview.preview.workDate, '2026-06-28');
   assert.ok(supabase.calls.some((call) => call[0] === 'finals_updates' && call[1] === 'eq' && call[2] === 'status' && call[3] === '미리보기'));
   assert.ok(supabase.calls.some((call) => call[0] === 'finals_updates' && call[1] === 'maybeSingle'));
+});
+
+test('getFinalsUpdateForDate reads any preview or approved update for a work date', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      finals_updates: {
+        id: 'finals-1',
+        work_date: '2026-06-28',
+        status: '승인됨',
+        preview: {
+          workDate: '2026-06-28'
+        },
+        created_at: '2026-06-28T12:00:00.000Z'
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const preview = await store.getFinalsUpdateForDate({ workDate: '2026-06-28' });
+
+  assert.equal(preview.id, 'finals-1');
+  assert.equal(preview.status, '승인됨');
+  assert.equal(preview.workDate, '2026-06-28');
+  assert.ok(supabase.calls.some((call) => call[0] === 'finals_updates' && call[1] === 'eq' && call[2] === 'work_date' && call[3] === '2026-06-28'));
 });
 
 test('approveFinalsUpdate marks a preview approved', async () => {
