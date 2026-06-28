@@ -27,6 +27,32 @@ function taskContextSource(task) {
   return task?.context?.source ?? task?.sourceType ?? '기록 없음';
 }
 
+function importanceRank(importance = '') {
+  if (importance.includes('상') || importance.includes('🔴')) {
+    return 0;
+  }
+
+  if (importance.includes('중') || importance.includes('🟡')) {
+    return 1;
+  }
+
+  if (importance.includes('하') || importance.includes('🟢')) {
+    return 2;
+  }
+
+  return 3;
+}
+
+function sortTasksForDisplay(tasks = []) {
+  return tasks
+    .map((task, index) => ({ task, index }))
+    .sort((left, right) => {
+      const rankDiff = importanceRank(left.task.importance) - importanceRank(right.task.importance);
+      return rankDiff || left.index - right.index;
+    })
+    .map(({ task }) => task);
+}
+
 function statusBadge(status) {
   const markerByStatus = {
     미시작: '🟡',
@@ -40,6 +66,64 @@ function statusBadge(status) {
   };
 
   return `${markerByStatus[status] ?? '🟡'} \`${status}\``;
+}
+
+function detailRows(value) {
+  const rows = Array.isArray(value) ? value : [value];
+  const normalized = rows
+    .map((row) => String(row ?? '').trim())
+    .filter(Boolean);
+
+  return normalized.length ? normalized.map((row) => `- ${row}`).join('\n') : '- 기록 없음';
+}
+
+function detailFromContext(context, keys) {
+  for (const key of keys) {
+    if (context?.[key]) {
+      return context[key];
+    }
+  }
+
+  return null;
+}
+
+export function buildTaskDetailThreadMessage({ user, task }) {
+  const context = task?.context ?? {};
+  const displayName = formatDisplayName(user);
+  const why = detailFromContext(context, ['why', 'reason', 'meetingContext']);
+  const assignmentReason = detailFromContext(context, ['assignmentReason', 'assigneeReason', 'ownerReason']);
+  const completionCriteria = detailFromContext(context, ['completionCriteria', 'acceptanceCriteria', 'doneCriteria']);
+  const dependencies = detailFromContext(context, ['dependencies', 'dependency']);
+  const confidence = detailFromContext(context, ['confidence', 'assignmentConfidence']);
+
+  const text = [
+    `*[task 상세 맥락] ${task.title}*`,
+    '',
+    `[왜 생긴 task인가]`,
+    detailRows(why),
+    '',
+    `[왜 ${displayName} 담당인가]`,
+    detailRows(assignmentReason),
+    '',
+    `[완료 기준]`,
+    detailRows(completionCriteria),
+    '',
+    `[의존성]`,
+    detailRows(dependencies),
+    '',
+    `[확신도]`,
+    detailRows(confidence),
+    '',
+    `[출처]`,
+    `- ${taskContextSource(task)}`,
+    `- 중요도: ${task.importance ?? '🟡 중'}`,
+    `- 조율: ${task.coordination ?? '🟡 중'}`
+  ].join('\n');
+
+  return {
+    text,
+    blocks: [section(text)]
+  };
 }
 
 function formatTask(task, index) {
@@ -117,26 +201,27 @@ export function formatKstDate(date = new Date()) {
 
 export function buildInProcessBoardMessage({ user, tasks = [], workDate = formatKstDate() }) {
   const displayName = formatDisplayName(user);
+  const sortedTasks = sortTasksForDisplay(tasks);
   const header = [
     `*${displayName} task*`,
     `상태: 출근 확인됨`,
     `기준일: ${workDate}`
   ].join('\n');
 
-  const body = tasks.length === 0
+  const body = sortedTasks.length === 0
     ? [
         '현재 배정된 task가 없습니다.',
         '회의 결과나 변경 제안이 반영되면 여기에 표시됩니다.'
       ].join('\n')
-    : tasks.map(formatTask).join('\n\n');
+    : sortedTasks.map(formatTask).join('\n\n');
 
   const text = [header, body].join('\n\n');
 
-  const blocks = tasks.length === 0
+  const blocks = sortedTasks.length === 0
     ? [section(text)]
     : [
         section(header),
-        ...tasks.flatMap((task, index) => [
+        ...sortedTasks.flatMap((task, index) => [
           section(formatTask(task, index)),
           taskActionsBlock({ task, user })
         ])

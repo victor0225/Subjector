@@ -44,6 +44,7 @@ function createFakeTaskEvaluator(evaluation) {
 
 function createFakeStore({
   existingMessage = null,
+  existingMessagesByPurpose = {},
   tasks = [],
   endedSessions = [],
   finalsUpdateForDate = null
@@ -61,7 +62,13 @@ function createFakeStore({
     },
     async findSlackMessage(input) {
       calls.push(['findSlackMessage', input]);
-      return existingMessage;
+      if (Object.prototype.hasOwnProperty.call(existingMessagesByPurpose, input.purpose)) {
+        return existingMessagesByPurpose[input.purpose];
+      }
+
+      return input.purpose?.startsWith('in_process:') || input.purpose === 'finals:cumulative'
+        ? existingMessage
+        : null;
     },
     async upsertSlackMessage(input) {
       calls.push(['upsertSlackMessage', input]);
@@ -270,6 +277,51 @@ test('handleStartWork updates an existing #in-process message', async () => {
   assert.equal(store.calls.some(([name]) => name === 'upsertSlackMessage'), false);
 });
 
+test('handleStartWork posts task detail threads for tasks that do not have one yet', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001',
+      threadTs: '1700000000.000001'
+    },
+    tasks: [
+      {
+        id: 'task-1',
+        title: 'ESP32 센서 후보 비교',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: {
+          source: '회의 결과록',
+          why: ['라즈베리파이에서 ESP32로 변경 가능성을 검토하기로 함'],
+          assignmentReason: ['수현님이 하드웨어 변경 논의를 주도함'],
+          completionCriteria: ['ESP32 후보 3개 이상 비교'],
+          dependencies: ['민성님 데이터 수집 구조 task에 영향 가능'],
+          confidence: '중간'
+        }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    clock: () => new Date('2026-06-28T01:00:00.000Z')
+  });
+
+  await service.handleStartWork({ user });
+
+  const detailPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.thread_ts === '1700000000.000001');
+  assert.ok(detailPost);
+  assert.match(detailPost[1].text, /task 상세 맥락/);
+  assert.match(detailPost[1].text, /왜 생긴 task인가/);
+
+  const detailUpsert = store.calls.find(([name, input]) => name === 'upsertSlackMessage' && input.purpose === 'task_detail:task-1');
+  assert.ok(detailUpsert);
+  assert.equal(detailUpsert[1].messageTs, '1710000000.000001');
+});
+
 test('handleStartWork recreates #in-process message when the stored Slack message was deleted', async () => {
   const deletedMessageError = new Error('message_not_found');
   deletedMessageError.data = { error: 'message_not_found' };
@@ -308,6 +360,50 @@ test('handleStartWork recreates #in-process message when the stored Slack messag
   const upsert = store.calls.find(([name]) => name === 'upsertSlackMessage');
   assert.equal(upsert[1].messageTs, '1710000000.000001');
   assert.equal(upsert[1].threadTs, '1710000000.000001');
+});
+
+test('handleStartWork reposts task details when the board thread was recreated', async () => {
+  const deletedMessageError = new Error('message_not_found');
+  deletedMessageError.data = { error: 'message_not_found' };
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001',
+      threadTs: '1700000000.000001'
+    },
+    existingMessagesByPurpose: {
+      'task_detail:task-1': {
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000002',
+        threadTs: '1700000000.000001'
+      }
+    },
+    tasks: [
+      {
+        id: 'task-1',
+        title: 'ESP32 센서 후보 비교',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient({
+    updateError: deletedMessageError
+  });
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    clock: () => new Date('2026-06-28T01:00:00.000Z')
+  });
+
+  await service.handleStartWork({ user });
+
+  const detailPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.thread_ts === '1710000000.000001');
+  assert.ok(detailPost);
+  assert.match(detailPost[1].text, /task 상세 맥락/);
 });
 
 test('handleTaskActionSubmission stores completed task output and refreshes the board', async () => {

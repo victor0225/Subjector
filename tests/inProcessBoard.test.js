@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildInProcessBoardMessage,
   buildInProcessMessagePurpose,
+  buildTaskDetailThreadMessage,
   formatKstDate
 } from '../src/domain/inProcessBoard.js';
 
@@ -56,6 +57,69 @@ test('buildInProcessBoardMessage includes assigned task summaries', () => {
   assert.match(message.text, /🔴 상/);
   assert.match(message.text, /🟡 중/);
   assert.match(message.text, /회의 결과록 2026-06-28/);
+});
+
+test('buildInProcessBoardMessage orders important tasks first', () => {
+  const message = buildInProcessBoardMessage({
+    user,
+    workDate: '2026-06-28',
+    tasks: [
+      {
+        id: 'task-low',
+        title: '낮은 중요도 task',
+        status: '미시작',
+        importance: '🟢 하',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      },
+      {
+        id: 'task-high',
+        title: '높은 중요도 task',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      },
+      {
+        id: 'task-mid',
+        title: '중간 중요도 task',
+        status: '미시작',
+        importance: '🟡 중',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+
+  assert.ok(message.text.indexOf('높은 중요도 task') < message.text.indexOf('중간 중요도 task'));
+  assert.ok(message.text.indexOf('중간 중요도 task') < message.text.indexOf('낮은 중요도 task'));
+});
+
+test('buildTaskDetailThreadMessage explains task rationale and acceptance criteria', () => {
+  const message = buildTaskDetailThreadMessage({
+    user,
+    task: {
+      title: 'ESP32 센서 후보 비교',
+      importance: '🔴 상',
+      coordination: '🟡 중',
+      context: {
+        source: '회의 결과록 2026-06-28',
+        why: ['라즈베리파이에서 ESP32로 변경 가능성을 검토하기로 함'],
+        assignmentReason: ['수현님이 하드웨어 변경 논의를 주도함'],
+        completionCriteria: ['ESP32 후보 3개 이상 비교', '추천안 1개와 근거 작성'],
+        dependencies: ['민성님 데이터 수집 구조 task에 영향 가능'],
+        confidence: '중간'
+      }
+    }
+  });
+
+  assert.match(message.text, /task 상세 맥락/);
+  assert.match(message.text, /왜 생긴 task인가/);
+  assert.match(message.text, /라즈베리파이에서 ESP32/);
+  assert.match(message.text, /왜 수현님 담당인가/);
+  assert.match(message.text, /완료 기준/);
+  assert.match(message.text, /의존성/);
+  assert.match(message.text, /확신도/);
 });
 
 test('buildInProcessBoardMessage attaches the four MVP task action buttons', () => {

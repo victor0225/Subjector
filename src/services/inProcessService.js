@@ -1,7 +1,12 @@
 import { buildCodexPrompt } from '../domain/codexPrompt.js';
 import { buildDailySummaryMessage } from '../domain/dailySummary.js';
 import { buildFinalsChannelMessage, buildFinalsPreviewMessage, buildFinalsPreviewRecord } from '../domain/finalsSummary.js';
-import { buildInProcessBoardMessage, buildInProcessMessagePurpose, formatKstDate } from '../domain/inProcessBoard.js';
+import {
+  buildInProcessBoardMessage,
+  buildInProcessMessagePurpose,
+  buildTaskDetailThreadMessage,
+  formatKstDate
+} from '../domain/inProcessBoard.js';
 import { buildEvaluationFeedbackMessage, normalizeTaskEvaluation } from '../domain/taskEvaluation.js';
 import { taskActionFromActionId } from '../domain/taskActions.js';
 import { formatDisplayName } from '../domain/users.js';
@@ -52,6 +57,43 @@ export function createInProcessService({ store, slackClient, config, users = con
     return posted;
   }
 
+  async function ensureTaskDetailThreads({ channelId, threadTs, tasks, user }) {
+    if (!threadTs) {
+      return;
+    }
+
+    for (const task of tasks) {
+      if (!task.id) {
+        continue;
+      }
+
+      const purpose = `task_detail:${task.id}`;
+      const existingDetail = await store.findSlackMessage({
+        purpose,
+        channelId
+      });
+
+      if (existingDetail?.messageTs && existingDetail.threadTs === threadTs) {
+        continue;
+      }
+
+      const detail = buildTaskDetailThreadMessage({ user, task });
+      const posted = await slackClient.chat.postMessage({
+        channel: channelId,
+        thread_ts: threadTs,
+        text: detail.text,
+        blocks: detail.blocks
+      });
+
+      await store.upsertSlackMessage({
+        purpose,
+        channelId,
+        messageTs: posted.ts,
+        threadTs
+      });
+    }
+  }
+
   async function renderBoard({ user, now = clock() }) {
     const workDate = formatKstDate(now);
     const channelId = config.channels.inProcess;
@@ -82,10 +124,17 @@ export function createInProcessService({ store, slackClient, config, users = con
           throw error;
         }
 
-        await postBoardMessage({
+        const posted = await postBoardMessage({
           channelId,
           message,
           purpose
+        });
+
+        await ensureTaskDetailThreads({
+          channelId,
+          threadTs: posted.ts,
+          tasks,
+          user
         });
 
         return {
@@ -94,16 +143,30 @@ export function createInProcessService({ store, slackClient, config, users = con
         };
       }
 
+      await ensureTaskDetailThreads({
+        channelId,
+        threadTs: existingMessage.threadTs ?? existingMessage.messageTs,
+        tasks,
+        user
+      });
+
       return {
         action: 'updated',
         taskCount: tasks.length
       };
     }
 
-    await postBoardMessage({
+    const posted = await postBoardMessage({
       channelId,
       message,
       purpose,
+    });
+
+    await ensureTaskDetailThreads({
+      channelId,
+      threadTs: posted.ts,
+      tasks,
+      user
     });
 
     return {
