@@ -320,8 +320,10 @@ test('handleMeetingFileMessage runs meeting transcription in the background', as
 
   assert.equal(serviceCalls[0][0], 'upload');
   assert.equal(serviceCalls[1][0], 'process');
-  assert.equal(postedMessages.length, 2);
-  assert.match(postedMessages[1].text, /전사가 완료되었습니다/);
+  assert.equal(postedMessages.length, 3);
+  assert.match(postedMessages[1].text, /회의 전사를 시작했습니다/);
+  assert.match(postedMessages[1].text, /61MB 같은 긴 녹음/);
+  assert.match(postedMessages[2].text, /전사가 완료되었습니다/);
 });
 
 test('handleMeetingSpeakerMappingButton lets only the lead map speakers', async () => {

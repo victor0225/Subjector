@@ -165,6 +165,15 @@ function runInBackground(task, logger) {
   }, 0);
 }
 
+function buildMeetingTranscribingText() {
+  return [
+    '회의 전사를 시작했습니다.',
+    '- 상태: 전사 중',
+    '- 안내: 61MB 같은 긴 녹음은 몇 분 이상 걸릴 수 있습니다.',
+    '완료되면 이 스레드에 Speaker A/B/C 매핑 버튼이 표시됩니다.'
+  ].join('\n');
+}
+
 export async function handleMeetingFileMessage({
   message,
   client,
@@ -189,7 +198,15 @@ export async function handleMeetingFileMessage({
     logger.info?.('Meeting audio upload recorded');
 
     if (typeof meetingService.processMeetingAudioUpload === 'function') {
-      backgroundRunner(async () => {
+      const backgroundResult = backgroundRunner(async () => {
+        const transcribingText = buildMeetingTranscribingText();
+        await client.chat.postMessage({
+          channel: result.channel,
+          thread_ts: result.threadTs,
+          text: transcribingText,
+          blocks: buildTextMessageBlocks(transcribingText)
+        });
+
         const processingResult = await meetingService.processMeetingAudioUpload({ message });
         if (!processingResult) {
           return;
@@ -202,6 +219,10 @@ export async function handleMeetingFileMessage({
           blocks: processingResult.blocks ?? buildTextMessageBlocks(processingResult.text)
         });
       });
+
+      if (backgroundResult && typeof backgroundResult.then === 'function') {
+        await backgroundResult;
+      }
     }
   } catch (error) {
     logger.error?.(error);
