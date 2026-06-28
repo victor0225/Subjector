@@ -18,17 +18,35 @@ function section(title, rows) {
   ].join('\n');
 }
 
-export function buildFinalsPreviewRecord({ workDate, tasks = [], results = [], changeRequests = [] }) {
+function assigneeLabel(task, users = []) {
+  const user = users.find((candidate) => candidate.key === task?.assigneeUserKey);
+  if (user?.displayName) {
+    return `${user.displayName}님`;
+  }
+
+  return task?.assigneeUserKey ? `${task.assigneeUserKey}` : '담당자 미지정';
+}
+
+function taskByTitle(tasks = []) {
+  return new Map(tasks.map((task) => [task.title, task]));
+}
+
+export function buildFinalsPreviewRecord({ workDate, tasks = [], results = [], changeRequests = [], users = [] }) {
+  const tasksByTitle = taskByTitle(tasks);
   const completed = tasks
     .filter((task) => task.status === '완료')
-    .map((task) => `${task.title}: ${task.importance} / ${task.coordination}`);
+    .map((task) => `${assigneeLabel(task, users)} 담당 ${task.title}는 완료 상태입니다.`);
 
   const inProgress = tasks
     .filter((task) => ['미시작', '수락', '오늘은 여기까지', '미정리', '변경 요청 중', '회의 필요'].includes(task.status))
-    .map((task) => `${task.title}: ${task.status} / 중요도 ${task.importance} / 협응도 ${task.coordination}`);
+    .map((task) => `${assigneeLabel(task, users)} 담당 ${task.title}는 ${task.status} 상태입니다.`);
 
-  const outputs = results.map((result) => `${result.taskTitle}: ${result.resultType} / ${compactRawText(result.rawText)}`);
-  const changeHistory = changeRequests.map((request) => `${request.taskTitle}: ${request.status} / ${compactRawText(request.rawText)}`);
+  const outputs = results.map((result) => {
+    const task = tasksByTitle.get(result.taskTitle);
+    const owner = task ? `${assigneeLabel(task, users)} 담당 ` : '';
+    return `${owner}${result.taskTitle}의 ${result.resultType} 결과는 ${compactRawText(result.rawText)}입니다.`;
+  });
+  const changeHistory = changeRequests.map((request) => `${request.taskTitle}에는 ${request.status} 상태의 변경 요청이 있습니다.`);
 
   return {
     workDate,

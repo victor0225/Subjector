@@ -265,7 +265,8 @@ export function createInProcessService({ store, slackClient, config, users = con
       workDate,
       tasks,
       results,
-      changeRequests
+      changeRequests,
+      users
     });
 
     await store.createFinalsPreview({

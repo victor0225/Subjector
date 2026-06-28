@@ -354,7 +354,7 @@ export function createSupabaseStore(supabase) {
   async function listAllTasks({ limit = 100 } = {}) {
     const result = await supabase
       .from('tasks')
-      .select('id,title,status,importance,coordination,source_type,context,created_at')
+      .select('id,assignee_user_key,title,status,importance,coordination,source_type,context,created_at')
       .order('created_at', { ascending: true })
       .limit(limit);
 

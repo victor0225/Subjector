@@ -397,6 +397,7 @@ test('listAllTasks reads cumulative task states for finals preview', async () =>
   const tasks = await store.listAllTasks({ limit: 50 });
 
   assert.equal(tasks[0].title, '센서 후보 정리');
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'select' && call[2].includes('assignee_user_key')));
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'order' && call[2] === 'created_at'));
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'limit' && call[2] === 50));
 });
