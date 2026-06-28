@@ -114,6 +114,7 @@ Implemented:
   - Task statuses in `#in-process` are displayed as red/yellow/green Slack-friendly badges.
   - If a stored `#in-process` board message was manually deleted and Slack returns `message_not_found`, Subjector recreates the board message and stores the new Slack timestamp on the next board refresh.
   - `퇴근` now records the user's end-of-work session, changes still-accepted tasks to `미정리`, refreshes the user's `#in-process` board, gathers today's task results/change requests, and sends a DM daily summary.
+  - Daily summaries show one final state per task. If a task has both `오늘은 여기까지` and `완료` submissions on the same day, the current final task status decides where it appears.
   - `finals 업데이트` now lets 조수현 generate a cumulative `#finals` preview by DM and stores the preview in `finals_updates`.
   - The `#finals` preview DM includes an approval button. When 조수현 approves, Subjector posts or updates the cumulative `#finals` message and marks the preview as `승인됨`.
   - When all configured users have sent `퇴근` for the day and no finals update exists for that date, Subjector automatically creates a `#finals` preview and sends it to 조수현 by DM with the approval button.
@@ -136,7 +137,7 @@ Implemented:
 
 Verification:
 
-- `pnpm test` passes: 99 tests, 0 failures.
+- `pnpm test` passes: 100 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.

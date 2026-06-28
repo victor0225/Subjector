@@ -38,3 +38,31 @@ test('buildDailySummaryMessage summarizes completed, stopped, unresolved, and ch
   assert.match(message, /변경 요청/);
   assert.match(message, /승인 버튼 문구 변경/);
 });
+
+test('buildDailySummaryMessage shows one final daily state per task', () => {
+  const message = buildDailySummaryMessage({
+    user,
+    workDate: '2026-06-28',
+    tasks: [
+      { id: 'task-1', title: '센서 후보 정리', status: '완료', importance: '🔴 상', coordination: '🟡 중' }
+    ],
+    results: [
+      {
+        taskId: 'task-1',
+        taskTitle: '센서 후보 정리',
+        resultType: '오늘은 여기까지',
+        rawText: '[오늘의 진행 상태]\n- 비교표 초안 작성'
+      },
+      {
+        taskId: 'task-1',
+        taskTitle: '센서 후보 정리',
+        resultType: '완료',
+        rawText: '[완료 제출 결과]\n[결론]\n- ESP32 우선 추천'
+      }
+    ]
+  });
+
+  assert.match(message, /ESP32 우선 추천/);
+  assert.doesNotMatch(message, /비교표 초안 작성/);
+  assert.equal(message.match(/센서 후보 정리/g).length, 1);
+});

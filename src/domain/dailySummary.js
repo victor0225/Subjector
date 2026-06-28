@@ -20,13 +20,27 @@ function section(title, rows) {
   ].join('\n');
 }
 
-function resultRows(results, resultType, fallbackTasks = []) {
-  const matched = results.filter((result) => result.resultType === resultType);
-  if (matched.length) {
-    return matched.map((result) => `${result.taskTitle}: ${compactRawText(result.rawText)}`);
+function isResultForTask(result, task) {
+  if (result.taskId && task.id) {
+    return result.taskId === task.id;
   }
 
-  return fallbackTasks.map((task) => `${task.title}: ${task.status}`);
+  return result.taskTitle === task.title;
+}
+
+function resultRows(results, resultType, fallbackTasks = []) {
+  return fallbackTasks.map((task) => {
+    const result = results
+      .slice()
+      .reverse()
+      .find((candidate) => candidate.resultType === resultType && isResultForTask(candidate, task));
+
+    if (result) {
+      return `${task.title}: ${compactRawText(result.rawText)}`;
+    }
+
+    return `${task.title}: ${task.status}`;
+  });
 }
 
 export function buildDailySummaryMessage({ user, workDate, tasks = [], results = [], changeRequests = [] }) {
