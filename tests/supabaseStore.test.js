@@ -229,6 +229,174 @@ test('saveMeetingTaskCandidates stores task candidates in the meeting summary', 
   assert.equal(update[2].summary.taskCandidates[0].title, '회의 처리 흐름 점검');
 });
 
+test('requestMeetingParticipantTaskInputs stores participant list in the meeting summary', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        id: 'meeting-1',
+        summary: {
+          transcript: { meetingTitle: '졸작 회의' }
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.requestMeetingParticipantTaskInputs({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    participantUserKeys: ['suhyeon', 'joeun']
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'needs_participant_input');
+  assert.deepEqual(update[2].summary.participantUserKeys, ['suhyeon', 'joeun']);
+  assert.deepEqual(update[2].summary.participantTaskInputs, {});
+  assert.equal(result.status, 'needs_participant_input');
+});
+
+test('saveMeetingParticipantTaskInput stores one answer and reports remaining users', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        id: 'meeting-1',
+        status: 'needs_participant_input',
+        summary: {
+          participantUserKeys: ['suhyeon', 'joeun'],
+          participantTaskInputs: {
+            suhyeon: '나는 회의 흐름을 점검한다.'
+          }
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.saveMeetingParticipantTaskInput({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    userKey: 'joeun',
+    rawText: '나는 센서 후보를 비교한다.'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'participant_inputs_ready');
+  assert.equal(update[2].summary.participantTaskInputs.joeun, '나는 센서 후보를 비교한다.');
+  assert.deepEqual(result.remainingUserKeys, []);
+});
+
+test('saveMeetingTaskCandidatesForReview stores pending per-assignee review state', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        id: 'meeting-1',
+        summary: {
+          transcript: { meetingTitle: '졸작 회의' },
+          participantTaskInputs: { suhyeon: '먼저 할 일' }
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  await store.saveMeetingTaskCandidatesForReview({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    taskCandidates: [
+      {
+        assigneeUserKey: 'suhyeon',
+        title: '회의 처리 흐름 점검',
+        importance: '🟡 중',
+        coordination: '🟢 하',
+        context: { source: '회의 결과록: 졸작 회의' }
+      }
+    ]
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'needs_candidate_review');
+  assert.equal(update[2].summary.taskCandidates[0].review.status, 'pending');
+  assert.equal(update[2].summary.participantTaskInputs.suhyeon, '먼저 할 일');
+});
+
+test('reviewMeetingTaskCandidate accepts one candidate and creates a task', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        id: 'meeting-1',
+        status: 'needs_candidate_review',
+        summary: {
+          taskCandidates: [
+            {
+              assigneeUserKey: 'joeun',
+              title: '센서 후보 비교',
+              importance: '🔴 상',
+              coordination: '🟡 중',
+              context: { why: '조은님이 먼저 할 일로 답했다.' },
+              review: { status: 'pending' }
+            }
+          ]
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.reviewMeetingTaskCandidate({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    candidateIndex: 0,
+    reviewedByUserKey: 'joeun',
+    decision: 'accepted'
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'insert');
+  assert.equal(insert[2].assignee_user_key, 'joeun');
+  assert.equal(insert[2].title, '센서 후보 비교');
+  assert.equal(insert[2].source_id, 'meeting-1');
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'candidate_reviewed');
+  assert.equal(update[2].summary.taskCandidates[0].review.status, 'accepted');
+  assert.equal(result.taskCandidate.title, '센서 후보 비교');
+});
+
+test('reviewMeetingTaskCandidate can reject a candidate without creating a task', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        id: 'meeting-1',
+        status: 'needs_candidate_review',
+        summary: {
+          taskCandidates: [
+            {
+              assigneeUserKey: 'joeun',
+              title: '농담성 자문 요청',
+              importance: '🟡 중',
+              coordination: '🟡 중',
+              context: {},
+              review: { status: 'pending' }
+            }
+          ]
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  await store.reviewMeetingTaskCandidate({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    candidateIndex: 0,
+    reviewedByUserKey: 'joeun',
+    decision: 'rejected'
+  });
+
+  assert.equal(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'insert'), false);
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].summary.taskCandidates[0].review.status, 'rejected');
+});
+
 test('approveMeetingTasks inserts stored candidates into tasks and marks the meeting complete', async () => {
   const supabase = createFakeSupabase({
     singleData: {

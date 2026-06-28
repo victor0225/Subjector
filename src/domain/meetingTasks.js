@@ -47,12 +47,24 @@ function taskSourceLabel({ sourceLabel, meetingTitle }) {
   return `회의 결과록: ${meetingTitle || '회의'}`;
 }
 
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
 export function areAllSpeakersMapped({ transcript, speakerMapping }) {
   const labels = (transcript?.speakers ?? [])
     .map((speaker) => asString(speaker.label))
     .filter(Boolean);
 
   return labels.length > 0 && labels.every((label) => Boolean(speakerMapping?.[label]));
+}
+
+export function getMappedParticipantUserKeys({ transcript, speakerMapping }) {
+  const labels = (transcript?.speakers ?? [])
+    .map((speaker) => asString(speaker.label))
+    .filter(Boolean);
+
+  return unique(labels.map((label) => speakerMapping?.[label]));
 }
 
 export function normalizeMeetingTaskCandidates(value = {}, { users = [], sourceLabel = null, meetingTitle = null } = {}) {
@@ -106,9 +118,64 @@ export function buildMeetingTaskApprovalText({ taskCandidates = [] }) {
   return lines.join('\n');
 }
 
+export function buildParticipantTaskInputThreadText({ participantUserKeys = [], users = [] }) {
+  const names = participantUserKeys
+    .map((userKey) => formatUserName(userKey, users))
+    .join(', ');
+
+  return [
+    'Speaker A/B/C 매핑이 완료되었습니다.',
+    '- 다음 단계: 회의 참여자에게 DM으로 “내가 먼저 해야 할 일”을 묻습니다.',
+    `- 대상: ${names || '등록된 참여자 없음'}`,
+    '모든 답변이 모이면 task 후보를 만들고 담당자별 채택/제외/수정 DM을 보냅니다.'
+  ].join('\n');
+}
+
+export function buildParticipantTaskInputDmText({ user, meetingTitle }) {
+  return [
+    `${formatDisplayNameForTask(user)}, 이번 회의 후 먼저 해야 한다고 생각하는 일을 적어 주세요.`,
+    `- 회의: ${meetingTitle || '회의'}`,
+    '- 기준: 본인이 먼저 해야 할 일, 안 해도 된다고 보는 후보, 중요하다고 느낀 순서를 짧게 적으면 됩니다.',
+    '아래 버튼을 눌러 답변을 남겨 주세요.'
+  ].join('\n');
+}
+
+export function buildParticipantTaskInputSavedText({ remainingUserKeys = [], users = [] }) {
+  if (remainingUserKeys.length === 0) {
+    return '답변을 저장했습니다. 모든 답변이 모여 task 후보를 생성합니다.';
+  }
+
+  return [
+    '답변을 저장했습니다.',
+    `- 아직 답변 대기: ${remainingUserKeys.map((userKey) => formatUserName(userKey, users)).join(', ')}`
+  ].join('\n');
+}
+
+export function buildMeetingTaskCandidateReviewText({ user, taskCandidates = [] }) {
+  return [
+    `${formatDisplayNameForTask(user)}, 회의 기반 task 후보를 확인해 주세요.`,
+    `- 후보: ${taskCandidates.length}개`,
+    '채택하면 바로 #in-process에 저장됩니다.',
+    '필요 없으면 제외, 내용이 어긋나면 수정해서 반영하세요.'
+  ].join('\n');
+}
+
 export function buildMeetingTaskApprovalResultText({ taskCandidates = [] }) {
   return [
     `회의 기반 task ${taskCandidates.length}개를 생성했습니다.`,
     '담당자가 Subjector Bot DM에 `최신화`를 보내면 #in-process task 보드에서 확인할 수 있습니다.'
   ].join('\n');
+}
+
+function formatDisplayNameForTask(user) {
+  if (!user) {
+    return '담당자님';
+  }
+
+  return `${asString(user.displayName || user.fullName || user.key)}님`;
+}
+
+function formatUserName(userKey, users) {
+  const user = users.find((candidate) => candidate.key === userKey);
+  return formatDisplayNameForTask(user);
 }

@@ -119,6 +119,52 @@ function mapMeeting(row) {
   };
 }
 
+function candidateCompletionCriteria(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item ?? '').trim()).filter(Boolean);
+  }
+
+  const text = String(value ?? '').trim();
+  return text ? [text] : [];
+}
+
+function mergeEditedCandidate(candidate, editedCandidate = {}) {
+  const title = String(editedCandidate.title ?? '').trim();
+  const why = String(editedCandidate.why ?? '').trim();
+  const completionCriteria = candidateCompletionCriteria(editedCandidate.completionCriteria);
+
+  return {
+    ...candidate,
+    title: title || candidate.title,
+    context: {
+      ...(candidate.context ?? {}),
+      why: why || candidate.context?.why,
+      completionCriteria: completionCriteria.length > 0
+        ? completionCriteria
+        : candidate.context?.completionCriteria
+    }
+  };
+}
+
+function candidateTaskRow({ meeting, candidate }) {
+  return {
+    assignee_user_key: candidate.assigneeUserKey,
+    title: candidate.title,
+    status: '미시작',
+    importance: candidate.importance,
+    coordination: candidate.coordination,
+    source_type: 'meeting',
+    source_id: meeting.id,
+    context: candidate.context ?? {}
+  };
+}
+
+function meetingStatusAfterCandidateReview(taskCandidates) {
+  return taskCandidates.every((candidate) => Boolean(candidate.review?.status) && candidate.review.status !== 'pending')
+    ? 'candidate_reviewed'
+    : 'needs_candidate_review';
+}
+
 export function createSupabaseStore(supabase) {
   async function startWorkSession({ userKey, workDate, startedAt }) {
     const result = await supabase
@@ -265,6 +311,173 @@ export function createSupabaseStore(supabase) {
       },
       context: 'Failed to save meeting task candidates'
     });
+  }
+
+  async function requestMeetingParticipantTaskInputs({ sourceChannelId, sourceMessageTs, participantUserKeys }) {
+    const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
+    const summary = {
+      ...(meeting?.summary ?? {}),
+      participantUserKeys,
+      participantTaskInputs: meeting?.summary?.participantTaskInputs ?? {}
+    };
+
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: 'needs_participant_input',
+        summary
+      },
+      context: 'Failed to request meeting participant task inputs'
+    });
+
+    return {
+      ...meeting,
+      status: 'needs_participant_input',
+      summary
+    };
+  }
+
+  async function saveMeetingParticipantTaskInput({ sourceChannelId, sourceMessageTs, userKey, rawText }) {
+    const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
+    const participantUserKeys = meeting?.summary?.participantUserKeys ?? [];
+    const participantTaskInputs = {
+      ...(meeting?.summary?.participantTaskInputs ?? {}),
+      [userKey]: rawText
+    };
+    const remainingUserKeys = participantUserKeys.filter((participantUserKey) => !participantTaskInputs[participantUserKey]);
+    const summary = {
+      ...(meeting?.summary ?? {}),
+      participantUserKeys,
+      participantTaskInputs
+    };
+
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: remainingUserKeys.length === 0 ? 'participant_inputs_ready' : 'needs_participant_input',
+        summary
+      },
+      context: 'Failed to save meeting participant task input'
+    });
+
+    return {
+      meeting: {
+        ...meeting,
+        status: remainingUserKeys.length === 0 ? 'participant_inputs_ready' : 'needs_participant_input',
+        summary
+      },
+      remainingUserKeys
+    };
+  }
+
+  async function saveMeetingTaskCandidatesForReview({ sourceChannelId, sourceMessageTs, taskCandidates }) {
+    const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
+    const summary = {
+      ...(meeting?.summary ?? {}),
+      taskCandidates: taskCandidates.map((candidate) => ({
+        ...candidate,
+        review: candidate.review ?? { status: 'pending' }
+      }))
+    };
+
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: 'needs_candidate_review',
+        summary
+      },
+      context: 'Failed to save meeting task candidates for review'
+    });
+
+    return {
+      ...meeting,
+      status: 'needs_candidate_review',
+      summary
+    };
+  }
+
+  async function getMeetingTaskCandidate({ sourceChannelId, sourceMessageTs, candidateIndex }) {
+    const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
+    const index = Number(candidateIndex);
+    const taskCandidate = meeting?.summary?.taskCandidates?.[index] ?? null;
+
+    return {
+      meeting,
+      taskCandidate,
+      candidateIndex: index
+    };
+  }
+
+  async function reviewMeetingTaskCandidate({
+    sourceChannelId,
+    sourceMessageTs,
+    candidateIndex,
+    reviewedByUserKey,
+    decision,
+    editedCandidate = null
+  }) {
+    const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
+    const index = Number(candidateIndex);
+    const taskCandidates = [...(meeting?.summary?.taskCandidates ?? [])];
+    const existingCandidate = taskCandidates[index];
+
+    if (!existingCandidate) {
+      throw new Error('Meeting task candidate not found');
+    }
+
+    if (existingCandidate.review?.status && existingCandidate.review.status !== 'pending') {
+      return {
+        taskCandidate: existingCandidate,
+        alreadyReviewed: true
+      };
+    }
+
+    const acceptedCandidate = editedCandidate
+      ? mergeEditedCandidate(existingCandidate, editedCandidate)
+      : existingCandidate;
+
+    if (decision === 'accepted' || decision === 'edited_accepted') {
+      const insert = await supabase
+        .from('tasks')
+        .insert(candidateTaskRow({
+          meeting,
+          candidate: acceptedCandidate
+        }));
+
+      throwIfError(insert, 'Failed to create reviewed meeting task');
+    }
+
+    const reviewedCandidate = {
+      ...acceptedCandidate,
+      review: {
+        status: decision,
+        reviewedByUserKey,
+        reviewedAt: new Date().toISOString()
+      }
+    };
+    taskCandidates[index] = reviewedCandidate;
+    const summary = {
+      ...(meeting?.summary ?? {}),
+      taskCandidates
+    };
+
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: meetingStatusAfterCandidateReview(taskCandidates),
+        summary
+      },
+      context: 'Failed to review meeting task candidate'
+    });
+
+    return {
+      taskCandidate: reviewedCandidate,
+      alreadyReviewed: false
+    };
   }
 
   async function approveMeetingTasks({ sourceChannelId, sourceMessageTs }) {
@@ -603,6 +816,11 @@ export function createSupabaseStore(supabase) {
     failMeetingTranscription,
     saveMeetingSpeakerMapping,
     saveMeetingTaskCandidates,
+    requestMeetingParticipantTaskInputs,
+    saveMeetingParticipantTaskInput,
+    saveMeetingTaskCandidatesForReview,
+    getMeetingTaskCandidate,
+    reviewMeetingTaskCandidate,
     approveMeetingTasks,
     listEndedWorkSessionsForDate,
     listOpenTasksForUser,

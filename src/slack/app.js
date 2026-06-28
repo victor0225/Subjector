@@ -18,6 +18,14 @@ import { createSupabaseStore } from '../services/supabaseStore.js';
 import { createTaskEvaluator } from '../services/taskEvaluatorFactory.js';
 import { buildFinalsPreviewBlocks, buildTextMessageBlocks } from './blocks.js';
 import { isDirectUserMessage } from './events.js';
+import {
+  MEETING_CANDIDATE_EDIT_CALLBACK_ID,
+  MEETING_PARTICIPANT_INPUT_CALLBACK_ID,
+  buildMeetingCandidateEditModal,
+  buildMeetingParticipantInputModal,
+  extractMeetingCandidateEditSubmission,
+  extractMeetingParticipantInputSubmission
+} from './meetingTaskBlocks.js';
 
 export function buildBootHealthStatus(config) {
   const usesOpenAiForEvaluation = config.ai?.evaluationProvider === 'openai';
@@ -169,6 +177,29 @@ async function sendFinalsPreviewToLead({ client, leadUser, text }) {
     text,
     blocks: buildFinalsPreviewBlocks(text)
   });
+}
+
+async function sendDirectMessage({ client, slackId, text, blocks = null }) {
+  const opened = await client.conversations.open({
+    users: slackId
+  });
+
+  await client.chat.postMessage({
+    channel: opened.channel.id,
+    text,
+    blocks: blocks ?? buildTextMessageBlocks(text)
+  });
+}
+
+async function sendDirectMessages({ client, messages = [] }) {
+  for (const message of messages) {
+    await sendDirectMessage({
+      client,
+      slackId: message.slackId,
+      text: message.text,
+      blocks: message.blocks
+    });
+  }
 }
 
 function registerDmHandlers(app, config, logger, inProcessService) {
@@ -323,6 +354,13 @@ export async function handleMeetingSpeakerMappingButton({ ack, body, client, con
       });
     }
 
+    if (result.directMessages?.length > 0) {
+      await sendDirectMessages({
+        client,
+        messages: result.directMessages
+      });
+    }
+
     logger.info?.('Meeting speaker mapping saved');
   } catch (error) {
     logger.error?.(error);
@@ -382,6 +420,241 @@ export async function handleMeetingTaskApprovalButton({ ack, body, client, confi
       user: body.user.id,
       text,
       blocks: buildTextMessageBlocks(text)
+    });
+  }
+}
+
+export async function handleMeetingParticipantInputButton({ ack, body, client, config, logger = console }) {
+  await ack();
+
+  const user = getUserBySlackId(config.users, body.user.id);
+  const channel = body.channel?.id;
+  const metadata = parseSpeakerMappingValue(body.actions[0].value);
+
+  if (!user) {
+    await client.chat.postMessage({
+      channel,
+      text: '등록되지 않은 사용자입니다. 수현님에게 Slack 멤버 ID 등록을 요청해 주세요.'
+    });
+    return;
+  }
+
+  if (user.key !== metadata.userKey) {
+    await client.chat.postMessage({
+      channel,
+      text: `${formatDisplayName(user)}, 이 답변은 담당자 본인만 입력할 수 있습니다.`
+    });
+    return;
+  }
+
+  await client.views.open({
+    trigger_id: body.trigger_id,
+    view: buildMeetingParticipantInputModal({ metadata })
+  });
+
+  logger.info?.('Meeting participant task input modal opened');
+}
+
+export async function handleMeetingParticipantInputViewSubmission({ ack, body, view, client, config, logger = console, meetingService }) {
+  const submittedBy = getUserBySlackId(config.users, body.user.id);
+
+  if (!submittedBy) {
+    await ack({
+      response_action: 'errors',
+      errors: {
+        meeting_participant_task_input: '등록되지 않은 사용자입니다.'
+      }
+    });
+    return;
+  }
+
+  const rawText = extractMeetingParticipantInputSubmission(view);
+  if (!rawText) {
+    await ack({
+      response_action: 'errors',
+      errors: {
+        meeting_participant_task_input: '내용을 입력해 주세요.'
+      }
+    });
+    return;
+  }
+
+  await ack();
+
+  try {
+    const metadata = parseSpeakerMappingValue(view.private_metadata);
+    const result = await meetingService.handleParticipantTaskInput({
+      sourceChannelId: metadata.sourceChannelId,
+      sourceMessageTs: metadata.sourceMessageTs,
+      userKey: submittedBy.key,
+      rawText
+    });
+
+    await sendDirectMessage({
+      client,
+      slackId: submittedBy.slackId,
+      text: result.text
+    });
+
+    if (result.candidateReviewMessages?.length > 0) {
+      await sendDirectMessages({
+        client,
+        messages: result.candidateReviewMessages
+      });
+    }
+
+    logger.info?.('Meeting participant task input submitted');
+  } catch (error) {
+    logger.error?.(error);
+    await sendDirectMessage({
+      client,
+      slackId: submittedBy.slackId,
+      text: '회의 후 우선 task 답변을 저장하지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.'
+    });
+  }
+}
+
+export async function handleMeetingCandidateDecisionButton({ ack, body, client, config, logger = console, meetingService, decision }) {
+  await ack();
+
+  const user = getUserBySlackId(config.users, body.user.id);
+  const channel = body.channel?.id;
+  const metadata = parseSpeakerMappingValue(body.actions[0].value);
+
+  if (!user) {
+    await client.chat.postMessage({
+      channel,
+      text: '등록되지 않은 사용자입니다. 수현님에게 Slack 멤버 ID 등록을 요청해 주세요.'
+    });
+    return;
+  }
+
+  try {
+    const result = await meetingService.handleCandidateReview({
+      ...metadata,
+      reviewedByUserKey: user.key,
+      decision
+    });
+
+    await client.chat.postMessage({
+      channel,
+      text: result.text,
+      blocks: buildTextMessageBlocks(result.text)
+    });
+
+    logger.info?.(`Meeting task candidate reviewed: ${decision}`);
+  } catch (error) {
+    logger.error?.(error);
+    const text = '회의 task 후보 처리를 저장하지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.';
+    await client.chat.postMessage({
+      channel,
+      text,
+      blocks: buildTextMessageBlocks(text)
+    });
+  }
+}
+
+export async function handleMeetingCandidateEditButton({ ack, body, client, config, logger = console, meetingService }) {
+  await ack();
+
+  const user = getUserBySlackId(config.users, body.user.id);
+  const channel = body.channel?.id;
+  const metadata = parseSpeakerMappingValue(body.actions[0].value);
+
+  if (!user) {
+    await client.chat.postMessage({
+      channel,
+      text: '등록되지 않은 사용자입니다. 수현님에게 Slack 멤버 ID 등록을 요청해 주세요.'
+    });
+    return;
+  }
+
+  if (user.key !== metadata.assigneeUserKey) {
+    await client.chat.postMessage({
+      channel,
+      text: `${formatDisplayName(user)}, 이 task 후보는 담당자 본인만 수정할 수 있습니다.`
+    });
+    return;
+  }
+
+  try {
+    const result = await meetingService.getMeetingTaskCandidate(metadata);
+    if (!result.taskCandidate) {
+      await client.chat.postMessage({
+        channel,
+        text: 'task 후보를 찾지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.'
+      });
+      return;
+    }
+
+    await client.views.open({
+      trigger_id: body.trigger_id,
+      view: buildMeetingCandidateEditModal({
+        metadata,
+        taskCandidate: result.taskCandidate
+      })
+    });
+
+    logger.info?.('Meeting task candidate edit modal opened');
+  } catch (error) {
+    logger.error?.(error);
+    const text = 'task 후보 수정 창을 열지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.';
+    await client.chat.postMessage({
+      channel,
+      text,
+      blocks: buildTextMessageBlocks(text)
+    });
+  }
+}
+
+export async function handleMeetingCandidateEditViewSubmission({ ack, body, view, client, config, logger = console, meetingService }) {
+  const submittedBy = getUserBySlackId(config.users, body.user.id);
+
+  if (!submittedBy) {
+    await ack({
+      response_action: 'errors',
+      errors: {
+        meeting_candidate_title: '등록되지 않은 사용자입니다.'
+      }
+    });
+    return;
+  }
+
+  const editedCandidate = extractMeetingCandidateEditSubmission(view);
+  if (!editedCandidate.title) {
+    await ack({
+      response_action: 'errors',
+      errors: {
+        meeting_candidate_title: 'task 이름을 입력해 주세요.'
+      }
+    });
+    return;
+  }
+
+  await ack();
+
+  try {
+    const metadata = parseSpeakerMappingValue(view.private_metadata);
+    const result = await meetingService.handleCandidateReview({
+      ...metadata,
+      reviewedByUserKey: submittedBy.key,
+      decision: 'edited_accepted',
+      editedCandidate
+    });
+
+    await sendDirectMessage({
+      client,
+      slackId: submittedBy.slackId,
+      text: result.text
+    });
+
+    logger.info?.('Meeting task candidate edited and accepted');
+  } catch (error) {
+    logger.error?.(error);
+    await sendDirectMessage({
+      client,
+      slackId: submittedBy.slackId,
+      text: '수정한 task 후보를 반영하지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.'
     });
   }
 }
@@ -611,6 +884,75 @@ function registerMeetingActionHandlers(app, config, logger, meetingService) {
     await handleMeetingSpeakerMappingButton({
       ack,
       body,
+      client,
+      config,
+      logger,
+      meetingService
+    });
+  });
+
+  app.action('meeting_participant_task_input', async ({ ack, body, client }) => {
+    await handleMeetingParticipantInputButton({
+      ack,
+      body,
+      client,
+      config,
+      logger
+    });
+  });
+
+  app.view(MEETING_PARTICIPANT_INPUT_CALLBACK_ID, async ({ ack, body, view, client }) => {
+    await handleMeetingParticipantInputViewSubmission({
+      ack,
+      body,
+      view,
+      client,
+      config,
+      logger,
+      meetingService
+    });
+  });
+
+  app.action('meeting_candidate_accept', async ({ ack, body, client }) => {
+    await handleMeetingCandidateDecisionButton({
+      ack,
+      body,
+      client,
+      config,
+      logger,
+      meetingService,
+      decision: 'accepted'
+    });
+  });
+
+  app.action('meeting_candidate_reject', async ({ ack, body, client }) => {
+    await handleMeetingCandidateDecisionButton({
+      ack,
+      body,
+      client,
+      config,
+      logger,
+      meetingService,
+      decision: 'rejected'
+    });
+  });
+
+  app.action('meeting_candidate_edit', async ({ ack, body, client }) => {
+    await handleMeetingCandidateEditButton({
+      ack,
+      body,
+      client,
+      config,
+      logger,
+      meetingService
+    });
+  });
+
+  app.view(MEETING_CANDIDATE_EDIT_CALLBACK_ID, async ({ ack, body, view, client }) => {
+    await handleMeetingCandidateEditViewSubmission({
+      ack,
+      body,
+      view,
       client,
       config,
       logger,

@@ -5,7 +5,12 @@ import {
   handleDirectDmMessage,
   handleCodexPromptCopyButton,
   handleFinalsApproveButton,
+  handleMeetingCandidateDecisionButton,
+  handleMeetingCandidateEditButton,
+  handleMeetingCandidateEditViewSubmission,
   handleMeetingFileMessage,
+  handleMeetingParticipantInputButton,
+  handleMeetingParticipantInputViewSubmission,
   handleMeetingSpeakerMappingButton,
   handleMeetingTaskApprovalButton,
   handleTaskAcceptButton,
@@ -470,6 +475,355 @@ test('handleMeetingSpeakerMappingButton posts task approval when task candidates
   assert.equal(postedMessages[1][0], 'message');
   assert.equal(postedMessages[1][1].thread_ts, '1710000000.000100');
   assert.match(postedMessages[1][1].text, /task 후보 추출이 완료되었습니다/);
+});
+
+test('handleMeetingSpeakerMappingButton sends participant task input DMs', async () => {
+  let acked = false;
+  const postedMessages = [];
+  const openedDms = [];
+
+  await handleMeetingSpeakerMappingButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'C_MEETING' },
+      user: { id: 'U1' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100',
+            speakerLabel: 'Speaker B',
+            userKey: 'joeun'
+          })
+        }
+      ]
+    },
+    client: {
+      conversations: {
+        open: async (input) => {
+          openedDms.push(input);
+          return { channel: { id: `D_${input.users}` } };
+        }
+      },
+      chat: {
+        postEphemeral: async (input) => postedMessages.push(['ephemeral', input]),
+        postMessage: async (input) => postedMessages.push(['message', input])
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleSpeakerMapping() {
+        return {
+          text: 'Speaker B를 조은님으로 저장했습니다.',
+          threadMessage: {
+            channel: 'C_MEETING',
+            threadTs: '1710000000.000100',
+            text: 'Speaker A/B/C 매핑이 완료되었습니다.'
+          },
+          directMessages: [
+            {
+              slackId: 'U1',
+              text: '수현님, 먼저 해야 할 일을 적어 주세요.',
+              blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '수현님' } }]
+            },
+            {
+              slackId: 'U2',
+              text: '조은님, 먼저 해야 할 일을 적어 주세요.',
+              blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '조은님' } }]
+            }
+          ]
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(openedDms.length, 2);
+  assert.equal(openedDms[0].users, 'U1');
+  assert.equal(openedDms[1].users, 'U2');
+  assert.match(postedMessages.at(-1)[1].text, /조은님/);
+});
+
+test('handleMeetingParticipantInputButton opens the participant input modal', async () => {
+  let acked = false;
+  const openedViews = [];
+
+  await handleMeetingParticipantInputButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      trigger_id: 'trigger-1',
+      channel: { id: 'D_U1' },
+      user: { id: 'U1' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100',
+            userKey: 'suhyeon'
+          })
+        }
+      ]
+    },
+    client: {
+      views: {
+        open: async (input) => openedViews.push(input)
+      },
+      chat: {
+        postMessage: async () => {}
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(openedViews[0].trigger_id, 'trigger-1');
+  assert.equal(openedViews[0].view.callback_id, 'meeting_participant_task_input_submission');
+});
+
+test('handleMeetingParticipantInputViewSubmission stores the answer and sends candidate review DMs', async () => {
+  let acked = false;
+  const serviceCalls = [];
+  const openedDms = [];
+  const postedMessages = [];
+
+  await handleMeetingParticipantInputViewSubmission({
+    ack: async (payload) => {
+      acked = payload ?? true;
+    },
+    body: {
+      user: { id: 'U1' }
+    },
+    view: {
+      private_metadata: JSON.stringify({
+        sourceChannelId: 'C_MEETING',
+        sourceMessageTs: '1710000000.000100',
+        userKey: 'suhyeon'
+      }),
+      state: {
+        values: {
+          meeting_participant_task_input: {
+            raw_text: {
+              value: '나는 회의 처리 흐름을 먼저 점검한다.'
+            }
+          }
+        }
+      }
+    },
+    client: {
+      conversations: {
+        open: async (input) => {
+          openedDms.push(input);
+          return { channel: { id: `D_${input.users}` } };
+        }
+      },
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleParticipantTaskInput(input) {
+        serviceCalls.push(input);
+        return {
+          text: '답변을 저장했습니다. 담당자별 task 후보 검토 DM을 보냈습니다.',
+          candidateReviewMessages: [
+            {
+              slackId: 'U2',
+              text: '조은님, 후보를 확인해 주세요.',
+              blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '후보' } }]
+            }
+          ]
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls[0].rawText, '나는 회의 처리 흐름을 먼저 점검한다.');
+  assert.equal(openedDms[0].users, 'U1');
+  assert.equal(openedDms[1].users, 'U2');
+  assert.match(postedMessages[1].text, /후보/);
+});
+
+test('handleMeetingCandidateDecisionButton stores an accepted candidate', async () => {
+  let acked = false;
+  const serviceCalls = [];
+  const postedMessages = [];
+
+  await handleMeetingCandidateDecisionButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'D_U2' },
+      user: { id: 'U2' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100',
+            candidateIndex: 0,
+            assigneeUserKey: 'joeun'
+          })
+        }
+      ]
+    },
+    client: {
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    decision: 'accepted',
+    meetingService: {
+      async handleCandidateReview(input) {
+        serviceCalls.push(input);
+        return {
+          text: '센서 후보 비교 task를 #in-process에 저장했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls[0].reviewedByUserKey, 'joeun');
+  assert.equal(serviceCalls[0].decision, 'accepted');
+  assert.match(postedMessages[0].text, /#in-process/);
+});
+
+test('handleMeetingCandidateEditButton opens a modal with the candidate text', async () => {
+  let acked = false;
+  const openedViews = [];
+
+  await handleMeetingCandidateEditButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      trigger_id: 'trigger-edit',
+      channel: { id: 'D_U2' },
+      user: { id: 'U2' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100',
+            candidateIndex: 0,
+            assigneeUserKey: 'joeun'
+          })
+        }
+      ]
+    },
+    client: {
+      views: {
+        open: async (input) => openedViews.push(input)
+      },
+      chat: {
+        postMessage: async () => {}
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async getMeetingTaskCandidate() {
+        return {
+          taskCandidate: {
+            title: '센서 후보 비교',
+            importance: '🔴 상',
+            coordination: '🟡 중',
+            context: {
+              why: '조은님이 먼저 할 일로 답했다.',
+              completionCriteria: ['비교표 작성']
+            }
+          }
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(openedViews[0].trigger_id, 'trigger-edit');
+  assert.equal(openedViews[0].view.callback_id, 'meeting_candidate_edit_submission');
+  assert.equal(openedViews[0].view.blocks[0].element.initial_value, '센서 후보 비교');
+});
+
+test('handleMeetingCandidateEditViewSubmission saves an edited candidate as a task', async () => {
+  let acked = false;
+  const serviceCalls = [];
+  const openedDms = [];
+  const postedMessages = [];
+
+  await handleMeetingCandidateEditViewSubmission({
+    ack: async (payload) => {
+      acked = payload ?? true;
+    },
+    body: {
+      user: { id: 'U2' }
+    },
+    view: {
+      private_metadata: JSON.stringify({
+        sourceChannelId: 'C_MEETING',
+        sourceMessageTs: '1710000000.000100',
+        candidateIndex: 0,
+        assigneeUserKey: 'joeun'
+      }),
+      state: {
+        values: {
+          meeting_candidate_title: {
+            title: {
+              value: '센서 후보 3개 비교'
+            }
+          },
+          meeting_candidate_why: {
+            why: {
+              value: '회의에서 센서 선정이 먼저 필요하다고 정리했다.'
+            }
+          },
+          meeting_candidate_completion: {
+            completionCriteria: {
+              value: '후보 3개 비교표 작성\n추천 후보 1개 제시'
+            }
+          }
+        }
+      }
+    },
+    client: {
+      conversations: {
+        open: async (input) => {
+          openedDms.push(input);
+          return { channel: { id: 'D_U2' } };
+        }
+      },
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleCandidateReview(input) {
+        serviceCalls.push(input);
+        return {
+          text: '센서 후보 3개 비교 task를 #in-process에 저장했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls[0].decision, 'edited_accepted');
+  assert.equal(serviceCalls[0].editedCandidate.title, '센서 후보 3개 비교');
+  assert.deepEqual(serviceCalls[0].editedCandidate.completionCriteria, ['후보 3개 비교표 작성', '추천 후보 1개 제시']);
+  assert.equal(openedDms[0].users, 'U2');
+  assert.match(postedMessages[0].text, /#in-process/);
 });
 
 test('handleMeetingTaskApprovalButton lets only the lead create extracted tasks', async () => {
