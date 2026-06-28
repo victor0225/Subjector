@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildBootHealthStatus,
   handleDirectDmMessage,
   handleCodexPromptCopyButton,
   handleFinalsApproveButton,
@@ -27,6 +28,18 @@ const teamConfig = {
     { key: 'minsung', slackId: 'U3', fullName: '배민성', displayName: '민성' }
   ]
 };
+
+test('buildBootHealthStatus reports OpenAI when meeting task extraction uses OpenAI', () => {
+  const status = buildBootHealthStatus({
+    supabase: { url: 'https://example.supabase.co', serviceRoleKey: 'service-key' },
+    ai: { evaluationProvider: 'gemini', meetingTaskProvider: 'openai' },
+    openai: { apiKey: 'sk-key' },
+    channels: { meeting: 'C1', inProcess: 'C2', finals: 'C3' }
+  });
+
+  assert.equal(status.openai.ok, true);
+  assert.match(status.openai.message, /task extraction/);
+});
 
 test('handleDirectDmMessage updates #in-process for 출근 commands', async () => {
   const replies = [];

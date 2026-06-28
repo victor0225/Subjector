@@ -10,8 +10,8 @@ import {
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
 import { createGeminiMeetingTranscriber } from '../services/geminiMeetingTranscriber.js';
-import { createGeminiMeetingTaskExtractor } from '../services/geminiMeetingTaskExtractor.js';
 import { createInProcessService } from '../services/inProcessService.js';
+import { createMeetingTaskExtractor } from '../services/meetingTaskExtractorFactory.js';
 import { createMeetingService } from '../services/meetingService.js';
 import { createSlackFileDownloader } from '../services/slackFileDownloader.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
@@ -19,7 +19,10 @@ import { createTaskEvaluator } from '../services/taskEvaluatorFactory.js';
 import { buildFinalsPreviewBlocks, buildTextMessageBlocks } from './blocks.js';
 import { isDirectUserMessage } from './events.js';
 
-function buildBootHealthStatus(config) {
+export function buildBootHealthStatus(config) {
+  const usesOpenAiForEvaluation = config.ai?.evaluationProvider === 'openai';
+  const usesOpenAiForTaskExtraction = config.ai?.meetingTaskProvider === 'openai';
+
   return {
     ...createDefaultHealthStatus(),
     slack: { ok: true, message: 'configured' },
@@ -28,10 +31,15 @@ function buildBootHealthStatus(config) {
       message: config.supabase?.url ? 'configured' : 'missing env'
     },
     openai: {
-      ok: config.ai?.evaluationProvider !== 'openai' || Boolean(config.openai?.apiKey),
-      message: config.ai?.evaluationProvider === 'openai'
-        ? (config.openai?.apiKey ? 'configured for evaluation' : 'missing env')
-        : 'not selected for evaluation'
+      ok: (!usesOpenAiForEvaluation && !usesOpenAiForTaskExtraction) || Boolean(config.openai?.apiKey),
+      message: usesOpenAiForEvaluation || usesOpenAiForTaskExtraction
+        ? (config.openai?.apiKey
+          ? `configured for ${[
+            usesOpenAiForEvaluation ? 'evaluation' : null,
+            usesOpenAiForTaskExtraction ? 'task extraction' : null
+          ].filter(Boolean).join(' and ')}`
+          : 'missing env')
+        : 'not selected'
     },
     channels: {
       meeting: { ok: Boolean(config.channels?.meeting), message: config.channels?.meeting ? '#회의-결과록 configured' : 'missing channel id' },
@@ -651,12 +659,7 @@ export function createSlackApp({
         model: config.gemini.transcriptionModel
       })
       : null,
-    taskExtractor: config.gemini.apiKey
-      ? createGeminiMeetingTaskExtractor({
-        apiKey: config.gemini.apiKey,
-        model: config.gemini.taskExtractionModel
-      })
-      : null
+    taskExtractor: createMeetingTaskExtractor({ config })
   });
 
   registerDmHandlers(app, config, logger, service);

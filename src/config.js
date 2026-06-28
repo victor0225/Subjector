@@ -16,6 +16,7 @@ const REQUIRED_ENV = [
 ];
 
 const EVALUATION_PROVIDERS = new Set(['openai', 'gemini']);
+const MEETING_TASK_PROVIDERS = new Set(['openai', 'gemini']);
 
 export { formatDisplayName, getUserByKey, getUserBySlackId };
 
@@ -47,9 +48,19 @@ export function loadConfigFromEnv(env = process.env) {
     throw new Error('AI_EVALUATION_PROVIDER must be one of: openai, gemini');
   }
 
-  const selectedProviderKey = evaluationProvider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY';
-  if (!env[selectedProviderKey] || env[selectedProviderKey].trim() === '') {
-    throw new Error(`Missing required env: ${selectedProviderKey}`);
+  const meetingTaskProvider = (env.MEETING_TASK_PROVIDER?.trim().toLowerCase() || 'openai');
+  if (!MEETING_TASK_PROVIDERS.has(meetingTaskProvider)) {
+    throw new Error('MEETING_TASK_PROVIDER must be one of: openai, gemini');
+  }
+
+  const requiredAiKeys = new Set([
+    evaluationProvider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY',
+    meetingTaskProvider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY'
+  ]);
+  for (const selectedProviderKey of requiredAiKeys) {
+    if (!env[selectedProviderKey] || env[selectedProviderKey].trim() === '') {
+      throw new Error(`Missing required env: ${selectedProviderKey}`);
+    }
   }
 
   const port = Number.parseInt(env.PORT, 10);
@@ -77,11 +88,13 @@ export function loadConfigFromEnv(env = process.env) {
       serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY.trim()
     },
     ai: {
-      evaluationProvider
+      evaluationProvider,
+      meetingTaskProvider
     },
     openai: {
       apiKey: env.OPENAI_API_KEY?.trim() || '',
-      evaluationModel: env.OPENAI_EVALUATION_MODEL?.trim() || 'gpt-5.2'
+      evaluationModel: env.OPENAI_EVALUATION_MODEL?.trim() || 'gpt-5.2',
+      taskExtractionModel: env.OPENAI_TASK_EXTRACTION_MODEL?.trim() || 'gpt-5.4'
     },
     gemini: {
       apiKey: env.GEMINI_API_KEY?.trim() || '',
