@@ -39,7 +39,8 @@ test('buildDailySummaryMessage summarizes completed, stopped, unresolved, and ch
   assert.match(message, /검수 기준 보완/);
   assert.match(message, /보완 필요/);
   assert.match(message, /변경 요청/);
-  assert.match(message, /승인 버튼 문구 변경/);
+  assert.match(message, /UI 흐름 검토: 투표 중/);
+  assert.doesNotMatch(message, /승인 버튼 문구 변경/);
 });
 
 test('buildDailySummaryMessage shows one final daily state per task', () => {

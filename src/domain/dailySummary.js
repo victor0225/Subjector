@@ -52,7 +52,7 @@ export function buildDailySummaryMessage({ user, workDate, tasks = [], results =
   const completedRows = resultRows(results, '완료', completedTasks);
   const stoppedRows = resultRows(results, '오늘은 여기까지', stoppedTasks);
   const unresolvedRows = unresolvedTasks.map((task) => `${task.title}: ${task.status} / 중요도 ${task.importance} / 협응도 ${task.coordination}`);
-  const changeRows = changeRequests.map((request) => `${request.taskTitle}: ${request.status} / ${compactRawText(request.rawText)}`);
+  const changeRows = changeRequests.map((request) => `${request.taskTitle}: ${request.status}`);
 
   return [
     `${displayName}, 오늘 한 일 요약입니다. (${workDate})`,
