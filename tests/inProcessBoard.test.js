@@ -57,6 +57,7 @@ test('buildInProcessBoardMessage includes assigned task summaries', () => {
   assert.match(message.text, /🔴 상/);
   assert.match(message.text, /🟡 중/);
   assert.match(message.text, /회의 결과록 2026-06-28/);
+  assert.match(message.text, /상세 근거: 스레드 참고/);
 });
 
 test('buildInProcessBoardMessage orders important tasks first', () => {
@@ -120,6 +121,24 @@ test('buildTaskDetailThreadMessage explains task rationale and acceptance criter
   assert.match(message.text, /완료 기준/);
   assert.match(message.text, /의존성/);
   assert.match(message.text, /확신도/);
+});
+
+test('buildTaskDetailThreadMessage uses task goal as rationale fallback', () => {
+  const message = buildTaskDetailThreadMessage({
+    user,
+    task: {
+      title: '센서 후보 정리',
+      importance: '🟡 중',
+      coordination: '🟡 중',
+      context: {
+        source: '회의 결과록',
+        goal: 'ESP32와 라즈베리파이를 비교한다.'
+      }
+    }
+  });
+
+  assert.match(message.text, /왜 생긴 task인가/);
+  assert.match(message.text, /ESP32와 라즈베리파이를 비교한다/);
 });
 
 test('buildInProcessBoardMessage attaches the four MVP task action buttons', () => {

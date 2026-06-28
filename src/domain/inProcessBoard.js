@@ -90,7 +90,7 @@ function detailFromContext(context, keys) {
 export function buildTaskDetailThreadMessage({ user, task }) {
   const context = task?.context ?? {};
   const displayName = formatDisplayName(user);
-  const why = detailFromContext(context, ['why', 'reason', 'meetingContext']);
+  const why = detailFromContext(context, ['why', 'reason', 'goal', 'meetingContext']);
   const assignmentReason = detailFromContext(context, ['assignmentReason', 'assigneeReason', 'ownerReason']);
   const completionCriteria = detailFromContext(context, ['completionCriteria', 'acceptanceCriteria', 'doneCriteria']);
   const dependencies = detailFromContext(context, ['dependencies', 'dependency']);
@@ -132,7 +132,8 @@ function formatTask(task, index) {
     `   - 상태: ${statusBadge(task.status)}`,
     `   - 중요도: ${task.importance}`,
     `   - 조율: ${task.coordination}`,
-    `   - 맥락: ${taskContextSource(task)}`
+    `   - 맥락: ${taskContextSource(task)}`,
+    `   - 상세 근거: 스레드 참고`
   ].join('\n');
 }
 

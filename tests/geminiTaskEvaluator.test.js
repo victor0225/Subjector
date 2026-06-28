@@ -78,3 +78,46 @@ test('createGeminiTaskEvaluator reports API errors without leaking the key', asy
     }
   );
 });
+
+test('createGeminiTaskEvaluator reads text from Interactions REST steps', async () => {
+  const evaluator = createGeminiTaskEvaluator({
+    apiKey: 'gemini-test-key',
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        id: 'interaction-1',
+        object: 'interaction',
+        status: 'completed',
+        steps: [
+          {
+            type: 'model_output',
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  verdict: 'needs_revision',
+                  score: 45,
+                  summary: '근거가 부족합니다.',
+                  reasons: ['비교 결과가 구체적이지 않습니다.'],
+                  missingItems: ['후보별 장단점'],
+                  feedbackToUser: '후보별 비교표를 추가해 주세요.'
+                })
+              }
+            ]
+          }
+        ]
+      })
+    })
+  });
+
+  const result = await evaluator.evaluateSubmission({
+    actionId: 'task_complete',
+    actionLabel: '완료',
+    task,
+    rawText: '[완료 제출 결과]\n비교함'
+  });
+
+  assert.equal(result.verdict, 'needs_revision');
+  assert.equal(result.score, 45);
+  assert.equal(result.blocksCompletion, true);
+});

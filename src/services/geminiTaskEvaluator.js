@@ -21,6 +21,14 @@ function extractOutputText(payload) {
     }
   }
 
+  for (const step of payload?.steps ?? []) {
+    for (const content of step.content ?? []) {
+      if (content.text) {
+        chunks.push(content.text);
+      }
+    }
+  }
+
   return chunks.join('\n');
 }
 
