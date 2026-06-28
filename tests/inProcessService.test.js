@@ -178,7 +178,7 @@ function createFakeStore({
   };
 }
 
-function createFakeSlackClient() {
+function createFakeSlackClient({ updateError = null } = {}) {
   const calls = [];
 
   return {
@@ -190,6 +190,9 @@ function createFakeSlackClient() {
       },
       async update(input) {
         calls.push(['update', input]);
+        if (updateError) {
+          throw updateError;
+        }
         return { ok: true, channel: input.channel, ts: input.ts };
       }
     }
@@ -253,6 +256,46 @@ test('handleStartWork updates an existing #in-process message', async () => {
   assert.equal(slackClient.calls[0][1].ts, '1700000000.000001');
   assert.match(slackClient.calls[0][1].text, /센서 후보 정리/);
   assert.equal(store.calls.some(([name]) => name === 'upsertSlackMessage'), false);
+});
+
+test('handleStartWork recreates #in-process message when the stored Slack message was deleted', async () => {
+  const deletedMessageError = new Error('message_not_found');
+  deletedMessageError.data = { error: 'message_not_found' };
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001'
+    },
+    tasks: [
+      {
+        title: '센서 후보 정리',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient({
+    updateError: deletedMessageError
+  });
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    clock: () => new Date('2026-06-28T01:00:00.000Z')
+  });
+
+  const result = await service.handleStartWork({ user });
+
+  assert.equal(result.action, 'reposted');
+  assert.match(result.dmText, /다시 만들었습니다/);
+  assert.equal(slackClient.calls[0][0], 'update');
+  assert.equal(slackClient.calls[1][0], 'postMessage');
+  assert.match(slackClient.calls[1][1].text, /센서 후보 정리/);
+  const upsert = store.calls.find(([name]) => name === 'upsertSlackMessage');
+  assert.equal(upsert[1].messageTs, '1710000000.000001');
+  assert.equal(upsert[1].threadTs, '1710000000.000001');
 });
 
 test('handleTaskActionSubmission stores completed task output and refreshes the board', async () => {

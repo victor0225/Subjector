@@ -27,7 +27,30 @@ function allUsersEndedWork({ users, sessions }) {
   return users.every((user) => endedUserKeys.has(user.key));
 }
 
+function isSlackMessageNotFound(error) {
+  return error?.data?.error === 'message_not_found'
+    || error?.error === 'message_not_found'
+    || error?.message === 'message_not_found';
+}
+
 export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date() }) {
+  async function postBoardMessage({ channelId, message, purpose }) {
+    const posted = await slackClient.chat.postMessage({
+      channel: channelId,
+      text: message.text,
+      blocks: message.blocks
+    });
+
+    await store.upsertSlackMessage({
+      purpose,
+      channelId,
+      messageTs: posted.ts,
+      threadTs: posted.ts
+    });
+
+    return posted;
+  }
+
   async function renderBoard({ user, now = clock() }) {
     const workDate = formatKstDate(now);
     const channelId = config.channels.inProcess;
@@ -46,12 +69,29 @@ export function createInProcessService({ store, slackClient, config, users = con
     });
 
     if (existingMessage?.messageTs) {
-      await slackClient.chat.update({
-        channel: channelId,
-        ts: existingMessage.messageTs,
-        text: message.text,
-        blocks: message.blocks
-      });
+      try {
+        await slackClient.chat.update({
+          channel: channelId,
+          ts: existingMessage.messageTs,
+          text: message.text,
+          blocks: message.blocks
+        });
+      } catch (error) {
+        if (!isSlackMessageNotFound(error)) {
+          throw error;
+        }
+
+        await postBoardMessage({
+          channelId,
+          message,
+          purpose
+        });
+
+        return {
+          action: 'reposted',
+          taskCount: tasks.length
+        };
+      }
 
       return {
         action: 'updated',
@@ -59,17 +99,10 @@ export function createInProcessService({ store, slackClient, config, users = con
       };
     }
 
-    const posted = await slackClient.chat.postMessage({
-      channel: channelId,
-      text: message.text,
-      blocks: message.blocks
-    });
-
-    await store.upsertSlackMessage({
-      purpose,
+    await postBoardMessage({
       channelId,
-      messageTs: posted.ts,
-      threadTs: posted.ts
+      message,
+      purpose,
     });
 
     return {
@@ -89,7 +122,12 @@ export function createInProcessService({ store, slackClient, config, users = con
     });
 
     const result = await renderBoard({ user, now });
-    const verb = result.action === 'updated' ? '업데이트했습니다' : '만들었습니다';
+    const verbByAction = {
+      updated: '업데이트했습니다',
+      posted: '만들었습니다',
+      reposted: '다시 만들었습니다'
+    };
+    const verb = verbByAction[result.action] ?? '업데이트했습니다';
 
     return {
       ...result,
