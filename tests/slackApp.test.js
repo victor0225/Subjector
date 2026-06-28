@@ -71,6 +71,61 @@ test('handleDirectDmMessage reports #in-process update failures to the user', as
   assert.match(replies[0].text, /Render 로그/);
 });
 
+test('handleDirectDmMessage sends a daily summary for 퇴근 commands', async () => {
+  const replies = [];
+  const serviceCalls = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      user: 'U1',
+      text: '퇴근'
+    },
+    say: async (payload) => replies.push(payload),
+    config,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleEndWork(input) {
+        serviceCalls.push(input);
+        return {
+          dmText: '수현님, 오늘 한 일 요약입니다.\n- 센서 후보 정리'
+        };
+      }
+    }
+  });
+
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].user.key, 'suhyeon');
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /오늘 한 일 요약/);
+});
+
+test('handleDirectDmMessage reports daily summary failures to the user', async () => {
+  const replies = [];
+  const errors = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      user: 'U1',
+      text: '퇴근'
+    },
+    say: async (payload) => replies.push(payload),
+    config,
+    logger: { info() {}, error(error) { errors.push(error); } },
+    inProcessService: {
+      async handleEndWork() {
+        throw new Error('summary failed');
+      }
+    }
+  });
+
+  assert.equal(errors.length, 1);
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /오늘 한 일 요약 생성에 실패했습니다/);
+  assert.match(replies[0].text, /Render 로그/);
+});
+
 test('handleTaskActionButton opens the matching Slack modal', async () => {
   let acked = false;
   const opened = [];

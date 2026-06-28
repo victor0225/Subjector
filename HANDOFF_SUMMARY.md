@@ -1,6 +1,6 @@
 # Subjector Handoff Summary
 
-Last updated: 2026-06-27
+Last updated: 2026-06-28
 
 This file preserves the current product context so the project can continue even if the Codex conversation is compacted or restarted.
 
@@ -108,7 +108,8 @@ Implemented:
   - `완료` stores a `task_results` row and changes task status to `완료`.
   - `오늘은 여기까지` stores a `task_results` row and changes task status to `오늘은 여기까지`.
   - `변경 요청` stores a `change_requests` row and changes task status to `변경 요청 중`.
-  - `#finals`, real daily-summary updates, voting, and OpenAI impact analysis are not wired yet.
+  - `퇴근` now records the user's end-of-work session, changes still-accepted tasks to `미정리`, gathers today's task results/change requests, and sends a DM daily summary.
+  - `#finals`, voting, and OpenAI impact analysis are not wired yet.
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
@@ -127,14 +128,14 @@ Implemented:
 
 Verification:
 
-- `pnpm test` passes: 57 tests, 0 failures.
+- `pnpm test` passes: 67 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.
 
 Not yet implemented:
 
-- Slack workflows beyond `출근`, basic `#in-process` board update, and first task action modal submissions.
+- Slack workflows beyond `출근`, `퇴근` daily summary, basic `#in-process` board update, and first task action modal submissions.
 - Slack vote/approval workflows for change requests.
 - Broader Supabase persistence workflows beyond work-session start, task result submission, change request creation, and `#in-process` message tracking.
 - Real OpenAI calls.

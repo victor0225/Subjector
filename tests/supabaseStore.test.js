@@ -19,6 +19,14 @@ function createFakeSupabase({ tableData = {}, singleData = {}, errors = {} } = {
         calls.push([table, 'in', column, values]);
         return builder;
       },
+      gte(column, value) {
+        calls.push([table, 'gte', column, value]);
+        return builder;
+      },
+      lt(column, value) {
+        calls.push([table, 'lt', column, value]);
+        return builder;
+      },
       order(column, options) {
         calls.push([table, 'order', column, options]);
         return builder;
@@ -77,6 +85,24 @@ test('startWorkSession upserts by user and work date', async () => {
   assert.equal(upsert[3].onConflict, 'user_key,work_date');
 });
 
+test('endWorkSession upserts by user and work date with ended time', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.endWorkSession({
+    userKey: 'suhyeon',
+    workDate: '2026-06-28',
+    endedAt: '2026-06-28T12:00:00.000Z'
+  });
+
+  const upsert = supabase.calls.find((call) => call[1] === 'upsert');
+  assert.equal(upsert[0], 'daily_work_sessions');
+  assert.equal(upsert[2].user_key, 'suhyeon');
+  assert.equal(upsert[2].work_date, '2026-06-28');
+  assert.equal(upsert[2].ended_at, '2026-06-28T12:00:00.000Z');
+  assert.equal(upsert[3].onConflict, 'user_key,work_date');
+});
+
 test('listOpenTasksForUser reads open tasks and maps database columns', async () => {
   const supabase = createFakeSupabase({
     tableData: {
@@ -103,6 +129,44 @@ test('listOpenTasksForUser reads open tasks and maps database columns', async ()
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'assignee_user_key'));
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[2] === 'status'));
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[3].includes('완료')));
+});
+
+test('markAcceptedTasksUnresolvedForUser changes accepted tasks to unresolved', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.markAcceptedTasksUnresolvedForUser({ userKey: 'suhyeon' });
+
+  const update = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'update');
+  assert.equal(update[2].status, '미정리');
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'assignee_user_key' && call[3] === 'suhyeon'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'status' && call[3] === '수락'));
+});
+
+test('listDailyTasksForUser reads task states for a user summary', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      tasks: [
+        {
+          id: 'task-1',
+          title: '센서 후보 정리',
+          status: '완료',
+          importance: '🔴 상',
+          coordination: '🟡 중',
+          source_type: 'manual',
+          context: {},
+          created_at: '2026-06-28T01:00:00.000Z'
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const tasks = await store.listDailyTasksForUser({ userKey: 'suhyeon' });
+
+  assert.equal(tasks[0].title, '센서 후보 정리');
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'assignee_user_key'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[2] === 'status'));
 });
 
 test('findSlackMessage maps the latest stored Slack message', async () => {
@@ -171,6 +235,36 @@ test('submitTaskResult inserts a raw Codex result', async () => {
   assert.equal(insert[2].submitted_by_user_key, 'suhyeon');
 });
 
+test('listDailyTaskResultsForUser reads Codex outputs submitted today', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      task_results: [
+        {
+          task_id: 'task-1',
+          result_type: '완료',
+          raw_text: '[완료 제출 결과]',
+          created_at: '2026-06-28T02:00:00.000Z',
+          tasks: {
+            title: '센서 후보 정리'
+          }
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const results = await store.listDailyTaskResultsForUser({
+    userKey: 'suhyeon',
+    fromIso: '2026-06-27T15:00:00.000Z',
+    toIso: '2026-06-28T15:00:00.000Z'
+  });
+
+  assert.equal(results[0].taskTitle, '센서 후보 정리');
+  assert.equal(results[0].resultType, '완료');
+  assert.ok(supabase.calls.some((call) => call[0] === 'task_results' && call[1] === 'gte' && call[2] === 'created_at'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'task_results' && call[1] === 'lt' && call[2] === 'created_at'));
+});
+
 test('createChangeRequest inserts a task change request', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);
@@ -185,6 +279,35 @@ test('createChangeRequest inserts a task change request', async () => {
   assert.equal(insert[2].task_id, 'task-1');
   assert.equal(insert[2].proposer_user_key, 'suhyeon');
   assert.equal(insert[2].status, '투표 중');
+});
+
+test('listDailyChangeRequestsForUser reads change requests proposed today', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      change_requests: [
+        {
+          task_id: 'task-2',
+          status: '투표 중',
+          raw_text: '[변경 제안]',
+          created_at: '2026-06-28T03:00:00.000Z',
+          tasks: {
+            title: 'UI 흐름 검토'
+          }
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const requests = await store.listDailyChangeRequestsForUser({
+    userKey: 'suhyeon',
+    fromIso: '2026-06-27T15:00:00.000Z',
+    toIso: '2026-06-28T15:00:00.000Z'
+  });
+
+  assert.equal(requests[0].taskTitle, 'UI 흐름 검토');
+  assert.equal(requests[0].status, '투표 중');
+  assert.ok(supabase.calls.some((call) => call[0] === 'change_requests' && call[1] === 'eq' && call[2] === 'proposer_user_key'));
 });
 
 test('updateTaskStatus updates task status and completion timestamp', async () => {

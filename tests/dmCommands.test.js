@@ -27,7 +27,7 @@ test('출근 requests #in-process update', () => {
   assert.match(result.text, /#in-process/);
 });
 
-test('퇴근 confirms the command without promising pending daily summary generation', () => {
+test('퇴근 requests daily summary generation', () => {
   const result = handleDmCommand({
     text: '퇴근',
     user: config.users[1],
@@ -35,10 +35,10 @@ test('퇴근 confirms the command without promising pending daily summary genera
   });
 
   assert.equal(result.type, 'end_work');
-  assert.equal(result.createDailySummary, false);
+  assert.equal(result.createDailySummary, true);
   assert.match(result.text, /조은님/);
   assert.match(result.text, /퇴근 명령을 확인했습니다/);
-  assert.match(result.text, /다음 구현 단계/);
+  assert.match(result.text, /오늘 한 일 요약/);
 });
 
 test('finals 업데이트 is allowed for lead user', () => {

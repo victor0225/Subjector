@@ -1,6 +1,18 @@
+import { buildDailySummaryMessage } from '../domain/dailySummary.js';
 import { buildInProcessBoardMessage, buildInProcessMessagePurpose, formatKstDate } from '../domain/inProcessBoard.js';
 import { taskActionFromActionId } from '../domain/taskActions.js';
 import { formatDisplayName } from '../domain/users.js';
+
+function kstDayRange(workDate) {
+  const [year, month, day] = workDate.split('-').map(Number);
+  const start = new Date(Date.UTC(year, month - 1, day, -9, 0, 0));
+  const end = new Date(Date.UTC(year, month - 1, day + 1, -9, 0, 0));
+
+  return {
+    fromIso: start.toISOString(),
+    toIso: end.toISOString()
+  };
+}
 
 export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date() }) {
   async function renderBoard({ user, now = clock() }) {
@@ -72,6 +84,38 @@ export function createInProcessService({ store, slackClient, config, users = con
     };
   }
 
+  async function handleEndWork({ user }) {
+    const now = clock();
+    const workDate = formatKstDate(now);
+    const { fromIso, toIso } = kstDayRange(workDate);
+
+    await store.endWorkSession({
+      userKey: user.key,
+      workDate,
+      endedAt: now.toISOString()
+    });
+
+    await store.markAcceptedTasksUnresolvedForUser({
+      userKey: user.key
+    });
+
+    const [tasks, results, changeRequests] = await Promise.all([
+      store.listDailyTasksForUser({ userKey: user.key }),
+      store.listDailyTaskResultsForUser({ userKey: user.key, fromIso, toIso }),
+      store.listDailyChangeRequestsForUser({ userKey: user.key, fromIso, toIso })
+    ]);
+
+    return {
+      dmText: buildDailySummaryMessage({
+        user,
+        workDate,
+        tasks,
+        results,
+        changeRequests
+      })
+    };
+  }
+
   async function handleTaskActionSubmission({ actionId, taskId, assigneeUserKey, submittedByUserKey, rawText }) {
     const action = taskActionFromActionId(actionId);
     if (!action) {
@@ -121,6 +165,7 @@ export function createInProcessService({ store, slackClient, config, users = con
 
   return {
     handleStartWork,
+    handleEndWork,
     handleTaskActionSubmission,
     getTaskTitle
   };

@@ -83,6 +83,22 @@ export async function handleDirectDmMessage({ message, say, config, logger = con
     }
   }
 
+  if (response.createDailySummary && inProcessService) {
+    try {
+      const result = await inProcessService.handleEndWork({ user });
+      await say({
+        text: result.dmText,
+        blocks: buildTextMessageBlocks(result.dmText)
+      });
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, 오늘 한 일 요약 생성에 실패했습니다. Render 로그를 확인한 뒤 다시 '퇴근'을 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
   await say({
     text: response.text,
     blocks: buildTextMessageBlocks(response.text)

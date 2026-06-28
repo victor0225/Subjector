@@ -53,6 +53,39 @@ function createFakeStore({ existingMessage = null, tasks = [] } = {}) {
     },
     async updateTaskStatus(input) {
       calls.push(['updateTaskStatus', input]);
+    },
+    async endWorkSession(input) {
+      calls.push(['endWorkSession', input]);
+    },
+    async markAcceptedTasksUnresolvedForUser(input) {
+      calls.push(['markAcceptedTasksUnresolvedForUser', input]);
+    },
+    async listDailyTasksForUser(input) {
+      calls.push(['listDailyTasksForUser', input]);
+      return [
+        {
+          id: 'task-1',
+          title: '센서 후보 정리',
+          status: '완료',
+          importance: '🔴 상',
+          coordination: '🟡 중'
+        }
+      ];
+    },
+    async listDailyTaskResultsForUser(input) {
+      calls.push(['listDailyTaskResultsForUser', input]);
+      return [
+        {
+          taskId: 'task-1',
+          taskTitle: '센서 후보 정리',
+          resultType: '완료',
+          rawText: '[완료 제출 결과]\n[결론]\n- ESP32 우선 추천'
+        }
+      ];
+    },
+    async listDailyChangeRequestsForUser(input) {
+      calls.push(['listDailyChangeRequestsForUser', input]);
+      return [];
     }
   };
 }
@@ -209,4 +242,31 @@ test('handleTaskActionSubmission stores change request output', async () => {
   assert.equal(result.status, '변경 요청 중');
   assert.equal(store.calls.find(([name]) => name === 'createChangeRequest')[1].rawText, '[변경 요청]');
   assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '변경 요청 중');
+});
+
+test('handleEndWork stores the end time and returns a daily summary', async () => {
+  const store = createFakeStore();
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleEndWork({ user });
+
+  assert.match(result.dmText, /수현님, 오늘 한 일 요약입니다/);
+  assert.match(result.dmText, /센서 후보 정리/);
+  assert.match(result.dmText, /ESP32 우선 추천/);
+  assert.deepEqual(store.calls.find(([name]) => name === 'endWorkSession')[1], {
+    userKey: 'suhyeon',
+    workDate: '2026-06-28',
+    endedAt: '2026-06-28T12:00:00.000Z'
+  });
+  assert.deepEqual(store.calls.find(([name]) => name === 'markAcceptedTasksUnresolvedForUser')[1], {
+    userKey: 'suhyeon'
+  });
+  assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].fromIso, '2026-06-27T15:00:00.000Z');
+  assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].toIso, '2026-06-28T15:00:00.000Z');
 });

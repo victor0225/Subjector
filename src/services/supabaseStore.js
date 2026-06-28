@@ -40,6 +40,26 @@ function mapSlackMessage(row) {
   };
 }
 
+function mapTaskResult(row) {
+  return {
+    taskId: row.task_id,
+    taskTitle: row.tasks?.title ?? 'task',
+    resultType: row.result_type,
+    rawText: row.raw_text,
+    createdAt: row.created_at
+  };
+}
+
+function mapChangeRequest(row) {
+  return {
+    taskId: row.task_id,
+    taskTitle: row.tasks?.title ?? 'task',
+    status: row.status,
+    rawText: row.raw_text,
+    createdAt: row.created_at
+  };
+}
+
 export function createSupabaseStore(supabase) {
   async function startWorkSession({ userKey, workDate, startedAt }) {
     const result = await supabase
@@ -55,6 +75,20 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to start work session');
   }
 
+  async function endWorkSession({ userKey, workDate, endedAt }) {
+    const result = await supabase
+      .from('daily_work_sessions')
+      .upsert({
+        user_key: userKey,
+        work_date: workDate,
+        ended_at: endedAt
+      }, {
+        onConflict: 'user_key,work_date'
+      });
+
+    throwIfError(result, 'Failed to end work session');
+  }
+
   async function listOpenTasksForUser(userKey) {
     const result = await supabase
       .from('tasks')
@@ -65,6 +99,29 @@ export function createSupabaseStore(supabase) {
       .limit(10);
 
     throwIfError(result, 'Failed to list open tasks');
+    return result.data.map(mapTask);
+  }
+
+  async function markAcceptedTasksUnresolvedForUser({ userKey }) {
+    const result = await supabase
+      .from('tasks')
+      .update({ status: '미정리' })
+      .eq('assignee_user_key', userKey)
+      .eq('status', '수락');
+
+    throwIfError(result, 'Failed to mark accepted tasks unresolved');
+  }
+
+  async function listDailyTasksForUser({ userKey }) {
+    const result = await supabase
+      .from('tasks')
+      .select('id,title,status,importance,coordination,source_type,context,created_at')
+      .eq('assignee_user_key', userKey)
+      .in('status', OPEN_TASK_STATUSES)
+      .order('created_at', { ascending: true })
+      .limit(20);
+
+    throwIfError(result, 'Failed to list daily tasks');
     return result.data.map(mapTask);
   }
 
@@ -106,6 +163,19 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to submit task result');
   }
 
+  async function listDailyTaskResultsForUser({ userKey, fromIso, toIso }) {
+    const result = await supabase
+      .from('task_results')
+      .select('task_id,result_type,raw_text,created_at,tasks(title)')
+      .eq('submitted_by_user_key', userKey)
+      .gte('created_at', fromIso)
+      .lt('created_at', toIso)
+      .order('created_at', { ascending: true });
+
+    throwIfError(result, 'Failed to list daily task results');
+    return result.data.map(mapTaskResult);
+  }
+
   async function createChangeRequest({ taskId, proposerUserKey, rawText }) {
     const result = await supabase
       .from('change_requests')
@@ -117,6 +187,19 @@ export function createSupabaseStore(supabase) {
       });
 
     throwIfError(result, 'Failed to create change request');
+  }
+
+  async function listDailyChangeRequestsForUser({ userKey, fromIso, toIso }) {
+    const result = await supabase
+      .from('change_requests')
+      .select('task_id,status,raw_text,created_at,tasks(title)')
+      .eq('proposer_user_key', userKey)
+      .gte('created_at', fromIso)
+      .lt('created_at', toIso)
+      .order('created_at', { ascending: true });
+
+    throwIfError(result, 'Failed to list daily change requests');
+    return result.data.map(mapChangeRequest);
   }
 
   async function updateTaskStatus({ taskId, status, completedAt = null }) {
@@ -150,11 +233,16 @@ export function createSupabaseStore(supabase) {
 
   return {
     startWorkSession,
+    endWorkSession,
     listOpenTasksForUser,
+    markAcceptedTasksUnresolvedForUser,
+    listDailyTasksForUser,
     findSlackMessage,
     getTaskById,
     submitTaskResult,
+    listDailyTaskResultsForUser,
     createChangeRequest,
+    listDailyChangeRequestsForUser,
     updateTaskStatus,
     upsertSlackMessage
   };
