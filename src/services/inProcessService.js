@@ -1,8 +1,10 @@
+import { buildCodexPrompt } from '../domain/codexPrompt.js';
 import { buildDailySummaryMessage } from '../domain/dailySummary.js';
 import { buildFinalsChannelMessage, buildFinalsPreviewMessage, buildFinalsPreviewRecord } from '../domain/finalsSummary.js';
 import { buildInProcessBoardMessage, buildInProcessMessagePurpose, formatKstDate } from '../domain/inProcessBoard.js';
 import { taskActionFromActionId } from '../domain/taskActions.js';
 import { formatDisplayName } from '../domain/users.js';
+import { buildCodexPromptBlocks } from '../slack/blocks.js';
 
 function kstDayRange(workDate) {
   const [year, month, day] = workDate.split('-').map(Number);
@@ -226,6 +228,63 @@ export function createInProcessService({ store, slackClient, config, users = con
     };
   }
 
+  async function handleTaskAcceptAndPrompt({ taskId, assigneeUserKey }) {
+    const now = clock();
+    const task = await store.getTaskById(taskId);
+    const ownerKey = task?.assigneeUserKey ?? assigneeUserKey;
+    const owner = users.find((candidate) => candidate.key === ownerKey);
+
+    if (!owner) {
+      throw new Error(`Unknown task owner: ${ownerKey}`);
+    }
+
+    const prompt = buildCodexPrompt({
+      assignee: owner,
+      task,
+      context: task.context ?? {}
+    });
+    const channelId = config.channels.inProcess;
+    const boardMessage = await store.findSlackMessage({
+      purpose: buildInProcessMessagePurpose(owner),
+      channelId
+    });
+    const threadTs = boardMessage?.threadTs ?? boardMessage?.messageTs;
+    const postInput = {
+      channel: channelId,
+      text: 'Codex 프롬프트가 생성되었습니다.',
+      blocks: buildCodexPromptBlocks({
+        taskId,
+        prompt
+      })
+    };
+
+    if (threadTs) {
+      postInput.thread_ts = threadTs;
+    }
+
+    const posted = await slackClient.chat.postMessage(postInput);
+
+    await store.createCodexPrompt({
+      taskId,
+      prompt,
+      slackChannelId: channelId,
+      slackMessageTs: posted.ts
+    });
+
+    await store.updateTaskStatus({
+      taskId,
+      status: '수락',
+      acceptedAt: now.toISOString()
+    });
+
+    await renderBoard({ user: owner, now });
+
+    return {
+      status: '수락',
+      responseText: `${formatDisplayName(owner)}, Codex 프롬프트를 생성했습니다. #in-process 스레드를 확인해 주세요.`
+    };
+  }
+
   async function handleTaskActionSubmission({ actionId, taskId, assigneeUserKey, submittedByUserKey, rawText }) {
     const action = taskActionFromActionId(actionId);
     if (!action) {
@@ -278,6 +337,7 @@ export function createInProcessService({ store, slackClient, config, users = con
     handleEndWork,
     handleFinalsPreview,
     handleFinalsApproval,
+    handleTaskAcceptAndPrompt,
     handleTaskActionSubmission,
     getTaskTitle
   };

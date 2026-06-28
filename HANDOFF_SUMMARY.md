@@ -108,6 +108,7 @@ Implemented:
   - `완료` stores a `task_results` row and changes task status to `완료`.
   - `오늘은 여기까지` stores a `task_results` row and changes task status to `오늘은 여기까지`.
   - `변경 요청` stores a `change_requests` row and changes task status to `변경 요청 중`.
+  - `수락 및 Codex 프롬프트 생성` now changes task status to `수락`, stores `accepted_at`, generates the Subjector Codex prompt, posts it in the user's `#in-process` board thread with `프롬프트 복사` above the prompt body, and stores the prompt in `codex_prompts`.
   - `퇴근` now records the user's end-of-work session, changes still-accepted tasks to `미정리`, gathers today's task results/change requests, and sends a DM daily summary.
   - `finals 업데이트` now lets 조수현 generate a cumulative `#finals` preview by DM and stores the preview in `finals_updates`.
   - The `#finals` preview DM includes an approval button. When 조수현 approves, Subjector posts or updates the cumulative `#finals` message and marks the preview as `승인됨`.
@@ -131,7 +132,7 @@ Implemented:
 
 Verification:
 
-- `pnpm test` passes: 88 tests, 0 failures.
+- `pnpm test` passes: 92 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.

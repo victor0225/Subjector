@@ -75,6 +75,9 @@ function createFakeStore({
     async updateTaskStatus(input) {
       calls.push(['updateTaskStatus', input]);
     },
+    async createCodexPrompt(input) {
+      calls.push(['createCodexPrompt', input]);
+    },
     async endWorkSession(input) {
       calls.push(['endWorkSession', input]);
     },
@@ -272,6 +275,46 @@ test('handleTaskActionSubmission stores completed task output and refreshes the 
   });
   assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '완료');
   assert.equal(slackClient.calls.at(-1)[0], 'update');
+});
+
+test('handleTaskAcceptAndPrompt accepts a task and posts the Codex prompt in the board thread', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001',
+      threadTs: '1700000000.000001'
+    }
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskAcceptAndPrompt({
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon'
+  });
+
+  assert.equal(result.status, '수락');
+  assert.match(result.responseText, /Codex 프롬프트를 생성했습니다/);
+  const statusUpdate = store.calls.find(([name]) => name === 'updateTaskStatus');
+  assert.equal(statusUpdate[1].status, '수락');
+  assert.equal(statusUpdate[1].acceptedAt, '2026-06-28T02:00:00.000Z');
+
+  const promptPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.thread_ts);
+  assert.equal(promptPost[1].channel, 'C_IN_PROCESS');
+  assert.equal(promptPost[1].thread_ts, '1700000000.000001');
+  assert.match(promptPost[1].text, /Codex 프롬프트가 생성되었습니다/);
+  assert.equal(promptPost[1].blocks[1].elements[0].text.text, '프롬프트 복사');
+
+  const promptInsert = store.calls.find(([name]) => name === 'createCodexPrompt');
+  assert.equal(promptInsert[1].taskId, 'task-1');
+  assert.match(promptInsert[1].prompt, /센서 후보 정리/);
+  assert.equal(promptInsert[1].slackMessageTs, '1710000000.000001');
 });
 
 test('handleTaskActionSubmission stores stop-for-today output', async () => {

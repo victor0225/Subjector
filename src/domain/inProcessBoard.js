@@ -61,7 +61,8 @@ function taskActionsBlock({ task, user }) {
     type: 'actions',
     block_id: `task_actions_${task.id}`,
     elements: [
-      taskActionButton({ actionId: 'task_complete', text: '완료', task, user, style: 'primary' }),
+      taskActionButton({ actionId: 'task_accept_generate_prompt', text: '수락 및 Codex 프롬프트 생성', task, user, style: 'primary' }),
+      taskActionButton({ actionId: 'task_complete', text: '완료', task, user }),
       taskActionButton({ actionId: 'task_stop_today', text: '오늘은 여기까지', task, user }),
       taskActionButton({ actionId: 'task_change_request', text: '변경 요청', task, user, style: 'danger' })
     ]

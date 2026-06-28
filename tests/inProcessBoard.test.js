@@ -58,7 +58,7 @@ test('buildInProcessBoardMessage includes assigned task summaries', () => {
   assert.match(message.text, /회의 결과록 2026-06-28/);
 });
 
-test('buildInProcessBoardMessage attaches the three task action buttons', () => {
+test('buildInProcessBoardMessage attaches the four MVP task action buttons', () => {
   const message = buildInProcessBoardMessage({
     user,
     workDate: '2026-06-28',
@@ -78,11 +78,13 @@ test('buildInProcessBoardMessage attaches the three task action buttons', () => 
 
   assert.ok(actions);
   assert.deepEqual(actions.elements.map((element) => element.action_id), [
+    'task_accept_generate_prompt',
     'task_complete',
     'task_stop_today',
     'task_change_request'
   ]);
   assert.deepEqual(actions.elements.map((element) => element.text.text), [
+    '수락 및 Codex 프롬프트 생성',
     '완료',
     '오늘은 여기까지',
     '변경 요청'

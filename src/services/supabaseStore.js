@@ -207,6 +207,19 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to submit task result');
   }
 
+  async function createCodexPrompt({ taskId, prompt, slackChannelId, slackMessageTs }) {
+    const result = await supabase
+      .from('codex_prompts')
+      .insert({
+        task_id: taskId,
+        prompt,
+        slack_channel_id: slackChannelId,
+        slack_message_ts: slackMessageTs
+      });
+
+    throwIfError(result, 'Failed to create Codex prompt');
+  }
+
   async function listDailyTaskResultsForUser({ userKey, fromIso, toIso }) {
     const result = await supabase
       .from('task_results')
@@ -319,10 +332,13 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to approve finals update');
   }
 
-  async function updateTaskStatus({ taskId, status, completedAt = null }) {
+  async function updateTaskStatus({ taskId, status, completedAt = null, acceptedAt = null }) {
     const update = { status };
     if (completedAt) {
       update.completed_at = completedAt;
+    }
+    if (acceptedAt) {
+      update.accepted_at = acceptedAt;
     }
 
     const result = await supabase
@@ -359,6 +375,7 @@ export function createSupabaseStore(supabase) {
     findSlackMessage,
     getTaskById,
     submitTaskResult,
+    createCodexPrompt,
     listDailyTaskResultsForUser,
     listAllTaskResults,
     createChangeRequest,

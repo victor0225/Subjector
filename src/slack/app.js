@@ -173,6 +173,20 @@ export async function handleTaskActionButton({ ack, body, client, logger = conso
   logger.info?.(`Task action modal opened: ${metadata.actionId}`);
 }
 
+export async function handleTaskAcceptButton({ ack, body, logger = console, inProcessService }) {
+  await ack();
+
+  const actionPayload = body.actions[0];
+  const metadata = parseTaskActionMetadata(actionPayload.value);
+
+  await inProcessService.handleTaskAcceptAndPrompt({
+    taskId: metadata.taskId,
+    assigneeUserKey: metadata.assigneeUserKey
+  });
+
+  logger.info?.('Task accepted and Codex prompt generated');
+}
+
 export async function handleTaskActionViewSubmission({ ack, body, view, config, logger = console, inProcessService }) {
   const metadata = parseTaskActionMetadata(view.private_metadata);
   const submittedBy = getUserBySlackId(config.users, body.user.id);
@@ -251,6 +265,15 @@ export async function handleFinalsApproveButton({ ack, body, client, config, log
 }
 
 function registerTaskActionHandlers(app, config, logger, inProcessService) {
+  app.action('task_accept_generate_prompt', async ({ ack, body }) => {
+    await handleTaskAcceptButton({
+      ack,
+      body,
+      logger,
+      inProcessService
+    });
+  });
+
   for (const actionId of ['task_complete', 'task_stop_today', 'task_change_request']) {
     app.action(actionId, async ({ ack, body, client }) => {
       await handleTaskActionButton({

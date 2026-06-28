@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   handleDirectDmMessage,
   handleFinalsApproveButton,
+  handleTaskAcceptButton,
   handleTaskActionButton,
   handleTaskActionViewSubmission
 } from '../src/slack/app.js';
@@ -343,6 +344,42 @@ test('handleTaskActionButton opens the matching Slack modal', async () => {
   assert.equal(opened[0].trigger_id, 'trigger-1');
   assert.equal(opened[0].view.callback_id, 'task_action_submission');
   assert.match(opened[0].view.blocks[0].text.text, /센서 후보 정리/);
+});
+
+test('handleTaskAcceptButton accepts a task and generates a Codex prompt', async () => {
+  let acked = false;
+  const serviceCalls = [];
+
+  await handleTaskAcceptButton({
+    ack: async () => { acked = true; },
+    body: {
+      actions: [
+        {
+          action_id: 'task_accept_generate_prompt',
+          value: JSON.stringify({
+            actionId: 'task_accept_generate_prompt',
+            taskId: 'task-1',
+            assigneeUserKey: 'suhyeon'
+          })
+        }
+      ]
+    },
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleTaskAcceptAndPrompt(input) {
+        serviceCalls.push(input);
+        return {
+          status: '수락',
+          responseText: '수현님, Codex 프롬프트를 생성했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].taskId, 'task-1');
+  assert.equal(serviceCalls[0].assigneeUserKey, 'suhyeon');
 });
 
 test('handleTaskActionViewSubmission stores modal input through the in-process service', async () => {

@@ -282,6 +282,24 @@ test('submitTaskResult inserts a raw Codex result', async () => {
   assert.equal(insert[2].submitted_by_user_key, 'suhyeon');
 });
 
+test('createCodexPrompt inserts a generated prompt with Slack location', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.createCodexPrompt({
+    taskId: 'task-1',
+    prompt: 'Codex prompt',
+    slackChannelId: 'C_IN_PROCESS',
+    slackMessageTs: '1710000000.000001'
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'codex_prompts' && call[1] === 'insert');
+  assert.equal(insert[2].task_id, 'task-1');
+  assert.equal(insert[2].prompt, 'Codex prompt');
+  assert.equal(insert[2].slack_channel_id, 'C_IN_PROCESS');
+  assert.equal(insert[2].slack_message_ts, '1710000000.000001');
+});
+
 test('listDailyTaskResultsForUser reads Codex outputs submitted today', async () => {
   const supabase = createFakeSupabase({
     tableData: {
@@ -504,6 +522,21 @@ test('updateTaskStatus updates task status and completion timestamp', async () =
   assert.equal(update[2].status, '완료');
   assert.equal(update[2].completed_at, '2026-06-28T02:00:00.000Z');
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'id'));
+});
+
+test('updateTaskStatus can store accepted timestamp', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.updateTaskStatus({
+    taskId: 'task-1',
+    status: '수락',
+    acceptedAt: '2026-06-28T02:00:00.000Z'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'update');
+  assert.equal(update[2].status, '수락');
+  assert.equal(update[2].accepted_at, '2026-06-28T02:00:00.000Z');
 });
 
 test('upsertSlackMessage stores purpose and Slack timestamp', async () => {
