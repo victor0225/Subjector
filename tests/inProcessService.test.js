@@ -45,6 +45,7 @@ function createFakeTaskEvaluator(evaluation) {
 function createFakeStore({
   existingMessage = null,
   existingMessagesByPurpose = {},
+  taskDetailMessages = [],
   tasks = [],
   endedSessions = [],
   finalsUpdateForDate = null
@@ -72,6 +73,13 @@ function createFakeStore({
     },
     async upsertSlackMessage(input) {
       calls.push(['upsertSlackMessage', input]);
+    },
+    async listTaskDetailMessagesForThread(input) {
+      calls.push(['listTaskDetailMessagesForThread', input]);
+      return taskDetailMessages;
+    },
+    async deleteSlackMessage(input) {
+      calls.push(['deleteSlackMessage', input]);
     },
     async getTaskById(taskId) {
       calls.push(['getTaskById', taskId]);
@@ -213,6 +221,10 @@ function createFakeSlackClient({ updateError = null } = {}) {
           throw updateError;
         }
         return { ok: true, channel: input.channel, ts: input.ts };
+      },
+      async delete(input) {
+        calls.push(['delete', input]);
+        return { ok: true, channel: input.channel, ts: input.ts };
       }
     }
   };
@@ -309,6 +321,63 @@ test('handleRefreshInProcess updates #in-process without starting a work session
   assert.equal(store.calls.some(([name]) => name === 'startWorkSession'), false);
   assert.equal(slackClient.calls[0][0], 'update');
   assert.match(slackClient.calls[0][1].text, /회의 기반 신규 task/);
+});
+
+test('handleRefreshInProcess deletes stale task detail thread messages', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001',
+      threadTs: '1700000000.000001'
+    },
+    taskDetailMessages: [
+      {
+        purpose: 'task_detail:task-1',
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000011',
+        threadTs: '1700000000.000001'
+      },
+      {
+        purpose: 'task_detail:deleted-task',
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000012',
+        threadTs: '1700000000.000001'
+      }
+    ],
+    tasks: [
+      {
+        id: 'task-1',
+        title: '남아있는 task',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    clock: () => new Date('2026-06-28T01:30:00.000Z')
+  });
+
+  await service.handleRefreshInProcess({ user });
+
+  const deletedSlackMessages = slackClient.calls.filter(([name]) => name === 'delete');
+  assert.equal(deletedSlackMessages.length, 1);
+  assert.deepEqual(deletedSlackMessages[0][1], {
+    channel: 'C_IN_PROCESS',
+    ts: '1700000000.000012'
+  });
+
+  const deletedRecords = store.calls.filter(([name]) => name === 'deleteSlackMessage');
+  assert.equal(deletedRecords.length, 1);
+  assert.deepEqual(deletedRecords[0][1], {
+    channelId: 'C_IN_PROCESS',
+    messageTs: '1700000000.000012'
+  });
 });
 
 test('handleStartWork posts task detail threads for tasks that do not have one yet', async () => {

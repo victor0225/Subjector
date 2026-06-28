@@ -34,11 +34,17 @@ function mapSlackMessage(row) {
     return null;
   }
 
-  return {
+  const message = {
     channelId: row.channel_id,
     messageTs: row.message_ts,
     threadTs: row.thread_ts
   };
+
+  if (row.purpose) {
+    message.purpose = row.purpose;
+  }
+
+  return message;
 }
 
 function mapWorkSession(row) {
@@ -359,7 +365,7 @@ export function createSupabaseStore(supabase) {
   async function findSlackMessage({ purpose, channelId }) {
     const result = await supabase
       .from('slack_messages')
-      .select('channel_id,message_ts,thread_ts')
+      .select('purpose,channel_id,message_ts,thread_ts')
       .eq('purpose', purpose)
       .eq('channel_id', channelId)
       .order('created_at', { ascending: false })
@@ -368,6 +374,19 @@ export function createSupabaseStore(supabase) {
 
     throwIfError(result, 'Failed to find Slack message');
     return mapSlackMessage(result.data);
+  }
+
+  async function listTaskDetailMessagesForThread({ channelId, threadTs }) {
+    const result = await supabase
+      .from('slack_messages')
+      .select('purpose,channel_id,message_ts,thread_ts')
+      .eq('channel_id', channelId)
+      .eq('thread_ts', threadTs)
+      .like('purpose', 'task_detail:%')
+      .order('created_at', { ascending: true });
+
+    throwIfError(result, 'Failed to list task detail Slack messages');
+    return result.data.map(mapSlackMessage);
   }
 
   async function getTaskById(taskId) {
@@ -565,6 +584,16 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to upsert Slack message');
   }
 
+  async function deleteSlackMessage({ channelId, messageTs }) {
+    const result = await supabase
+      .from('slack_messages')
+      .delete()
+      .eq('channel_id', channelId)
+      .eq('message_ts', messageTs);
+
+    throwIfError(result, 'Failed to delete Slack message record');
+  }
+
   return {
     startWorkSession,
     endWorkSession,
@@ -581,6 +610,7 @@ export function createSupabaseStore(supabase) {
     listDailyTasksForUser,
     listAllTasks,
     findSlackMessage,
+    listTaskDetailMessagesForThread,
     getTaskById,
     submitTaskResult,
     createCodexPrompt,
@@ -595,6 +625,7 @@ export function createSupabaseStore(supabase) {
     getFinalsUpdateForDate,
     approveFinalsUpdate,
     updateTaskStatus,
-    upsertSlackMessage
+    upsertSlackMessage,
+    deleteSlackMessage
   };
 }

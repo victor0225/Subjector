@@ -39,6 +39,11 @@ function isSlackMessageNotFound(error) {
     || error?.message === 'message_not_found';
 }
 
+function taskIdFromDetailPurpose(purpose) {
+  const text = String(purpose ?? '');
+  return text.startsWith('task_detail:') ? text.slice('task_detail:'.length) : '';
+}
+
 export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date(), taskEvaluator = null }) {
   async function postBoardMessage({ channelId, message, purpose }) {
     const posted = await slackClient.chat.postMessage({
@@ -90,6 +95,41 @@ export function createInProcessService({ store, slackClient, config, users = con
         channelId,
         messageTs: posted.ts,
         threadTs
+      });
+    }
+  }
+
+  async function cleanupStaleTaskDetailThreads({ channelId, threadTs, tasks }) {
+    if (!threadTs) {
+      return;
+    }
+
+    const currentTaskIds = new Set(tasks.map((task) => task.id).filter(Boolean));
+    const existingDetails = await store.listTaskDetailMessagesForThread({
+      channelId,
+      threadTs
+    });
+
+    for (const detail of existingDetails) {
+      const taskId = taskIdFromDetailPurpose(detail.purpose);
+      if (!taskId || currentTaskIds.has(taskId)) {
+        continue;
+      }
+
+      try {
+        await slackClient.chat.delete({
+          channel: channelId,
+          ts: detail.messageTs
+        });
+      } catch (error) {
+        if (!isSlackMessageNotFound(error)) {
+          throw error;
+        }
+      }
+
+      await store.deleteSlackMessage({
+        channelId,
+        messageTs: detail.messageTs
       });
     }
   }
@@ -148,6 +188,12 @@ export function createInProcessService({ store, slackClient, config, users = con
         threadTs: existingMessage.threadTs ?? existingMessage.messageTs,
         tasks,
         user
+      });
+
+      await cleanupStaleTaskDetailThreads({
+        channelId,
+        threadTs: existingMessage.threadTs ?? existingMessage.messageTs,
+        tasks
       });
 
       return {

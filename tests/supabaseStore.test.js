@@ -15,6 +15,10 @@ function createFakeSupabase({ tableData = {}, singleData = {}, errors = {} } = {
         calls.push([table, 'eq', column, value]);
         return builder;
       },
+      like(column, value) {
+        calls.push([table, 'like', column, value]);
+        return builder;
+      },
       in(column, values) {
         calls.push([table, 'in', column, values]);
         return builder;
@@ -45,6 +49,10 @@ function createFakeSupabase({ tableData = {}, singleData = {}, errors = {} } = {
       },
       update(row) {
         calls.push([table, 'update', row]);
+        return builder;
+      },
+      delete() {
+        calls.push([table, 'delete']);
         return builder;
       },
       upsert(row, options) {
@@ -417,6 +425,35 @@ test('findSlackMessage maps the latest stored Slack message', async () => {
   });
 });
 
+test('listTaskDetailMessagesForThread reads stored task detail messages', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      slack_messages: [
+        {
+          purpose: 'task_detail:task-1',
+          channel_id: 'C_IN_PROCESS',
+          message_ts: '1700000000.000011',
+          thread_ts: '1700000000.000001'
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const messages = await store.listTaskDetailMessagesForThread({
+    channelId: 'C_IN_PROCESS',
+    threadTs: '1700000000.000001'
+  });
+
+  assert.deepEqual(messages[0], {
+    purpose: 'task_detail:task-1',
+    channelId: 'C_IN_PROCESS',
+    messageTs: '1700000000.000011',
+    threadTs: '1700000000.000001'
+  });
+  assert.ok(supabase.calls.some((call) => call[0] === 'slack_messages' && call[1] === 'like' && call[2] === 'purpose' && call[3] === 'task_detail:%'));
+});
+
 test('getTaskById reads task ownership for action submissions', async () => {
   const supabase = createFakeSupabase({
     singleData: {
@@ -763,6 +800,20 @@ test('upsertSlackMessage stores purpose and Slack timestamp', async () => {
   assert.equal(upsert[2].purpose, 'in_process:suhyeon');
   assert.equal(upsert[2].message_ts, '1700000000.000001');
   assert.equal(upsert[3].onConflict, 'channel_id,message_ts');
+});
+
+test('deleteSlackMessage removes a stored Slack message by channel and timestamp', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.deleteSlackMessage({
+    channelId: 'C_IN_PROCESS',
+    messageTs: '1700000000.000011'
+  });
+
+  assert.ok(supabase.calls.some((call) => call[0] === 'slack_messages' && call[1] === 'delete'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'slack_messages' && call[1] === 'eq' && call[2] === 'channel_id' && call[3] === 'C_IN_PROCESS'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'slack_messages' && call[1] === 'eq' && call[2] === 'message_ts' && call[3] === '1700000000.000011'));
 });
 
 test('store methods throw Supabase errors with context', async () => {
