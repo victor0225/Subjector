@@ -78,7 +78,7 @@ export function buildCodexPromptBlocks({ taskId, prompt }) {
   return [
     {
       type: 'section',
-      text: mrkdwn('*Codex 프롬프트가 생성되었습니다.*\n아래 버튼을 먼저 사용한 뒤, 필요하면 본문을 직접 확인하세요.')
+      text: mrkdwn('*Codex 프롬프트가 생성되었습니다.*\n아래 버튼을 누르면 나에게만 복사용 본문이 다시 표시됩니다.')
     },
     {
       type: 'actions',
@@ -87,7 +87,7 @@ export function buildCodexPromptBlocks({ taskId, prompt }) {
         {
           type: 'button',
           action_id: 'copy_codex_prompt',
-          text: plainText('프롬프트 복사'),
+          text: plainText('프롬프트 보기/복사'),
           value: taskId,
           style: 'primary'
         }
@@ -96,6 +96,22 @@ export function buildCodexPromptBlocks({ taskId, prompt }) {
     ...chunks.map((chunk, index) => ({
       type: 'section',
       block_id: `codex_prompt_body_${index + 1}`,
+      text: mrkdwn(codeBlock(chunk))
+    }))
+  ];
+}
+
+export function buildCodexPromptCopyBlocks({ prompt }) {
+  const chunks = chunkText(prompt);
+
+  return [
+    {
+      type: 'section',
+      text: mrkdwn('*Codex 프롬프트 복사용 본문*\nSlack 제한상 버튼이 직접 클립보드에 복사하지는 못합니다. 아래 본문을 선택해서 복사해 주세요.')
+    },
+    ...chunks.map((chunk, index) => ({
+      type: 'section',
+      block_id: `codex_prompt_copy_body_${index + 1}`,
       text: mrkdwn(codeBlock(chunk))
     }))
   ];

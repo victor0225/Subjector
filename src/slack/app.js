@@ -187,6 +187,35 @@ export async function handleTaskAcceptButton({ ack, body, logger = console, inPr
   logger.info?.('Task accepted and Codex prompt generated');
 }
 
+export async function handleCodexPromptCopyButton({ ack, body, client, logger = console, inProcessService }) {
+  await ack();
+
+  const taskId = body.actions?.[0]?.value;
+  const channel = body.channel?.id;
+  const userId = body.user?.id;
+
+  try {
+    const result = await inProcessService.handleCodexPromptCopyRequest({ taskId });
+
+    await client.chat.postEphemeral({
+      channel,
+      user: userId,
+      text: result.text,
+      blocks: result.blocks
+    });
+
+    logger.info?.('Codex prompt copy message sent');
+  } catch (error) {
+    logger.error?.(error);
+    await client.chat.postEphemeral({
+      channel,
+      user: userId,
+      text: 'Codex 프롬프트를 불러오지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.',
+      blocks: buildTextMessageBlocks('Codex 프롬프트를 불러오지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.')
+    });
+  }
+}
+
 export async function handleTaskActionViewSubmission({ ack, body, view, config, logger = console, inProcessService }) {
   const metadata = parseTaskActionMetadata(view.private_metadata);
   const submittedBy = getUserBySlackId(config.users, body.user.id);
@@ -269,6 +298,16 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
     await handleTaskAcceptButton({
       ack,
       body,
+      logger,
+      inProcessService
+    });
+  });
+
+  app.action('copy_codex_prompt', async ({ ack, body, client }) => {
+    await handleCodexPromptCopyButton({
+      ack,
+      body,
+      client,
       logger,
       inProcessService
     });

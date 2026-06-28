@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   handleDirectDmMessage,
+  handleCodexPromptCopyButton,
   handleFinalsApproveButton,
   handleTaskAcceptButton,
   handleTaskActionButton,
@@ -380,6 +381,55 @@ test('handleTaskAcceptButton accepts a task and generates a Codex prompt', async
   assert.equal(serviceCalls.length, 1);
   assert.equal(serviceCalls[0].taskId, 'task-1');
   assert.equal(serviceCalls[0].assigneeUserKey, 'suhyeon');
+});
+
+test('handleCodexPromptCopyButton acknowledges and sends a copyable ephemeral prompt', async () => {
+  let acked = false;
+  const serviceCalls = [];
+  const ephemeralMessages = [];
+
+  await handleCodexPromptCopyButton({
+    ack: async () => { acked = true; },
+    body: {
+      user: { id: 'U1' },
+      channel: { id: 'C_IN_PROCESS' },
+      actions: [
+        {
+          action_id: 'copy_codex_prompt',
+          value: 'task-1'
+        }
+      ]
+    },
+    client: {
+      chat: {
+        postEphemeral: async (input) => ephemeralMessages.push(input)
+      }
+    },
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleCodexPromptCopyRequest(input) {
+        serviceCalls.push(input);
+        return {
+          text: 'Codex 프롬프트 복사용 본문입니다.',
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: '```Subjector Codex prompt```'
+              }
+            }
+          ]
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.deepEqual(serviceCalls[0], { taskId: 'task-1' });
+  assert.equal(ephemeralMessages[0].channel, 'C_IN_PROCESS');
+  assert.equal(ephemeralMessages[0].user, 'U1');
+  assert.match(ephemeralMessages[0].text, /Codex 프롬프트/);
 });
 
 test('handleTaskActionViewSubmission stores modal input through the in-process service', async () => {

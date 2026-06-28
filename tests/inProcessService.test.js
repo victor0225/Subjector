@@ -78,6 +78,15 @@ function createFakeStore({
     async createCodexPrompt(input) {
       calls.push(['createCodexPrompt', input]);
     },
+    async getLatestCodexPromptForTask(taskId) {
+      calls.push(['getLatestCodexPromptForTask', taskId]);
+      return {
+        taskId,
+        prompt: 'Subjector Codex prompt',
+        slackChannelId: 'C_IN_PROCESS',
+        slackMessageTs: '1710000000.000001'
+      };
+    },
     async endWorkSession(input) {
       calls.push(['endWorkSession', input]);
     },
@@ -309,12 +318,32 @@ test('handleTaskAcceptAndPrompt accepts a task and posts the Codex prompt in the
   assert.equal(promptPost[1].channel, 'C_IN_PROCESS');
   assert.equal(promptPost[1].thread_ts, '1700000000.000001');
   assert.match(promptPost[1].text, /Codex 프롬프트가 생성되었습니다/);
-  assert.equal(promptPost[1].blocks[1].elements[0].text.text, '프롬프트 복사');
+  assert.equal(promptPost[1].blocks[1].elements[0].text.text, '프롬프트 보기/복사');
 
   const promptInsert = store.calls.find(([name]) => name === 'createCodexPrompt');
   assert.equal(promptInsert[1].taskId, 'task-1');
   assert.match(promptInsert[1].prompt, /센서 후보 정리/);
   assert.equal(promptInsert[1].slackMessageTs, '1710000000.000001');
+});
+
+test('handleCodexPromptCopyRequest returns a copyable prompt message', async () => {
+  const store = createFakeStore();
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user]
+  });
+
+  const result = await service.handleCodexPromptCopyRequest({ taskId: 'task-1' });
+
+  assert.match(result.text, /Codex 프롬프트/);
+  assert.match(result.blocks[0].text.text, /선택해서 복사/);
+  assert.match(result.blocks[1].text.text, /Subjector Codex prompt/);
+  assert.deepEqual(store.calls.find(([name]) => name === 'getLatestCodexPromptForTask'), [
+    'getLatestCodexPromptForTask',
+    'task-1'
+  ]);
 });
 
 test('handleTaskActionSubmission stores stop-for-today output', async () => {
@@ -388,6 +417,40 @@ test('handleEndWork stores the end time and returns a daily summary', async () =
   });
   assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].fromIso, '2026-06-27T15:00:00.000Z');
   assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].toIso, '2026-06-28T15:00:00.000Z');
+});
+
+test('handleEndWork refreshes #in-process after marking accepted tasks unresolved', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001'
+    },
+    tasks: [
+      {
+        id: 'task-1',
+        title: '센서 후보 정리',
+        status: '미정리',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  await service.handleEndWork({ user });
+
+  const update = slackClient.calls.find(([name]) => name === 'update');
+  assert.equal(update[1].channel, 'C_IN_PROCESS');
+  assert.equal(update[1].ts, '1700000000.000001');
+  assert.match(update[1].text, /미정리/);
 });
 
 test('handleEndWork creates a finals preview when all users have ended work and no preview exists', async () => {

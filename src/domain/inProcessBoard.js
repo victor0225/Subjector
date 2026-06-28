@@ -27,10 +27,24 @@ function taskContextSource(task) {
   return task?.context?.source ?? task?.sourceType ?? '기록 없음';
 }
 
+function statusBadge(status) {
+  const markerByStatus = {
+    미시작: '🟡',
+    수락: '🟡',
+    완료: '🟢',
+    '오늘은 여기까지': '🟡',
+    미정리: '🔴',
+    '변경 요청 중': '🔴',
+    '회의 필요': '🔴'
+  };
+
+  return `${markerByStatus[status] ?? '🟡'} \`${status}\``;
+}
+
 function formatTask(task, index) {
   return [
     `${index + 1}. *${task.title}*`,
-    `   - 상태: ${task.status}`,
+    `   - 상태: ${statusBadge(task.status)}`,
     `   - 중요도: ${task.importance}`,
     `   - 조율: ${task.coordination}`,
     `   - 맥락: ${taskContextSource(task)}`
@@ -57,15 +71,22 @@ function taskActionButton({ actionId, text, task, user, style }) {
 }
 
 function taskActionsBlock({ task, user }) {
+  const elements = [
+    taskActionButton({ actionId: 'task_complete', text: '완료', task, user }),
+    taskActionButton({ actionId: 'task_stop_today', text: '오늘은 여기까지', task, user }),
+    taskActionButton({ actionId: 'task_change_request', text: '변경 요청', task, user, style: 'danger' })
+  ];
+
+  if (task.status === '미시작') {
+    elements.unshift(
+      taskActionButton({ actionId: 'task_accept_generate_prompt', text: '수락 및 Codex 프롬프트 생성', task, user, style: 'primary' })
+    );
+  }
+
   return {
     type: 'actions',
     block_id: `task_actions_${task.id}`,
-    elements: [
-      taskActionButton({ actionId: 'task_accept_generate_prompt', text: '수락 및 Codex 프롬프트 생성', task, user, style: 'primary' }),
-      taskActionButton({ actionId: 'task_complete', text: '완료', task, user }),
-      taskActionButton({ actionId: 'task_stop_today', text: '오늘은 여기까지', task, user }),
-      taskActionButton({ actionId: 'task_change_request', text: '변경 요청', task, user, style: 'danger' })
-    ]
+    elements
   };
 }
 

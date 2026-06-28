@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCodexPromptBlocks, buildFinalsPreviewBlocks, buildTextMessageBlocks } from '../src/slack/blocks.js';
+import {
+  buildCodexPromptBlocks,
+  buildCodexPromptCopyBlocks,
+  buildFinalsPreviewBlocks,
+  buildTextMessageBlocks
+} from '../src/slack/blocks.js';
 
 test('buildTextMessageBlocks renders a simple Slack section block', () => {
   const blocks = buildTextMessageBlocks('수현님, 오늘 할 일 맥락을 정리했습니다.');
@@ -23,7 +28,7 @@ test('buildCodexPromptBlocks puts prompt copy action before prompt body', () => 
   assert.ok(actionIndex > -1);
   assert.ok(promptIndex > -1);
   assert.ok(actionIndex < promptIndex);
-  assert.equal(blocks[actionIndex].elements[0].text.text, '프롬프트 복사');
+  assert.equal(blocks[actionIndex].elements[0].text.text, '프롬프트 보기/복사');
 });
 
 test('buildCodexPromptBlocks splits long prompt into Slack-sized body chunks', () => {
@@ -46,4 +51,14 @@ test('buildFinalsPreviewBlocks includes an approve action before the preview bod
   assert.equal(blocks[1].elements[0].action_id, 'finals_approve_latest');
   assert.match(blocks[1].elements[0].text.text, /승인/);
   assert.match(blocks[2].text.text, /#finals 누적 업데이트 미리보기/);
+});
+
+test('buildCodexPromptCopyBlocks shows a copyable prompt body', () => {
+  const blocks = buildCodexPromptCopyBlocks({
+    prompt: 'Subjector Codex prompt'
+  });
+
+  assert.match(blocks[0].text.text, /선택해서 복사/);
+  assert.match(blocks[1].text.text, /Subjector Codex prompt/);
+  assert.match(blocks[1].text.text, /```/);
 });

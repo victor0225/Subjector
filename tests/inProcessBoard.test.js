@@ -52,7 +52,7 @@ test('buildInProcessBoardMessage includes assigned task summaries', () => {
   });
 
   assert.match(message.text, /센서 후보 정리/);
-  assert.match(message.text, /미시작/);
+  assert.match(message.text, /🟡 `미시작`/);
   assert.match(message.text, /🔴 상/);
   assert.match(message.text, /🟡 중/);
   assert.match(message.text, /회의 결과록 2026-06-28/);
@@ -91,4 +91,30 @@ test('buildInProcessBoardMessage attaches the four MVP task action buttons', () 
   ]);
   assert.ok(actions.elements.every((element) => element.value.includes('task-1')));
   assert.ok(actions.elements.every((element) => element.value.includes('suhyeon')));
+});
+
+test('buildInProcessBoardMessage hides the accept button after task acceptance', () => {
+  const message = buildInProcessBoardMessage({
+    user,
+    workDate: '2026-06-28',
+    tasks: [
+      {
+        id: 'task-1',
+        title: '센서 후보 정리',
+        status: '수락',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+
+  const actions = message.blocks.find((block) => block.type === 'actions');
+
+  assert.match(message.text, /🟡 `수락`/);
+  assert.deepEqual(actions.elements.map((element) => element.action_id), [
+    'task_complete',
+    'task_stop_today',
+    'task_change_request'
+  ]);
 });

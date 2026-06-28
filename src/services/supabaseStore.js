@@ -82,6 +82,20 @@ function mapFinalsPreview(row) {
   };
 }
 
+function mapCodexPrompt(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    taskId: row.task_id,
+    prompt: row.prompt,
+    slackChannelId: row.slack_channel_id,
+    slackMessageTs: row.slack_message_ts,
+    createdAt: row.created_at
+  };
+}
+
 export function createSupabaseStore(supabase) {
   async function startWorkSession({ userKey, workDate, startedAt }) {
     const result = await supabase
@@ -218,6 +232,19 @@ export function createSupabaseStore(supabase) {
       });
 
     throwIfError(result, 'Failed to create Codex prompt');
+  }
+
+  async function getLatestCodexPromptForTask(taskId) {
+    const result = await supabase
+      .from('codex_prompts')
+      .select('task_id,prompt,slack_channel_id,slack_message_ts,created_at')
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfError(result, 'Failed to get latest Codex prompt');
+    return mapCodexPrompt(result.data);
   }
 
   async function listDailyTaskResultsForUser({ userKey, fromIso, toIso }) {
@@ -376,6 +403,7 @@ export function createSupabaseStore(supabase) {
     getTaskById,
     submitTaskResult,
     createCodexPrompt,
+    getLatestCodexPromptForTask,
     listDailyTaskResultsForUser,
     listAllTaskResults,
     createChangeRequest,

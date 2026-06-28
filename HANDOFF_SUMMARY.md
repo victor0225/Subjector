@@ -37,7 +37,7 @@ Latest operating model:
 - 조수현 can force finals preview generation with DM command: `finals 업데이트`.
 - `#finals` is never updated directly without 조수현's preview approval.
 - `수락` and `Codex에서 진행` are merged into `수락 및 Codex 프롬프트 생성`.
-- The generated Codex prompt must show `프롬프트 복사` above the prompt content.
+- The generated Codex prompt must show `프롬프트 보기/복사` above the prompt content.
 - Mid-work Codex command: `오늘은 여기까지`.
 - Final Codex command: `완료 제출 결과 작성해줘`.
 - `#in-process` task buttons are `수락 및 Codex 프롬프트 생성`, `완료`, `오늘은 여기까지`, `변경 요청`, `회의 요청`.
@@ -108,8 +108,11 @@ Implemented:
   - `완료` stores a `task_results` row and changes task status to `완료`.
   - `오늘은 여기까지` stores a `task_results` row and changes task status to `오늘은 여기까지`.
   - `변경 요청` stores a `change_requests` row and changes task status to `변경 요청 중`.
-  - `수락 및 Codex 프롬프트 생성` now changes task status to `수락`, stores `accepted_at`, generates the Subjector Codex prompt, posts it in the user's `#in-process` board thread with `프롬프트 복사` above the prompt body, and stores the prompt in `codex_prompts`.
-  - `퇴근` now records the user's end-of-work session, changes still-accepted tasks to `미정리`, gathers today's task results/change requests, and sends a DM daily summary.
+  - `수락 및 Codex 프롬프트 생성` now changes task status to `수락`, stores `accepted_at`, generates the Subjector Codex prompt, posts it in the user's `#in-process` board thread with `프롬프트 보기/복사` above the prompt body, and stores the prompt in `codex_prompts`.
+  - `프롬프트 보기/복사` is handled by Slack interactivity. It immediately acknowledges the button and sends the user an ephemeral copyable prompt body. Slack cannot directly copy text to the clipboard from a server-side button.
+  - Accepted tasks no longer show the `수락 및 Codex 프롬프트 생성` button again.
+  - Task statuses in `#in-process` are displayed as red/yellow/green Slack-friendly badges.
+  - `퇴근` now records the user's end-of-work session, changes still-accepted tasks to `미정리`, refreshes the user's `#in-process` board, gathers today's task results/change requests, and sends a DM daily summary.
   - `finals 업데이트` now lets 조수현 generate a cumulative `#finals` preview by DM and stores the preview in `finals_updates`.
   - The `#finals` preview DM includes an approval button. When 조수현 approves, Subjector posts or updates the cumulative `#finals` message and marks the preview as `승인됨`.
   - When all configured users have sent `퇴근` for the day and no finals update exists for that date, Subjector automatically creates a `#finals` preview and sends it to 조수현 by DM with the approval button.
@@ -132,7 +135,7 @@ Implemented:
 
 Verification:
 
-- `pnpm test` passes: 92 tests, 0 failures.
+- `pnpm test` passes: 98 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.
@@ -422,7 +425,7 @@ When clicked:
 
 1. Task status becomes accepted.
 2. A detailed Codex prompt is generated in the task thread.
-3. A `프롬프트 복사` button is shown above the prompt content.
+3. A `프롬프트 보기/복사` button is shown above the prompt content.
 
 `진행 중` button was removed because acceptance already implies starting work.
 

@@ -4,7 +4,7 @@ import { buildFinalsChannelMessage, buildFinalsPreviewMessage, buildFinalsPrevie
 import { buildInProcessBoardMessage, buildInProcessMessagePurpose, formatKstDate } from '../domain/inProcessBoard.js';
 import { taskActionFromActionId } from '../domain/taskActions.js';
 import { formatDisplayName } from '../domain/users.js';
-import { buildCodexPromptBlocks } from '../slack/blocks.js';
+import { buildCodexPromptBlocks, buildCodexPromptCopyBlocks, buildTextMessageBlocks } from '../slack/blocks.js';
 
 function kstDayRange(workDate) {
   const [year, month, day] = workDate.split('-').map(Number);
@@ -155,6 +155,8 @@ export function createInProcessService({ store, slackClient, config, users = con
       userKey: user.key
     });
 
+    await renderBoard({ user, now });
+
     const [tasks, results, changeRequests] = await Promise.all([
       store.listDailyTasksForUser({ userKey: user.key }),
       store.listDailyTaskResultsForUser({ userKey: user.key, fromIso, toIso }),
@@ -171,6 +173,26 @@ export function createInProcessService({ store, slackClient, config, users = con
         changeRequests
       }),
       ...(automaticFinals ?? {})
+    };
+  }
+
+  async function handleCodexPromptCopyRequest({ taskId }) {
+    const record = await store.getLatestCodexPromptForTask(taskId);
+
+    if (!record?.prompt) {
+      const text = '저장된 Codex 프롬프트를 찾지 못했습니다. task에서 `수락 및 Codex 프롬프트 생성`을 다시 실행해 주세요.';
+      return {
+        text,
+        blocks: buildTextMessageBlocks(text)
+      };
+    }
+
+    const text = 'Codex 프롬프트 복사용 본문입니다. Slack 메시지에서 아래 본문을 선택해 복사해 주세요.';
+    return {
+      text,
+      blocks: buildCodexPromptCopyBlocks({
+        prompt: record.prompt
+      })
     };
   }
 
@@ -338,6 +360,7 @@ export function createInProcessService({ store, slackClient, config, users = con
     handleFinalsPreview,
     handleFinalsApproval,
     handleTaskAcceptAndPrompt,
+    handleCodexPromptCopyRequest,
     handleTaskActionSubmission,
     getTaskTitle
   };

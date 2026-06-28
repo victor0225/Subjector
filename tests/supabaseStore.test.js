@@ -300,6 +300,30 @@ test('createCodexPrompt inserts a generated prompt with Slack location', async (
   assert.equal(insert[2].slack_message_ts, '1710000000.000001');
 });
 
+test('getLatestCodexPromptForTask reads the newest prompt for a task', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      codex_prompts: {
+        task_id: 'task-1',
+        prompt: 'Codex prompt',
+        slack_channel_id: 'C_IN_PROCESS',
+        slack_message_ts: '1710000000.000001',
+        created_at: '2026-06-28T02:00:00.000Z'
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const prompt = await store.getLatestCodexPromptForTask('task-1');
+
+  assert.equal(prompt.taskId, 'task-1');
+  assert.equal(prompt.prompt, 'Codex prompt');
+  assert.equal(prompt.slackChannelId, 'C_IN_PROCESS');
+  assert.ok(supabase.calls.some((call) => call[0] === 'codex_prompts' && call[1] === 'eq' && call[2] === 'task_id' && call[3] === 'task-1'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'codex_prompts' && call[1] === 'order' && call[2] === 'created_at'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'codex_prompts' && call[1] === 'maybeSingle'));
+});
+
 test('listDailyTaskResultsForUser reads Codex outputs submitted today', async () => {
   const supabase = createFakeSupabase({
     tableData: {
