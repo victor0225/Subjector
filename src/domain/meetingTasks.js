@@ -133,9 +133,9 @@ export function buildParticipantTaskInputThreadText({ participantUserKeys = [], 
 
 export function buildParticipantTaskInputDmText({ user, meetingTitle }) {
   return [
-    `${formatDisplayNameForTask(user)}, 이번 회의 후 먼저 해야 한다고 생각하는 일을 적어 주세요.`,
+    `${formatDisplayNameForTask(user)}, 이번 회의 후 중요하다고 보는 일을 적어 주세요.`,
     `- 회의: ${meetingTitle || '회의'}`,
-    '- 기준: 본인이 먼저 해야 할 일, 안 해도 된다고 보는 후보, 중요하다고 느낀 순서를 짧게 적으면 됩니다.',
+    '- 기준: 내가 먼저 해야 할 일, 남이 맡아야 한다고 보는 일, 안 해도 된다고 보는 후보, 중요하다고 느낀 순서를 짧게 적으면 됩니다.',
     '아래 버튼을 눌러 답변을 남겨 주세요.'
   ].join('\n');
 }

@@ -11,6 +11,7 @@ import {
   handleMeetingFileMessage,
   handleMeetingParticipantInputButton,
   handleMeetingParticipantInputViewSubmission,
+  handleMeetingParticipantSkipWaitingButton,
   handleMeetingSpeakerMappingButton,
   handleMeetingTaskApprovalButton,
   handleTaskAcceptButton,
@@ -650,6 +651,105 @@ test('handleMeetingParticipantInputViewSubmission stores the answer and sends ca
   assert.equal(openedDms[0].users, 'U1');
   assert.equal(openedDms[1].users, 'U2');
   assert.match(postedMessages[1].text, /후보/);
+});
+
+test('handleMeetingParticipantSkipWaitingButton lets the lead continue with collected answers', async () => {
+  let acked = false;
+  const serviceCalls = [];
+  const openedDms = [];
+  const postedMessages = [];
+
+  await handleMeetingParticipantSkipWaitingButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'D_U1' },
+      user: { id: 'U1' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100'
+          })
+        }
+      ]
+    },
+    client: {
+      conversations: {
+        open: async (input) => {
+          openedDms.push(input);
+          return { channel: { id: `D_${input.users}` } };
+        }
+      },
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleParticipantSkipWaiting(input) {
+        serviceCalls.push(input);
+        return {
+          text: '테스트용으로 현재 답변만으로 task 후보를 생성했습니다.',
+          candidateReviewMessages: [
+            {
+              slackId: 'U1',
+              text: '수현님, 후보를 확인해 주세요.',
+              blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '후보' } }]
+            }
+          ]
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls[0].requestedByUserKey, 'suhyeon');
+  assert.match(postedMessages[0].text, /현재 답변만으로/);
+  assert.equal(openedDms[0].users, 'U1');
+  assert.match(postedMessages[1].text, /후보/);
+});
+
+test('handleMeetingParticipantSkipWaitingButton rejects non-lead users', async () => {
+  let acked = false;
+  const postedMessages = [];
+  const serviceCalls = [];
+
+  await handleMeetingParticipantSkipWaitingButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'D_U2' },
+      user: { id: 'U2' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100'
+          })
+        }
+      ]
+    },
+    client: {
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleParticipantSkipWaiting(input) {
+        serviceCalls.push(input);
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 0);
+  assert.match(postedMessages[0].text, /수현님만/);
 });
 
 test('handleMeetingCandidateDecisionButton stores an accepted candidate', async () => {

@@ -814,6 +814,7 @@ export function createSupabaseStore(supabase) {
     markMeetingTranscribing,
     completeMeetingTranscription,
     failMeetingTranscription,
+    getMeetingBySource,
     saveMeetingSpeakerMapping,
     saveMeetingTaskCandidates,
     requestMeetingParticipantTaskInputs,

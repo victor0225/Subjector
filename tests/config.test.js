@@ -85,6 +85,31 @@ test('loadConfigFromEnv allows overriding AI model selections', () => {
   assert.equal(config.gemini.taskExtractionModel, 'gemini-3.5-pro');
 });
 
+test('loadConfigFromEnv enables participant skip only with an explicit test flag', () => {
+  const baseEnv = {
+    PORT: '3333',
+    BASE_URL: 'https://subjector.onrender.com',
+    HEALTH_PIN: '2468',
+    SLACK_BOT_TOKEN: 'xoxb-token',
+    SLACK_SIGNING_SECRET: 'secret',
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+    OPENAI_API_KEY: 'sk-key',
+    GEMINI_API_KEY: 'gemini-key',
+    MEETING_CHANNEL_ID: 'C1',
+    IN_PROCESS_CHANNEL_ID: 'C2',
+    FINALS_CHANNEL_ID: 'C3',
+    LEAD_USER_KEY: 'suhyeon',
+    USERS_JSON: usersJson
+  };
+
+  assert.equal(loadConfigFromEnv(baseEnv).features.enableTestParticipantSkip, false);
+  assert.equal(loadConfigFromEnv({
+    ...baseEnv,
+    ENABLE_TEST_PARTICIPANT_SKIP: 'true'
+  }).features.enableTestParticipantSkip, true);
+});
+
 test('loadConfigFromEnv supports Gemini task evaluation provider', () => {
   const config = loadConfigFromEnv({
     PORT: '3333',

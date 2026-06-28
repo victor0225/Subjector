@@ -20,6 +20,10 @@ const MEETING_TASK_PROVIDERS = new Set(['openai', 'gemini']);
 
 export { formatDisplayName, getUserByKey, getUserBySlackId };
 
+function envFlag(value) {
+  return String(value ?? '').trim().toLowerCase() === 'true';
+}
+
 export function parseUsersJson(raw) {
   let parsed;
 
@@ -111,6 +115,9 @@ export function loadConfigFromEnv(env = process.env) {
       meeting: env.MEETING_CHANNEL_ID.trim(),
       inProcess: env.IN_PROCESS_CHANNEL_ID.trim(),
       finals: env.FINALS_CHANNEL_ID.trim()
+    },
+    features: {
+      enableTestParticipantSkip: envFlag(env.ENABLE_TEST_PARTICIPANT_SKIP)
     }
   };
 }

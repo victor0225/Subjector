@@ -92,6 +92,28 @@ export function buildMeetingParticipantInputBlocks({ text, sourceChannelId, sour
   ];
 }
 
+export function buildMeetingParticipantSkipBlocks({ text, sourceChannelId, sourceMessageTs }) {
+  return [
+    {
+      type: 'section',
+      text: mrkdwn(text)
+    },
+    {
+      type: 'actions',
+      block_id: 'meeting_participant_skip_actions',
+      elements: [
+        {
+          type: 'button',
+          action_id: 'meeting_participant_skip_waiting',
+          text: plainText('테스트용: 현재 답변만으로 진행'),
+          value: meetingValue({ sourceChannelId, sourceMessageTs }),
+          style: 'primary'
+        }
+      ]
+    }
+  ];
+}
+
 export function buildMeetingParticipantInputModal({ metadata }) {
   return {
     type: 'modal',

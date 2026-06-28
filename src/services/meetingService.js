@@ -18,7 +18,8 @@ import { formatDisplayName, getUserByKey } from '../domain/users.js';
 import { buildSpeakerMappingBlocks } from '../slack/meetingBlocks.js';
 import {
   buildMeetingCandidateReviewBlocks,
-  buildMeetingParticipantInputBlocks
+  buildMeetingParticipantInputBlocks,
+  buildMeetingParticipantSkipBlocks
 } from '../slack/meetingTaskBlocks.js';
 
 function sourceFromMessage(message) {
@@ -266,9 +267,31 @@ export function createMeetingService({
     });
 
     if (result.remainingUserKeys.length > 0 || !taskExtractor) {
-      return {
-        text
-      };
+      const response = { text };
+      if (result.remainingUserKeys.length > 0 && config.features?.enableTestParticipantSkip) {
+        const leadUser = getUserByKey(config.users, config.leadUserKey);
+        if (leadUser?.slackId) {
+          const skipText = [
+            '[테스트용]',
+            '아직 답변하지 않은 사람이 있지만 현재 저장된 답변만으로 task 후보 생성을 진행할 수 있습니다.',
+            '실제 운영에서는 모든 참여자의 답변을 받은 뒤 진행하는 것을 권장합니다.'
+          ].join('\n');
+          response.directMessages = [
+            {
+              userKey: leadUser.key,
+              slackId: leadUser.slackId,
+              text: skipText,
+              blocks: buildMeetingParticipantSkipBlocks({
+                text: skipText,
+                sourceChannelId,
+                sourceMessageTs
+              })
+            }
+          ];
+        }
+      }
+
+      return response;
     }
 
     const taskCandidates = await taskExtractor.extractTasks({
@@ -284,6 +307,53 @@ export function createMeetingService({
 
     return {
       text: `${text}\n담당자별 task 후보 검토 DM을 보냈습니다.`,
+      candidateReviewMessages: candidateReviewMessages({
+        taskCandidates,
+        sourceChannelId,
+        sourceMessageTs,
+        config
+      })
+    };
+  }
+
+  async function handleParticipantSkipWaiting({ sourceChannelId, sourceMessageTs, requestedByUserKey }) {
+    if (requestedByUserKey !== config.leadUserKey) {
+      return {
+        text: '테스트용 진행은 수현님만 실행할 수 있습니다.'
+      };
+    }
+
+    const meeting = await store.getMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs
+    });
+    const participantTaskInputs = meeting?.summary?.participantTaskInputs ?? {};
+
+    if (Object.keys(participantTaskInputs).length === 0) {
+      return {
+        text: '아직 저장된 답변이 없어 현재 답변만으로 진행할 수 없습니다.'
+      };
+    }
+
+    if (!taskExtractor) {
+      return {
+        text: 'task 후보 생성 모델이 설정되어 있지 않아 현재 답변만으로 진행할 수 없습니다.'
+      };
+    }
+
+    const taskCandidates = await taskExtractor.extractTasks({
+      meeting,
+      users: config.users
+    });
+
+    await store.saveMeetingTaskCandidatesForReview({
+      sourceChannelId,
+      sourceMessageTs,
+      taskCandidates
+    });
+
+    return {
+      text: '테스트용으로 현재 답변만으로 task 후보를 생성했습니다. 담당자별 task 후보 검토 DM을 보냈습니다.',
       candidateReviewMessages: candidateReviewMessages({
         taskCandidates,
         sourceChannelId,
@@ -348,6 +418,7 @@ export function createMeetingService({
     processMeetingAudioUpload,
     handleSpeakerMapping,
     handleParticipantTaskInput,
+    handleParticipantSkipWaiting,
     getMeetingTaskCandidate,
     handleCandidateReview,
     handleTaskApproval

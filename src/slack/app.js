@@ -496,6 +496,13 @@ export async function handleMeetingParticipantInputViewSubmission({ ack, body, v
       text: result.text
     });
 
+    if (result.directMessages?.length > 0) {
+      await sendDirectMessages({
+        client,
+        messages: result.directMessages
+      });
+    }
+
     if (result.candidateReviewMessages?.length > 0) {
       await sendDirectMessages({
         client,
@@ -510,6 +517,60 @@ export async function handleMeetingParticipantInputViewSubmission({ ack, body, v
       client,
       slackId: submittedBy.slackId,
       text: '회의 후 우선 task 답변을 저장하지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.'
+    });
+  }
+}
+
+export async function handleMeetingParticipantSkipWaitingButton({ ack, body, client, config, logger = console, meetingService }) {
+  await ack();
+
+  const user = getUserBySlackId(config.users, body.user.id);
+  const channel = body.channel?.id;
+
+  if (!user) {
+    await client.chat.postMessage({
+      channel,
+      text: '등록되지 않은 사용자입니다. 수현님에게 Slack 멤버 ID 등록을 요청해 주세요.'
+    });
+    return;
+  }
+
+  if (user.key !== config.leadUserKey) {
+    await client.chat.postMessage({
+      channel,
+      text: `${formatDisplayName(user)}, 테스트용 진행은 수현님만 실행할 수 있습니다.`
+    });
+    return;
+  }
+
+  try {
+    const metadata = parseSpeakerMappingValue(body.actions[0].value);
+    const result = await meetingService.handleParticipantSkipWaiting({
+      ...metadata,
+      requestedByUserKey: user.key
+    });
+
+    await client.chat.postMessage({
+      channel,
+      text: result.text,
+      blocks: buildTextMessageBlocks(result.text)
+    });
+
+    if (result.candidateReviewMessages?.length > 0) {
+      await sendDirectMessages({
+        client,
+        messages: result.candidateReviewMessages
+      });
+    }
+
+    logger.info?.('Meeting participant waiting skipped for testing');
+  } catch (error) {
+    logger.error?.(error);
+    const text = '현재 답변만으로 진행하지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.';
+    await client.chat.postMessage({
+      channel,
+      text,
+      blocks: buildTextMessageBlocks(text)
     });
   }
 }
@@ -906,6 +967,17 @@ function registerMeetingActionHandlers(app, config, logger, meetingService) {
       ack,
       body,
       view,
+      client,
+      config,
+      logger,
+      meetingService
+    });
+  });
+
+  app.action('meeting_participant_skip_waiting', async ({ ack, body, client }) => {
+    await handleMeetingParticipantSkipWaitingButton({
+      ack,
+      body,
       client,
       config,
       logger,

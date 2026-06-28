@@ -15,6 +15,7 @@ const teamConfig = {
   channels: {
     meeting: 'C_MEETING'
   },
+  leadUserKey: 'suhyeon',
   users: [
     { key: 'suhyeon', slackId: 'U1', fullName: '조수현', displayName: '수현' },
     { key: 'joeun', slackId: 'U2', fullName: '김조은', displayName: '조은' }
@@ -267,7 +268,7 @@ test('handleSpeakerMapping asks mapped participants for their first tasks before
   assert.equal(result.threadMessage.channel, 'C_MEETING');
   assert.equal(result.threadMessage.threadTs, '1710000000.000100');
   assert.equal(result.directMessages.length, 2);
-  assert.match(result.directMessages[0].text, /먼저 해야 한다고 생각하는 일/);
+  assert.match(result.directMessages[0].text, /중요하다고 보는 일/);
   assert.equal(result.directMessages[0].blocks[1].elements[0].action_id, 'meeting_participant_task_input');
 });
 
@@ -311,6 +312,45 @@ test('handleParticipantTaskInput waits until every mapped participant answers', 
   assert.equal(calls.some((call) => call[0] === 'extractTasks'), false);
   assert.match(result.text, /아직 답변 대기/);
   assert.match(result.text, /조은님/);
+});
+
+test('handleParticipantTaskInput sends a lead-only test skip button while waiting', async () => {
+  const service = createMeetingService({
+    config: {
+      ...teamConfig,
+      features: {
+        enableTestParticipantSkip: true
+      }
+    },
+    store: {
+      async saveMeetingParticipantTaskInput(input) {
+        return {
+          meeting: {
+            id: 'meeting-1',
+            summary: {
+              participantUserKeys: ['suhyeon', 'joeun'],
+              participantTaskInputs: {
+                suhyeon: input.rawText
+              }
+            }
+          },
+          remainingUserKeys: ['joeun']
+        };
+      }
+    }
+  });
+
+  const result = await service.handleParticipantTaskInput({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    userKey: 'suhyeon',
+    rawText: '나는 회의 처리 흐름을 먼저 점검한다.'
+  });
+
+  assert.equal(result.directMessages.length, 1);
+  assert.equal(result.directMessages[0].slackId, 'U1');
+  assert.match(result.directMessages[0].text, /테스트용/);
+  assert.equal(result.directMessages[0].blocks[1].elements[0].action_id, 'meeting_participant_skip_waiting');
 });
 
 test('handleParticipantTaskInput extracts candidates and creates assignee review DMs after all answers', async () => {
@@ -380,6 +420,67 @@ test('handleParticipantTaskInput extracts candidates and creates assignee review
   assert.equal(result.candidateReviewMessages.length, 1);
   assert.equal(result.candidateReviewMessages[0].slackId, 'U2');
   assert.equal(result.candidateReviewMessages[0].blocks[2].elements[0].action_id, 'meeting_candidate_accept');
+});
+
+test('handleParticipantSkipWaiting extracts candidates from the answers collected so far', async () => {
+  const calls = [];
+  const service = createMeetingService({
+    config: teamConfig,
+    store: {
+      async getMeetingBySource(input) {
+        calls.push(['getMeetingBySource', input]);
+        return {
+          id: 'meeting-1',
+          speakerMapping: {
+            'Speaker A': 'suhyeon',
+            'Speaker B': 'joeun'
+          },
+          summary: {
+            transcript: {
+              meetingTitle: '졸작 회의',
+              speakers: [{ label: 'Speaker A' }, { label: 'Speaker B' }]
+            },
+            participantUserKeys: ['suhyeon', 'joeun'],
+            participantTaskInputs: {
+              suhyeon: '나는 회의 처리 흐름을 먼저 점검한다.'
+            }
+          }
+        };
+      },
+      async saveMeetingTaskCandidatesForReview(input) {
+        calls.push(['saveMeetingTaskCandidatesForReview', input]);
+      }
+    },
+    taskExtractor: {
+      async extractTasks(input) {
+        calls.push(['extractTasks', input.meeting.summary.participantTaskInputs]);
+        return [
+          {
+            assigneeUserKey: 'suhyeon',
+            title: '회의 처리 흐름 점검',
+            importance: '🔴 상',
+            coordination: '🟡 중',
+            context: {
+              why: '수현님 답변에서 우선순위로 제시되었다.'
+            }
+          }
+        ];
+      }
+    }
+  });
+
+  const result = await service.handleParticipantSkipWaiting({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    requestedByUserKey: 'suhyeon'
+  });
+
+  assert.equal(calls[0][0], 'getMeetingBySource');
+  assert.equal(calls[1][0], 'extractTasks');
+  assert.equal(calls[2][0], 'saveMeetingTaskCandidatesForReview');
+  assert.match(result.text, /현재 답변만으로/);
+  assert.equal(result.candidateReviewMessages.length, 1);
+  assert.equal(result.candidateReviewMessages[0].slackId, 'U1');
 });
 
 test('handleCandidateReview accepts only the assigned candidate owner', async () => {
