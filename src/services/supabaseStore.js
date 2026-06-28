@@ -127,6 +127,20 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to end work session');
   }
 
+  async function createMeetingFromAudioUpload({ sourceChannelId, sourceMessageTs, uploaderUserKey, audioFileName }) {
+    const result = await supabase
+      .from('meetings')
+      .insert({
+        source_channel_id: sourceChannelId,
+        source_message_ts: sourceMessageTs,
+        uploader_user_key: uploaderUserKey,
+        status: 'uploaded',
+        audio_file_name: audioFileName
+      });
+
+    throwIfError(result, 'Failed to create meeting from audio upload');
+  }
+
   async function listEndedWorkSessionsForDate({ workDate }) {
     const result = await supabase
       .from('daily_work_sessions')
@@ -397,6 +411,7 @@ export function createSupabaseStore(supabase) {
   return {
     startWorkSession,
     endWorkSession,
+    createMeetingFromAudioUpload,
     listEndedWorkSessionsForDate,
     listOpenTasksForUser,
     markAcceptedTasksUnresolvedForUser,

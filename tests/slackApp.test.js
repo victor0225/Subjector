@@ -4,6 +4,7 @@ import {
   handleDirectDmMessage,
   handleCodexPromptCopyButton,
   handleFinalsApproveButton,
+  handleMeetingFileMessage,
   handleTaskAcceptButton,
   handleTaskActionButton,
   handleTaskActionViewSubmission
@@ -236,6 +237,43 @@ test('handleDirectDmMessage reports finals preview failures to the lead', async 
   assert.equal(replies.length, 1);
   assert.match(replies[0].text, /#finals 미리보기 생성에 실패했습니다/);
   assert.match(replies[0].text, /Render 로그/);
+});
+
+test('handleMeetingFileMessage posts a processing thread reply for meeting audio uploads', async () => {
+  const postedMessages = [];
+  const serviceCalls = [];
+
+  await handleMeetingFileMessage({
+    message: {
+      channel: 'C_MEETING',
+      ts: '1710000000.000100',
+      user: 'U1',
+      files: [{ name: '졸작회의.m4a', mimetype: 'audio/mp4' }]
+    },
+    client: {
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleMeetingFileMessage(input) {
+        serviceCalls.push(input);
+        return {
+          channel: input.message.channel,
+          threadTs: input.message.ts,
+          text: '회의 녹음 업로드를 확인했습니다.\n다음 단계에서 전사와 Speaker A/B/C 매핑을 진행합니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(postedMessages.length, 1);
+  assert.equal(postedMessages[0].channel, 'C_MEETING');
+  assert.equal(postedMessages[0].thread_ts, '1710000000.000100');
+  assert.match(postedMessages[0].text, /회의 녹음 업로드를 확인했습니다/);
+  assert.match(postedMessages[0].blocks[0].text.text, /Speaker A\/B\/C/);
 });
 
 test('handleFinalsApproveButton lets the lead approve the latest finals preview', async () => {

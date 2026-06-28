@@ -10,6 +10,7 @@ import {
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
 import { createInProcessService } from '../services/inProcessService.js';
+import { createMeetingService } from '../services/meetingService.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
 import { createTaskEvaluator } from '../services/taskEvaluatorFactory.js';
 import { buildFinalsPreviewBlocks, buildTextMessageBlocks } from './blocks.js';
@@ -152,6 +153,48 @@ function registerDmHandlers(app, config, logger, inProcessService) {
       config,
       logger,
       inProcessService
+    });
+  });
+}
+
+export async function handleMeetingFileMessage({ message, client, logger = console, meetingService }) {
+  try {
+    const result = await meetingService.handleMeetingFileMessage({ message });
+
+    if (!result) {
+      return;
+    }
+
+    await client.chat.postMessage({
+      channel: result.channel,
+      thread_ts: result.threadTs,
+      text: result.text,
+      blocks: buildTextMessageBlocks(result.text)
+    });
+
+    logger.info?.('Meeting audio upload recorded');
+  } catch (error) {
+    logger.error?.(error);
+
+    if (message?.channel && message?.ts && client?.chat?.postMessage) {
+      const text = '회의 녹음 업로드를 기록하지 못했습니다. Render 로그를 확인한 뒤 다시 업로드해 주세요.';
+      await client.chat.postMessage({
+        channel: message.channel,
+        thread_ts: message.thread_ts ?? message.ts,
+        text,
+        blocks: buildTextMessageBlocks(text)
+      });
+    }
+  }
+}
+
+function registerMeetingHandlers(app, logger, meetingService) {
+  app.message(async ({ message, client }) => {
+    await handleMeetingFileMessage({
+      message,
+      client,
+      logger,
+      meetingService
     });
   });
 }
@@ -376,7 +419,13 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
   });
 }
 
-export function createSlackApp({ config, logger = console, deferInitialization = false, inProcessService = null }) {
+export function createSlackApp({
+  config,
+  logger = console,
+  deferInitialization = false,
+  inProcessService = null,
+  meetingService = null
+}) {
   const receiver = new ExpressReceiver({
     signingSecret: config.slack.signingSecret
   });
@@ -389,17 +438,26 @@ export function createSlackApp({ config, logger = console, deferInitialization =
     deferInitialization
   });
 
+  const store = createSupabaseStore(createClient(config.supabase.url, config.supabase.serviceRoleKey, {
+    auth: { persistSession: false }
+  }));
+
   const service = inProcessService ?? createInProcessService({
-    store: createSupabaseStore(createClient(config.supabase.url, config.supabase.serviceRoleKey, {
-      auth: { persistSession: false }
-    })),
+    store,
     slackClient: app.client,
     config,
     logger,
     taskEvaluator: createTaskEvaluator({ config })
   });
 
+  const meetings = meetingService ?? createMeetingService({
+    store,
+    config,
+    logger
+  });
+
   registerDmHandlers(app, config, logger, service);
+  registerMeetingHandlers(app, logger, meetings);
   registerTaskActionHandlers(app, config, logger, service);
 
   return { app, receiver };

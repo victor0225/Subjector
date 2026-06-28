@@ -85,6 +85,25 @@ test('startWorkSession upserts by user and work date', async () => {
   assert.equal(upsert[3].onConflict, 'user_key,work_date');
 });
 
+test('createMeetingFromAudioUpload inserts an uploaded meeting record', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.createMeetingFromAudioUpload({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    uploaderUserKey: 'suhyeon',
+    audioFileName: '졸작회의.m4a'
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'insert');
+  assert.equal(insert[2].source_channel_id, 'C_MEETING');
+  assert.equal(insert[2].source_message_ts, '1710000000.000100');
+  assert.equal(insert[2].uploader_user_key, 'suhyeon');
+  assert.equal(insert[2].status, 'uploaded');
+  assert.equal(insert[2].audio_file_name, '졸작회의.m4a');
+});
+
 test('endWorkSession upserts by user and work date with ended time', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);
