@@ -10,6 +10,7 @@ import {
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
 import { createGeminiMeetingTranscriber } from '../services/geminiMeetingTranscriber.js';
+import { createGeminiMeetingTaskExtractor } from '../services/geminiMeetingTaskExtractor.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createMeetingService } from '../services/meetingService.js';
 import { createSlackFileDownloader } from '../services/slackFileDownloader.js';
@@ -289,11 +290,69 @@ export async function handleMeetingSpeakerMappingButton({ ack, body, client, con
       blocks: buildTextMessageBlocks(result.text)
     });
 
+    if (result.threadMessage) {
+      await client.chat.postMessage({
+        channel: result.threadMessage.channel,
+        thread_ts: result.threadMessage.threadTs,
+        text: result.threadMessage.text,
+        blocks: result.threadMessage.blocks ?? buildTextMessageBlocks(result.threadMessage.text)
+      });
+    }
+
     logger.info?.('Meeting speaker mapping saved');
   } catch (error) {
     logger.error?.(error);
 
     const text = 'Speaker 매핑을 저장하지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.';
+    await client.chat.postEphemeral({
+      channel,
+      user: body.user.id,
+      text,
+      blocks: buildTextMessageBlocks(text)
+    });
+  }
+}
+
+export async function handleMeetingTaskApprovalButton({ ack, body, client, config, logger = console, meetingService }) {
+  await ack();
+
+  const user = getUserBySlackId(config.users, body.user.id);
+  const channel = body.channel?.id;
+
+  if (!user) {
+    await client.chat.postEphemeral({
+      channel,
+      user: body.user.id,
+      text: '등록되지 않은 사용자입니다. 수현님에게 Slack 멤버 ID 등록을 요청해 주세요.'
+    });
+    return;
+  }
+
+  if (user.key !== config.leadUserKey) {
+    await client.chat.postEphemeral({
+      channel,
+      user: body.user.id,
+      text: `${formatDisplayName(user)}, task 반영 승인은 수현님만 실행할 수 있습니다.`
+    });
+    return;
+  }
+
+  try {
+    const metadata = parseSpeakerMappingValue(body.actions[0].value);
+    const result = await meetingService.handleTaskApproval(metadata);
+
+    await client.chat.postMessage({
+      channel,
+      thread_ts: metadata.sourceMessageTs,
+      text: result.text,
+      blocks: buildTextMessageBlocks(result.text)
+    });
+
+    logger.info?.('Meeting tasks approved');
+  } catch (error) {
+    logger.error?.(error);
+
+    const text = '회의 기반 task 반영에 실패했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.';
     await client.chat.postEphemeral({
       channel,
       user: body.user.id,
@@ -534,6 +593,17 @@ function registerMeetingActionHandlers(app, config, logger, meetingService) {
       meetingService
     });
   });
+
+  app.action('meeting_approve_tasks', async ({ ack, body, client }) => {
+    await handleMeetingTaskApprovalButton({
+      ack,
+      body,
+      client,
+      config,
+      logger,
+      meetingService
+    });
+  });
 }
 
 export function createSlackApp({
@@ -579,6 +649,12 @@ export function createSlackApp({
       ? createGeminiMeetingTranscriber({
         apiKey: config.gemini.apiKey,
         model: config.gemini.transcriptionModel
+      })
+      : null,
+    taskExtractor: config.gemini.apiKey
+      ? createGeminiMeetingTaskExtractor({
+        apiKey: config.gemini.apiKey,
+        model: config.gemini.taskExtractionModel
       })
       : null
   });

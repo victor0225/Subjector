@@ -204,3 +204,93 @@ test('handleSpeakerMapping stores a lead-approved speaker mapping', async () => 
   assert.match(result.text, /Speaker A/);
   assert.match(result.text, /수현님/);
 });
+
+test('handleSpeakerMapping extracts task candidates after all speakers are mapped', async () => {
+  const calls = [];
+  const service = createMeetingService({
+    config,
+    store: {
+      async saveMeetingSpeakerMapping(input) {
+        calls.push(['saveMeetingSpeakerMapping', input]);
+        return {
+          speakerMapping: {
+            'Speaker A': 'suhyeon'
+          },
+          meeting: {
+            id: 'meeting-1',
+            status: 'needs_speaker_mapping',
+            summary: {
+              transcript: {
+                meetingTitle: '졸작 회의',
+                speakers: [{ label: 'Speaker A' }],
+                segments: [{ speaker: 'Speaker A', text: '수현님이 회의 처리 흐름을 점검한다.' }]
+              }
+            }
+          }
+        };
+      },
+      async saveMeetingTaskCandidates(input) {
+        calls.push(['saveMeetingTaskCandidates', input]);
+      }
+    },
+    taskExtractor: {
+      async extractTasks(input) {
+        calls.push(['extractTasks', input.meeting.id]);
+        return [
+          {
+            assigneeUserKey: 'suhyeon',
+            title: '회의 처리 흐름 점검',
+            importance: '🟡 중',
+            coordination: '🟢 하',
+            context: {
+              source: '회의 결과록: 졸작 회의',
+              why: '전사에서 점검 필요가 나왔다.'
+            }
+          }
+        ];
+      }
+    }
+  });
+
+  const result = await service.handleSpeakerMapping({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    speakerLabel: 'Speaker A',
+    userKey: 'suhyeon'
+  });
+
+  assert.equal(calls[1][0], 'extractTasks');
+  assert.equal(calls[2][0], 'saveMeetingTaskCandidates');
+  assert.equal(calls[2][1].taskCandidates[0].title, '회의 처리 흐름 점검');
+  assert.match(result.text, /Speaker A를 수현님으로 저장했습니다/);
+  assert.match(result.threadMessage.text, /task 후보 추출이 완료되었습니다/);
+  assert.equal(result.threadMessage.channel, 'C_MEETING');
+  assert.equal(result.threadMessage.threadTs, '1710000000.000100');
+});
+
+test('handleTaskApproval creates approved meeting tasks', async () => {
+  const calls = [];
+  const service = createMeetingService({
+    config,
+    store: {
+      async approveMeetingTasks(input) {
+        calls.push(input);
+        return {
+          taskCandidates: [
+            { assigneeUserKey: 'suhyeon', title: '회의 처리 흐름 점검' },
+            { assigneeUserKey: 'joeun', title: '센서 후보 비교' }
+          ]
+        };
+      }
+    }
+  });
+
+  const result = await service.handleTaskApproval({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100'
+  });
+
+  assert.equal(calls[0].sourceChannelId, 'C_MEETING');
+  assert.match(result.text, /task 2개를 생성했습니다/);
+  assert.match(result.text, /#in-process/);
+});

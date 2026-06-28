@@ -98,6 +98,21 @@ function mapCodexPrompt(row) {
   };
 }
 
+function mapMeeting(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    sourceChannelId: row.source_channel_id,
+    sourceMessageTs: row.source_message_ts,
+    status: row.status,
+    speakerMapping: row.speaker_mapping ?? {},
+    summary: row.summary ?? {}
+  };
+}
+
 export function createSupabaseStore(supabase) {
   async function startWorkSession({ userKey, workDate, startedAt }) {
     const result = await supabase
@@ -193,19 +208,19 @@ export function createSupabaseStore(supabase) {
   async function getMeetingBySource({ sourceChannelId, sourceMessageTs }) {
     const result = await supabase
       .from('meetings')
-      .select('source_channel_id,source_message_ts,status,speaker_mapping,summary')
+      .select('id,source_channel_id,source_message_ts,status,speaker_mapping,summary')
       .eq('source_channel_id', sourceChannelId)
       .eq('source_message_ts', sourceMessageTs)
       .maybeSingle();
 
     throwIfError(result, 'Failed to get meeting by source');
-    return result.data;
+    return mapMeeting(result.data);
   }
 
   async function saveMeetingSpeakerMapping({ sourceChannelId, sourceMessageTs, speakerLabel, userKey }) {
     const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
     const speakerMapping = {
-      ...(meeting?.speaker_mapping ?? {}),
+      ...(meeting?.speakerMapping ?? {}),
       [speakerLabel]: userKey
     };
 
@@ -220,7 +235,66 @@ export function createSupabaseStore(supabase) {
     });
 
     return {
-      speakerMapping
+      speakerMapping,
+      meeting: {
+        ...meeting,
+        speakerMapping
+      }
+    };
+  }
+
+  async function saveMeetingTaskCandidates({ sourceChannelId, sourceMessageTs, taskCandidates }) {
+    const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
+    const summary = {
+      ...(meeting?.summary ?? {}),
+      taskCandidates
+    };
+
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: 'needs_task_approval',
+        summary
+      },
+      context: 'Failed to save meeting task candidates'
+    });
+  }
+
+  async function approveMeetingTasks({ sourceChannelId, sourceMessageTs }) {
+    const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
+    const taskCandidates = meeting?.summary?.taskCandidates ?? [];
+
+    const rows = taskCandidates.map((task) => ({
+      assignee_user_key: task.assigneeUserKey,
+      title: task.title,
+      status: '미시작',
+      importance: task.importance,
+      coordination: task.coordination,
+      source_type: 'meeting',
+      source_id: meeting.id,
+      context: task.context ?? {}
+    }));
+
+    if (rows.length > 0) {
+      const insert = await supabase
+        .from('tasks')
+        .insert(rows);
+
+      throwIfError(insert, 'Failed to create meeting tasks');
+    }
+
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: 'tasks_created'
+      },
+      context: 'Failed to mark meeting tasks created'
+    });
+
+    return {
+      taskCandidates
     };
   }
 
@@ -499,6 +573,8 @@ export function createSupabaseStore(supabase) {
     completeMeetingTranscription,
     failMeetingTranscription,
     saveMeetingSpeakerMapping,
+    saveMeetingTaskCandidates,
+    approveMeetingTasks,
     listEndedWorkSessionsForDate,
     listOpenTasksForUser,
     markAcceptedTasksUnresolvedForUser,

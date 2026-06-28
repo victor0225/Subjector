@@ -88,6 +88,10 @@ export function loadConfigFromEnv(env = process.env) {
       evaluationModel: env.GEMINI_EVALUATION_MODEL?.trim() || 'gemini-3.5-flash',
       transcriptionModel: env.GEMINI_TRANSCRIPTION_MODEL?.trim()
         || env.GEMINI_EVALUATION_MODEL?.trim()
+        || 'gemini-3.5-flash',
+      taskExtractionModel: env.GEMINI_TASK_EXTRACTION_MODEL?.trim()
+        || env.GEMINI_TRANSCRIPTION_MODEL?.trim()
+        || env.GEMINI_EVALUATION_MODEL?.trim()
         || 'gemini-3.5-flash'
     },
     channels: {

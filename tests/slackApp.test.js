@@ -6,6 +6,7 @@ import {
   handleFinalsApproveButton,
   handleMeetingFileMessage,
   handleMeetingSpeakerMappingButton,
+  handleMeetingTaskApprovalButton,
   handleTaskAcceptButton,
   handleTaskActionButton,
   handleTaskActionViewSubmission
@@ -370,6 +371,146 @@ test('handleMeetingSpeakerMappingButton lets only the lead map speakers', async 
   assert.equal(serviceCalls.length, 1);
   assert.equal(serviceCalls[0].speakerLabel, 'Speaker A');
   assert.match(postedMessages[0].text, /수현님으로 저장했습니다/);
+});
+
+test('handleMeetingSpeakerMappingButton posts task approval when task candidates are extracted', async () => {
+  let acked = false;
+  const postedMessages = [];
+  const serviceCalls = [];
+
+  await handleMeetingSpeakerMappingButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'C_MEETING' },
+      user: { id: 'U1' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100',
+            speakerLabel: 'Speaker C',
+            userKey: 'minsung'
+          })
+        }
+      ]
+    },
+    client: {
+      chat: {
+        postEphemeral: async (input) => postedMessages.push(['ephemeral', input]),
+        postMessage: async (input) => postedMessages.push(['message', input])
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleSpeakerMapping(input) {
+        serviceCalls.push(input);
+        return {
+          text: 'Speaker C를 민성님으로 저장했습니다.',
+          threadMessage: {
+            channel: 'C_MEETING',
+            threadTs: '1710000000.000100',
+            text: 'task 후보 추출이 완료되었습니다.',
+            blocks: [{ type: 'section', text: { type: 'mrkdwn', text: 'task 후보 추출이 완료되었습니다.' } }]
+          }
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(postedMessages[0][0], 'ephemeral');
+  assert.match(postedMessages[0][1].text, /민성님으로 저장했습니다/);
+  assert.equal(postedMessages[1][0], 'message');
+  assert.equal(postedMessages[1][1].thread_ts, '1710000000.000100');
+  assert.match(postedMessages[1][1].text, /task 후보 추출이 완료되었습니다/);
+});
+
+test('handleMeetingTaskApprovalButton lets only the lead create extracted tasks', async () => {
+  let acked = false;
+  const postedMessages = [];
+  const serviceCalls = [];
+
+  await handleMeetingTaskApprovalButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'C_MEETING' },
+      user: { id: 'U1' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100'
+          })
+        }
+      ]
+    },
+    client: {
+      chat: {
+        postMessage: async (input) => postedMessages.push(input),
+        postEphemeral: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleTaskApproval(input) {
+        serviceCalls.push(input);
+        return {
+          text: 'task 2개를 생성했습니다. 다음 출근 때 #in-process에서 확인할 수 있습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(postedMessages[0].thread_ts, '1710000000.000100');
+  assert.match(postedMessages[0].text, /task 2개를 생성했습니다/);
+});
+
+test('handleMeetingTaskApprovalButton rejects non-lead users', async () => {
+  let acked = false;
+  const postedMessages = [];
+  const serviceCalls = [];
+
+  await handleMeetingTaskApprovalButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'C_MEETING' },
+      user: { id: 'U2' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100'
+          })
+        }
+      ]
+    },
+    client: {
+      chat: {
+        postEphemeral: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleTaskApproval(input) {
+        serviceCalls.push(input);
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 0);
+  assert.match(postedMessages[0].text, /task 반영 승인은 수현님만/);
 });
 
 test('handleMeetingSpeakerMappingButton rejects non-lead users', async () => {

@@ -1,12 +1,18 @@
 import { getUserBySlackId } from '../config.js';
 import { buildMeetingTranscriptionReadyText, normalizeMeetingTranscript } from '../domain/meetingTranscript.js';
 import {
+  areAllSpeakersMapped,
+  buildMeetingTaskApprovalResultText,
+  buildMeetingTaskApprovalText
+} from '../domain/meetingTasks.js';
+import {
   buildMeetingUploadThreadText,
   getMeetingAudioFile,
   isMeetingUploadMessage
 } from '../domain/meetingUploads.js';
 import { formatDisplayName, getUserByKey } from '../domain/users.js';
 import { buildSpeakerMappingBlocks } from '../slack/meetingBlocks.js';
+import { buildMeetingTaskApprovalBlocks } from '../slack/meetingTaskBlocks.js';
 
 function sourceFromMessage(message) {
   return {
@@ -23,7 +29,22 @@ function buildFailureText(error) {
   ].join('\n');
 }
 
-export function createMeetingService({ store, config, fileDownloader = null, audioTranscriber = null }) {
+function shouldExtractTaskCandidates({ meeting }) {
+  return meeting?.status !== 'needs_task_approval'
+    && meeting?.status !== 'tasks_created'
+    && areAllSpeakersMapped({
+      transcript: meeting?.summary?.transcript,
+      speakerMapping: meeting?.speakerMapping
+    });
+}
+
+export function createMeetingService({
+  store,
+  config,
+  fileDownloader = null,
+  audioTranscriber = null,
+  taskExtractor = null
+}) {
   async function handleMeetingFileMessage({ message }) {
     if (!isMeetingUploadMessage({
       message,
@@ -117,16 +138,64 @@ export function createMeetingService({ store, config, fileDownloader = null, aud
       userKey
     });
     const user = getUserByKey(config.users, userKey);
-
-    return {
+    const response = {
       speakerMapping: result.speakerMapping,
       text: `${speakerLabel}를 ${formatDisplayName(user)}으로 저장했습니다.`
+    };
+    const mappedMeeting = {
+      ...result.meeting,
+      speakerMapping: result.speakerMapping
+    };
+
+    if (!taskExtractor || !shouldExtractTaskCandidates({ meeting: mappedMeeting })) {
+      return response;
+    }
+
+    const taskCandidates = await taskExtractor.extractTasks({
+      meeting: mappedMeeting,
+      users: config.users
+    });
+
+    await store.saveMeetingTaskCandidates({
+      sourceChannelId,
+      sourceMessageTs,
+      taskCandidates
+    });
+
+    const text = buildMeetingTaskApprovalText({ taskCandidates });
+    return {
+      ...response,
+      threadMessage: {
+        channel: sourceChannelId,
+        threadTs: sourceMessageTs,
+        text,
+        blocks: buildMeetingTaskApprovalBlocks({
+          text,
+          taskCandidates,
+          sourceChannelId,
+          sourceMessageTs
+        })
+      }
+    };
+  }
+
+  async function handleTaskApproval({ sourceChannelId, sourceMessageTs }) {
+    const result = await store.approveMeetingTasks({
+      sourceChannelId,
+      sourceMessageTs
+    });
+
+    return {
+      text: buildMeetingTaskApprovalResultText({
+        taskCandidates: result.taskCandidates
+      })
     };
   }
 
   return {
     handleMeetingFileMessage,
     processMeetingAudioUpload,
-    handleSpeakerMapping
+    handleSpeakerMapping,
+    handleTaskApproval
   };
 }

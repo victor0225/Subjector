@@ -159,8 +159,13 @@ test('saveMeetingSpeakerMapping merges a new speaker mapping', async () => {
   const supabase = createFakeSupabase({
     singleData: {
       meetings: {
+        id: 'meeting-1',
+        status: 'needs_speaker_mapping',
         speaker_mapping: {
           'Speaker B': 'joeun'
+        },
+        summary: {
+          transcript: { meetingTitle: '졸작 회의' }
         }
       }
     }
@@ -179,6 +184,81 @@ test('saveMeetingSpeakerMapping merges a new speaker mapping', async () => {
   assert.equal(update[2].speaker_mapping['Speaker A'], 'suhyeon');
   assert.equal(update[2].speaker_mapping['Speaker B'], 'joeun');
   assert.equal(result.speakerMapping['Speaker A'], 'suhyeon');
+  assert.equal(result.meeting.id, 'meeting-1');
+  assert.equal(result.meeting.summary.transcript.meetingTitle, '졸작 회의');
+});
+
+test('saveMeetingTaskCandidates stores task candidates in the meeting summary', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        id: 'meeting-1',
+        summary: {
+          transcript: { meetingTitle: '졸작 회의' }
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  await store.saveMeetingTaskCandidates({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    taskCandidates: [
+      {
+        assigneeUserKey: 'suhyeon',
+        title: '회의 처리 흐름 점검',
+        importance: '🟡 중',
+        coordination: '🟢 하',
+        context: { source: '회의 결과록: 졸작 회의' }
+      }
+    ]
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'needs_task_approval');
+  assert.equal(update[2].summary.transcript.meetingTitle, '졸작 회의');
+  assert.equal(update[2].summary.taskCandidates[0].title, '회의 처리 흐름 점검');
+});
+
+test('approveMeetingTasks inserts stored candidates into tasks and marks the meeting complete', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        id: 'meeting-1',
+        status: 'needs_task_approval',
+        summary: {
+          transcript: { meetingTitle: '졸작 회의' },
+          taskCandidates: [
+            {
+              assigneeUserKey: 'suhyeon',
+              title: '회의 처리 흐름 점검',
+              importance: '🟡 중',
+              coordination: '🟢 하',
+              context: { source: '회의 결과록: 졸작 회의' }
+            }
+          ]
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.approveMeetingTasks({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100'
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'insert');
+  assert.equal(insert[2][0].assignee_user_key, 'suhyeon');
+  assert.equal(insert[2][0].title, '회의 처리 흐름 점검');
+  assert.equal(insert[2][0].source_type, 'meeting');
+  assert.equal(insert[2][0].source_id, 'meeting-1');
+  assert.equal(insert[2][0].status, '미시작');
+
+  const meetingUpdates = supabase.calls.filter((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(meetingUpdates.at(-1)[2].status, 'tasks_created');
+  assert.equal(result.taskCandidates[0].title, '회의 처리 흐름 점검');
 });
 
 test('endWorkSession upserts by user and work date with ended time', async () => {
