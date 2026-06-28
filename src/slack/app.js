@@ -11,7 +11,7 @@ import {
 } from '../domain/taskActions.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
-import { buildTextMessageBlocks } from './blocks.js';
+import { buildFinalsPreviewBlocks, buildTextMessageBlocks } from './blocks.js';
 import { isDirectUserMessage } from './events.js';
 
 function buildBootHealthStatus(config) {
@@ -104,7 +104,7 @@ export async function handleDirectDmMessage({ message, say, config, logger = con
       const result = await inProcessService.handleFinalsPreview({ user });
       await say({
         text: result.dmText,
-        blocks: buildTextMessageBlocks(result.dmText)
+        blocks: buildFinalsPreviewBlocks(result.dmText)
       });
       return;
     } catch (error) {
@@ -190,6 +190,46 @@ export async function handleTaskActionViewSubmission({ ack, body, view, config, 
   await ack();
 }
 
+export async function handleFinalsApproveButton({ ack, body, client, config, logger = console, inProcessService }) {
+  await ack();
+
+  const user = getUserBySlackId(config.users, body.user.id);
+  const channel = body.channel?.id;
+
+  if (!user) {
+    await client.chat.postMessage({
+      channel,
+      text: '등록되지 않은 사용자입니다. 수현님에게 Slack 멤버 ID 등록을 요청해 주세요.'
+    });
+    return;
+  }
+
+  if (user.key !== config.leadUserKey) {
+    await client.chat.postMessage({
+      channel,
+      text: `${formatDisplayName(user)}, #finals 반영은 수현님만 실행할 수 있습니다.`
+    });
+    return;
+  }
+
+  try {
+    const result = await inProcessService.handleFinalsApproval({
+      approvedByUserKey: user.key
+    });
+
+    await client.chat.postMessage({
+      channel,
+      text: result.responseText
+    });
+  } catch (error) {
+    logger.error?.(error);
+    await client.chat.postMessage({
+      channel,
+      text: `${formatDisplayName(user)}, #finals 반영에 실패했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.`
+    });
+  }
+}
+
 function registerTaskActionHandlers(app, config, logger, inProcessService) {
   for (const actionId of ['task_complete', 'task_stop_today', 'task_change_request']) {
     app.action(actionId, async ({ ack, body, client }) => {
@@ -208,6 +248,17 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
       ack,
       body,
       view,
+      config,
+      logger,
+      inProcessService
+    });
+  });
+
+  app.action('finals_approve_latest', async ({ ack, body, client }) => {
+    await handleFinalsApproveButton({
+      ack,
+      body,
+      client,
       config,
       logger,
       inProcessService

@@ -404,6 +404,47 @@ test('createFinalsPreview stores a pending finals preview', async () => {
   assert.equal(insert[2].preview.confirmed[0], '센서 후보 정리');
 });
 
+test('getLatestFinalsPreview reads the latest pending preview', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      finals_updates: {
+        id: 'finals-1',
+        work_date: '2026-06-28',
+        preview: {
+          workDate: '2026-06-28'
+        },
+        created_at: '2026-06-28T12:00:00.000Z'
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const preview = await store.getLatestFinalsPreview();
+
+  assert.equal(preview.id, 'finals-1');
+  assert.equal(preview.workDate, '2026-06-28');
+  assert.equal(preview.preview.workDate, '2026-06-28');
+  assert.ok(supabase.calls.some((call) => call[0] === 'finals_updates' && call[1] === 'eq' && call[2] === 'status' && call[3] === '미리보기'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'finals_updates' && call[1] === 'maybeSingle'));
+});
+
+test('approveFinalsUpdate marks a preview approved', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.approveFinalsUpdate({
+    id: 'finals-1',
+    approvedByUserKey: 'suhyeon',
+    approvedAt: '2026-06-28T12:00:00.000Z'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'finals_updates' && call[1] === 'update');
+  assert.equal(update[2].status, '승인됨');
+  assert.equal(update[2].approved_by_user_key, 'suhyeon');
+  assert.equal(update[2].approved_at, '2026-06-28T12:00:00.000Z');
+  assert.ok(supabase.calls.some((call) => call[0] === 'finals_updates' && call[1] === 'eq' && call[2] === 'id' && call[3] === 'finals-1'));
+});
+
 test('updateTaskStatus updates task status and completion timestamp', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);

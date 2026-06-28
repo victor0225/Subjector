@@ -54,3 +54,18 @@ export function buildFinalsPreviewMessage(preview) {
     section('충돌/변경 이력', preview.changeHistory)
   ].join('\n');
 }
+
+export function buildFinalsChannelMessage(preview) {
+  return [
+    `#finals 누적 정리 (${preview.workDate})`,
+    '',
+    section('확정/완료된 결과', [
+      ...preview.completed,
+      ...preview.outputs
+    ]),
+    '',
+    section('진행 중/미완료', preview.inProgress),
+    '',
+    section('충돌/변경 이력', preview.changeHistory)
+  ].join('\n');
+}

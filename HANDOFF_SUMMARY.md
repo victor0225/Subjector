@@ -110,7 +110,8 @@ Implemented:
   - `변경 요청` stores a `change_requests` row and changes task status to `변경 요청 중`.
   - `퇴근` now records the user's end-of-work session, changes still-accepted tasks to `미정리`, gathers today's task results/change requests, and sends a DM daily summary.
   - `finals 업데이트` now lets 조수현 generate a cumulative `#finals` preview by DM and stores the preview in `finals_updates`.
-  - Actual approval and posting/updating in `#finals`, voting, and OpenAI impact analysis are not wired yet.
+  - The `#finals` preview DM includes an approval button. When 조수현 approves, Subjector posts or updates the cumulative `#finals` message and marks the preview as `승인됨`.
+  - Automatic all-three-users퇴근 triggering, voting, and OpenAI impact analysis are not wired yet.
 - Tests:
   - `tests/config.test.js`
   - `tests/envFile.test.js`
@@ -129,7 +130,7 @@ Implemented:
 
 Verification:
 
-- `pnpm test` passes: 75 tests, 0 failures.
+- `pnpm test` passes: 82 tests, 0 failures.
 - `node src/server.js` without `.env` exits with a clear missing-environment-variable message.
 - Slack app factory can be created with `deferInitialization: true` without network verification.
 - `git diff --cached --check` reports no staged whitespace/conflict-marker problems.
@@ -143,7 +144,7 @@ Not yet implemented:
 - Meeting audio pipeline.
 - Full `#in-process` update lifecycle.
 - Change-request voting workflow.
-- `#finals` approval and actual channel update workflow.
+- Automatic all-three-users `퇴근` detection for daily finals preview generation.
 
 Current MVP statuses:
 

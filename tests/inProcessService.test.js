@@ -4,7 +4,8 @@ import { createInProcessService } from '../src/services/inProcessService.js';
 
 const config = {
   channels: {
-    inProcess: 'C_IN_PROCESS'
+    inProcess: 'C_IN_PROCESS',
+    finals: 'C_FINALS'
   }
 };
 
@@ -116,6 +117,23 @@ function createFakeStore({ existingMessage = null, tasks = [] } = {}) {
     },
     async createFinalsPreview(input) {
       calls.push(['createFinalsPreview', input]);
+    },
+    async getLatestFinalsPreview() {
+      calls.push(['getLatestFinalsPreview']);
+      return {
+        id: 'finals-1',
+        workDate: '2026-06-28',
+        preview: {
+          workDate: '2026-06-28',
+          completed: ['센서 후보 정리: 🔴 상 / 🟡 중'],
+          inProgress: [],
+          outputs: ['센서 후보 정리: 완료 / [결론] / - ESP32 우선 추천'],
+          changeHistory: []
+        }
+      };
+    },
+    async approveFinalsUpdate(input) {
+      calls.push(['approveFinalsUpdate', input]);
     }
   };
 }
@@ -322,4 +340,49 @@ test('handleFinalsPreview stores a cumulative preview and returns a DM message',
   assert.ok(store.calls.some(([name]) => name === 'listAllTasks'));
   assert.ok(store.calls.some(([name]) => name === 'listAllTaskResults'));
   assert.ok(store.calls.some(([name]) => name === 'listAllChangeRequests'));
+});
+
+test('handleFinalsApproval posts the latest preview to #finals when no message exists', async () => {
+  const store = createFakeStore();
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleFinalsApproval({ approvedByUserKey: 'suhyeon' });
+
+  assert.match(result.responseText, /#finals 누적 정리를 반영했습니다/);
+  const post = slackClient.calls.find(([name]) => name === 'postMessage');
+  assert.equal(post[1].channel, 'C_FINALS');
+  assert.match(post[1].text, /#finals 누적 정리/);
+  assert.equal(store.calls.find(([name]) => name === 'upsertSlackMessage')[1].purpose, 'finals:cumulative');
+  assert.equal(store.calls.find(([name]) => name === 'approveFinalsUpdate')[1].id, 'finals-1');
+});
+
+test('handleFinalsApproval updates the existing #finals cumulative message', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_FINALS',
+      messageTs: '1700000000.000001'
+    }
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  await service.handleFinalsApproval({ approvedByUserKey: 'suhyeon' });
+
+  const update = slackClient.calls.find(([name]) => name === 'update');
+  assert.equal(update[1].channel, 'C_FINALS');
+  assert.equal(update[1].ts, '1700000000.000001');
+  assert.equal(store.calls.some(([name]) => name === 'upsertSlackMessage'), false);
 });

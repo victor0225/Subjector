@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   handleDirectDmMessage,
+  handleFinalsApproveButton,
   handleTaskActionButton,
   handleTaskActionViewSubmission
 } from '../src/slack/app.js';
@@ -153,6 +154,7 @@ test('handleDirectDmMessage sends a finals preview for lead finals update comman
   assert.equal(serviceCalls[0].user.key, 'suhyeon');
   assert.equal(replies.length, 1);
   assert.match(replies[0].text, /#finals 누적 업데이트 미리보기/);
+  assert.equal(replies[0].blocks[1].elements[0].action_id, 'finals_approve_latest');
 });
 
 test('handleDirectDmMessage reports finals preview failures to the lead', async () => {
@@ -179,6 +181,76 @@ test('handleDirectDmMessage reports finals preview failures to the lead', async 
   assert.equal(replies.length, 1);
   assert.match(replies[0].text, /#finals 미리보기 생성에 실패했습니다/);
   assert.match(replies[0].text, /Render 로그/);
+});
+
+test('handleFinalsApproveButton lets the lead approve the latest finals preview', async () => {
+  let acked = false;
+  const serviceCalls = [];
+  const replies = [];
+
+  await handleFinalsApproveButton({
+    ack: async () => { acked = true; },
+    body: {
+      user: { id: 'U1' },
+      channel: { id: 'D1' }
+    },
+    client: {
+      chat: {
+        postMessage: async (input) => replies.push(input)
+      }
+    },
+    config,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleFinalsApproval(input) {
+        serviceCalls.push(input);
+        return {
+          responseText: '#finals 누적 정리를 반영했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].approvedByUserKey, 'suhyeon');
+  assert.equal(replies[0].channel, 'D1');
+  assert.match(replies[0].text, /반영했습니다/);
+});
+
+test('handleFinalsApproveButton rejects non-lead users', async () => {
+  let acked = false;
+  const replies = [];
+
+  await handleFinalsApproveButton({
+    ack: async () => { acked = true; },
+    body: {
+      user: { id: 'U2' },
+      channel: { id: 'D2' }
+    },
+    client: {
+      chat: {
+        postMessage: async (input) => replies.push(input)
+      }
+    },
+    config: {
+      ...config,
+      users: [
+        ...config.users,
+        { key: 'joeun', slackId: 'U2', fullName: '김조은', displayName: '조은' }
+      ]
+    },
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleFinalsApproval() {
+        throw new Error('should not be called');
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /수현님만/);
 });
 
 test('handleTaskActionButton opens the matching Slack modal', async () => {

@@ -1,5 +1,5 @@
 import { buildDailySummaryMessage } from '../domain/dailySummary.js';
-import { buildFinalsPreviewMessage, buildFinalsPreviewRecord } from '../domain/finalsSummary.js';
+import { buildFinalsChannelMessage, buildFinalsPreviewMessage, buildFinalsPreviewRecord } from '../domain/finalsSummary.js';
 import { buildInProcessBoardMessage, buildInProcessMessagePurpose, formatKstDate } from '../domain/inProcessBoard.js';
 import { taskActionFromActionId } from '../domain/taskActions.js';
 import { formatDisplayName } from '../domain/users.js';
@@ -142,6 +142,54 @@ export function createInProcessService({ store, slackClient, config, users = con
     };
   }
 
+  async function handleFinalsApproval({ approvedByUserKey }) {
+    const now = clock();
+    const channelId = config.channels.finals;
+    const latest = await store.getLatestFinalsPreview();
+
+    if (!latest) {
+      return {
+        responseText: '승인할 #finals 미리보기가 없습니다. 먼저 `finals 업데이트`를 보내 주세요.'
+      };
+    }
+
+    const text = buildFinalsChannelMessage(latest.preview);
+    const existingMessage = await store.findSlackMessage({
+      purpose: 'finals:cumulative',
+      channelId
+    });
+
+    if (existingMessage?.messageTs) {
+      await slackClient.chat.update({
+        channel: channelId,
+        ts: existingMessage.messageTs,
+        text
+      });
+    } else {
+      const posted = await slackClient.chat.postMessage({
+        channel: channelId,
+        text
+      });
+
+      await store.upsertSlackMessage({
+        purpose: 'finals:cumulative',
+        channelId,
+        messageTs: posted.ts,
+        threadTs: posted.ts
+      });
+    }
+
+    await store.approveFinalsUpdate({
+      id: latest.id,
+      approvedByUserKey,
+      approvedAt: now.toISOString()
+    });
+
+    return {
+      responseText: '#finals 누적 정리를 반영했습니다.'
+    };
+  }
+
   async function handleTaskActionSubmission({ actionId, taskId, assigneeUserKey, submittedByUserKey, rawText }) {
     const action = taskActionFromActionId(actionId);
     if (!action) {
@@ -193,6 +241,7 @@ export function createInProcessService({ store, slackClient, config, users = con
     handleStartWork,
     handleEndWork,
     handleFinalsPreview,
+    handleFinalsApproval,
     handleTaskActionSubmission,
     getTaskTitle
   };

@@ -60,6 +60,19 @@ function mapChangeRequest(row) {
   };
 }
 
+function mapFinalsPreview(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    workDate: row.work_date,
+    preview: row.preview ?? {},
+    createdAt: row.created_at
+  };
+}
+
 export function createSupabaseStore(supabase) {
   async function startWorkSession({ userKey, workDate, startedAt }) {
     const result = await supabase
@@ -247,6 +260,32 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to create finals preview');
   }
 
+  async function getLatestFinalsPreview() {
+    const result = await supabase
+      .from('finals_updates')
+      .select('id,work_date,preview,created_at')
+      .eq('status', '미리보기')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    throwIfError(result, 'Failed to get latest finals preview');
+    return mapFinalsPreview(result.data);
+  }
+
+  async function approveFinalsUpdate({ id, approvedByUserKey, approvedAt }) {
+    const result = await supabase
+      .from('finals_updates')
+      .update({
+        status: '승인됨',
+        approved_by_user_key: approvedByUserKey,
+        approved_at: approvedAt
+      })
+      .eq('id', id);
+
+    throwIfError(result, 'Failed to approve finals update');
+  }
+
   async function updateTaskStatus({ taskId, status, completedAt = null }) {
     const update = { status };
     if (completedAt) {
@@ -292,6 +331,8 @@ export function createSupabaseStore(supabase) {
     listDailyChangeRequestsForUser,
     listAllChangeRequests,
     createFinalsPreview,
+    getLatestFinalsPreview,
+    approveFinalsUpdate,
     updateTaskStatus,
     upsertSlackMessage
   };
