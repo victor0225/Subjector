@@ -378,13 +378,7 @@ export function createInProcessService({ store, slackClient, config, users = con
       channelId
     });
 
-    if (existingMessage?.messageTs) {
-      await slackClient.chat.update({
-        channel: channelId,
-        ts: existingMessage.messageTs,
-        text
-      });
-    } else {
+    async function postFinalsMessage() {
       const posted = await slackClient.chat.postMessage({
         channel: channelId,
         text
@@ -396,6 +390,24 @@ export function createInProcessService({ store, slackClient, config, users = con
         messageTs: posted.ts,
         threadTs: posted.ts
       });
+    }
+
+    if (existingMessage?.messageTs) {
+      try {
+        await slackClient.chat.update({
+          channel: channelId,
+          ts: existingMessage.messageTs,
+          text
+        });
+      } catch (error) {
+        if (!isSlackMessageNotFound(error)) {
+          throw error;
+        }
+
+        await postFinalsMessage();
+      }
+    } else {
+      await postFinalsMessage();
     }
 
     await store.approveFinalsUpdate({

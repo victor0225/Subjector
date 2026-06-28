@@ -954,3 +954,35 @@ test('handleFinalsApproval updates the existing #finals cumulative message', asy
   assert.equal(update[1].ts, '1700000000.000001');
   assert.equal(store.calls.some(([name]) => name === 'upsertSlackMessage'), false);
 });
+
+test('handleFinalsApproval reposts #finals when the stored Slack message was deleted', async () => {
+  const deletedMessageError = new Error('message_not_found');
+  deletedMessageError.data = { error: 'message_not_found' };
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_FINALS',
+      messageTs: '1700000000.000001'
+    }
+  });
+  const slackClient = createFakeSlackClient({
+    updateError: deletedMessageError
+  });
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleFinalsApproval({ approvedByUserKey: 'suhyeon' });
+
+  assert.match(result.responseText, /#finals 누적 정리를 반영했습니다/);
+  assert.equal(slackClient.calls[0][0], 'update');
+  assert.equal(slackClient.calls[1][0], 'postMessage');
+  assert.equal(slackClient.calls[1][1].channel, 'C_FINALS');
+  const upsert = store.calls.find(([name]) => name === 'upsertSlackMessage');
+  assert.equal(upsert[1].purpose, 'finals:cumulative');
+  assert.equal(upsert[1].messageTs, '1710000000.000001');
+  assert.equal(store.calls.find(([name]) => name === 'approveFinalsUpdate')[1].id, 'finals-1');
+});
