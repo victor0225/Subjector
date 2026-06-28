@@ -5,6 +5,7 @@ import {
   handleCodexPromptCopyButton,
   handleFinalsApproveButton,
   handleMeetingFileMessage,
+  handleMeetingSpeakerMappingButton,
   handleTaskAcceptButton,
   handleTaskActionButton,
   handleTaskActionViewSubmission
@@ -274,6 +275,141 @@ test('handleMeetingFileMessage posts a processing thread reply for meeting audio
   assert.equal(postedMessages[0].thread_ts, '1710000000.000100');
   assert.match(postedMessages[0].text, /회의 녹음 업로드를 확인했습니다/);
   assert.match(postedMessages[0].blocks[0].text.text, /Speaker A\/B\/C/);
+});
+
+test('handleMeetingFileMessage runs meeting transcription in the background', async () => {
+  const postedMessages = [];
+  const serviceCalls = [];
+
+  await handleMeetingFileMessage({
+    message: {
+      channel: 'C_MEETING',
+      ts: '1710000000.000100',
+      user: 'U1',
+      files: [{ name: '졸작회의.m4a', mimetype: 'audio/mp4' }]
+    },
+    client: {
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    logger: { info() {}, error() {} },
+    backgroundRunner: async (task) => {
+      await task();
+    },
+    meetingService: {
+      async handleMeetingFileMessage(input) {
+        serviceCalls.push(['upload', input]);
+        return {
+          channel: input.message.channel,
+          threadTs: input.message.ts,
+          text: '회의 녹음 업로드를 확인했습니다.'
+        };
+      },
+      async processMeetingAudioUpload(input) {
+        serviceCalls.push(['process', input]);
+        return {
+          channel: input.message.channel,
+          threadTs: input.message.ts,
+          text: '전사가 완료되었습니다. Speaker A/B/C를 실제 사람으로 지정해 주세요.',
+          blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '전사가 완료되었습니다.' } }]
+        };
+      }
+    }
+  });
+
+  assert.equal(serviceCalls[0][0], 'upload');
+  assert.equal(serviceCalls[1][0], 'process');
+  assert.equal(postedMessages.length, 2);
+  assert.match(postedMessages[1].text, /전사가 완료되었습니다/);
+});
+
+test('handleMeetingSpeakerMappingButton lets only the lead map speakers', async () => {
+  let acked = false;
+  const postedMessages = [];
+  const serviceCalls = [];
+
+  await handleMeetingSpeakerMappingButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'C_MEETING' },
+      user: { id: 'U1' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100',
+            speakerLabel: 'Speaker A',
+            userKey: 'suhyeon'
+          })
+        }
+      ]
+    },
+    client: {
+      chat: {
+        postEphemeral: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleSpeakerMapping(input) {
+        serviceCalls.push(input);
+        return {
+          text: 'Speaker A를 수현님으로 저장했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].speakerLabel, 'Speaker A');
+  assert.match(postedMessages[0].text, /수현님으로 저장했습니다/);
+});
+
+test('handleMeetingSpeakerMappingButton rejects non-lead users', async () => {
+  let acked = false;
+  const postedMessages = [];
+  const serviceCalls = [];
+
+  await handleMeetingSpeakerMappingButton({
+    ack: async () => {
+      acked = true;
+    },
+    body: {
+      channel: { id: 'C_MEETING' },
+      user: { id: 'U2' },
+      actions: [
+        {
+          value: JSON.stringify({
+            sourceChannelId: 'C_MEETING',
+            sourceMessageTs: '1710000000.000100',
+            speakerLabel: 'Speaker A',
+            userKey: 'suhyeon'
+          })
+        }
+      ]
+    },
+    client: {
+      chat: {
+        postEphemeral: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleSpeakerMapping(input) {
+        serviceCalls.push(input);
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 0);
+  assert.match(postedMessages[0].text, /Speaker 매핑은 수현님만/);
 });
 
 test('handleFinalsApproveButton lets the lead approve the latest finals preview', async () => {

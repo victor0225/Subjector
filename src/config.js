@@ -85,7 +85,10 @@ export function loadConfigFromEnv(env = process.env) {
     },
     gemini: {
       apiKey: env.GEMINI_API_KEY?.trim() || '',
-      evaluationModel: env.GEMINI_EVALUATION_MODEL?.trim() || 'gemini-3.5-flash'
+      evaluationModel: env.GEMINI_EVALUATION_MODEL?.trim() || 'gemini-3.5-flash',
+      transcriptionModel: env.GEMINI_TRANSCRIPTION_MODEL?.trim()
+        || env.GEMINI_EVALUATION_MODEL?.trim()
+        || 'gemini-3.5-flash'
     },
     channels: {
       meeting: env.MEETING_CHANNEL_ID.trim(),

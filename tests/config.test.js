@@ -33,6 +33,7 @@ test('loadConfigFromEnv builds app config from environment values', () => {
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'service-key',
     OPENAI_API_KEY: 'sk-key',
+    GEMINI_API_KEY: 'gemini-key',
     MEETING_CHANNEL_ID: 'C1',
     IN_PROCESS_CHANNEL_ID: 'C2',
     FINALS_CHANNEL_ID: 'C3',
@@ -50,6 +51,7 @@ test('loadConfigFromEnv builds app config from environment values', () => {
   assert.equal(config.ai.evaluationProvider, 'openai');
   assert.equal(config.openai.evaluationModel, 'gpt-5.2');
   assert.equal(config.gemini.evaluationModel, 'gemini-3.5-flash');
+  assert.equal(config.gemini.transcriptionModel, 'gemini-3.5-flash');
 });
 
 test('loadConfigFromEnv allows overriding the OpenAI evaluation model', () => {
@@ -62,7 +64,9 @@ test('loadConfigFromEnv allows overriding the OpenAI evaluation model', () => {
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'service-key',
     OPENAI_API_KEY: 'sk-key',
+    GEMINI_API_KEY: 'gemini-key',
     OPENAI_EVALUATION_MODEL: 'gpt-5.2-mini',
+    GEMINI_TRANSCRIPTION_MODEL: 'gemini-3.5-flash-lite',
     MEETING_CHANNEL_ID: 'C1',
     IN_PROCESS_CHANNEL_ID: 'C2',
     FINALS_CHANNEL_ID: 'C3',
@@ -71,6 +75,7 @@ test('loadConfigFromEnv allows overriding the OpenAI evaluation model', () => {
   });
 
   assert.equal(config.openai.evaluationModel, 'gpt-5.2-mini');
+  assert.equal(config.gemini.transcriptionModel, 'gemini-3.5-flash-lite');
 });
 
 test('loadConfigFromEnv supports Gemini task evaluation provider', () => {

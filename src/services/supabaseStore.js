@@ -141,6 +141,89 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to create meeting from audio upload');
   }
 
+  async function updateMeetingBySource({ sourceChannelId, sourceMessageTs, update, context }) {
+    const result = await supabase
+      .from('meetings')
+      .update(update)
+      .eq('source_channel_id', sourceChannelId)
+      .eq('source_message_ts', sourceMessageTs);
+
+    throwIfError(result, context);
+  }
+
+  async function markMeetingTranscribing({ sourceChannelId, sourceMessageTs }) {
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: 'transcribing',
+        error_message: null
+      },
+      context: 'Failed to mark meeting transcribing'
+    });
+  }
+
+  async function completeMeetingTranscription({ sourceChannelId, sourceMessageTs, transcript }) {
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: 'needs_speaker_mapping',
+        summary: {
+          transcript
+        },
+        error_message: null
+      },
+      context: 'Failed to complete meeting transcription'
+    });
+  }
+
+  async function failMeetingTranscription({ sourceChannelId, sourceMessageTs, errorMessage }) {
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        status: 'transcription_failed',
+        error_message: errorMessage
+      },
+      context: 'Failed to mark meeting transcription failed'
+    });
+  }
+
+  async function getMeetingBySource({ sourceChannelId, sourceMessageTs }) {
+    const result = await supabase
+      .from('meetings')
+      .select('source_channel_id,source_message_ts,status,speaker_mapping,summary')
+      .eq('source_channel_id', sourceChannelId)
+      .eq('source_message_ts', sourceMessageTs)
+      .maybeSingle();
+
+    throwIfError(result, 'Failed to get meeting by source');
+    return result.data;
+  }
+
+  async function saveMeetingSpeakerMapping({ sourceChannelId, sourceMessageTs, speakerLabel, userKey }) {
+    const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
+    const speakerMapping = {
+      ...(meeting?.speaker_mapping ?? {}),
+      [speakerLabel]: userKey
+    };
+
+    await updateMeetingBySource({
+      sourceChannelId,
+      sourceMessageTs,
+      update: {
+        speaker_mapping: speakerMapping,
+        status: 'needs_speaker_mapping'
+      },
+      context: 'Failed to save meeting speaker mapping'
+    });
+
+    return {
+      speakerMapping
+    };
+  }
+
   async function listEndedWorkSessionsForDate({ workDate }) {
     const result = await supabase
       .from('daily_work_sessions')
@@ -412,6 +495,10 @@ export function createSupabaseStore(supabase) {
     startWorkSession,
     endWorkSession,
     createMeetingFromAudioUpload,
+    markMeetingTranscribing,
+    completeMeetingTranscription,
+    failMeetingTranscription,
+    saveMeetingSpeakerMapping,
     listEndedWorkSessionsForDate,
     listOpenTasksForUser,
     markAcceptedTasksUnresolvedForUser,

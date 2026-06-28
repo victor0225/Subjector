@@ -9,8 +9,10 @@ import {
   extractTaskActionSubmissionText,
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
+import { createGeminiMeetingTranscriber } from '../services/geminiMeetingTranscriber.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createMeetingService } from '../services/meetingService.js';
+import { createSlackFileDownloader } from '../services/slackFileDownloader.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
 import { createTaskEvaluator } from '../services/taskEvaluatorFactory.js';
 import { buildFinalsPreviewBlocks, buildTextMessageBlocks } from './blocks.js';
@@ -157,7 +159,19 @@ function registerDmHandlers(app, config, logger, inProcessService) {
   });
 }
 
-export async function handleMeetingFileMessage({ message, client, logger = console, meetingService }) {
+function runInBackground(task, logger) {
+  setTimeout(() => {
+    task().catch((error) => logger.error?.(error));
+  }, 0);
+}
+
+export async function handleMeetingFileMessage({
+  message,
+  client,
+  logger = console,
+  meetingService,
+  backgroundRunner = (task) => runInBackground(task, logger)
+}) {
   try {
     const result = await meetingService.handleMeetingFileMessage({ message });
 
@@ -173,6 +187,22 @@ export async function handleMeetingFileMessage({ message, client, logger = conso
     });
 
     logger.info?.('Meeting audio upload recorded');
+
+    if (typeof meetingService.processMeetingAudioUpload === 'function') {
+      backgroundRunner(async () => {
+        const processingResult = await meetingService.processMeetingAudioUpload({ message });
+        if (!processingResult) {
+          return;
+        }
+
+        await client.chat.postMessage({
+          channel: processingResult.channel,
+          thread_ts: processingResult.threadTs,
+          text: processingResult.text,
+          blocks: processingResult.blocks ?? buildTextMessageBlocks(processingResult.text)
+        });
+      });
+    }
   } catch (error) {
     logger.error?.(error);
 
@@ -197,6 +227,59 @@ function registerMeetingHandlers(app, logger, meetingService) {
       meetingService
     });
   });
+}
+
+function parseSpeakerMappingValue(value) {
+  return JSON.parse(value);
+}
+
+export async function handleMeetingSpeakerMappingButton({ ack, body, client, config, logger = console, meetingService }) {
+  await ack();
+
+  const user = getUserBySlackId(config.users, body.user.id);
+  const channel = body.channel?.id;
+
+  if (!user) {
+    await client.chat.postEphemeral({
+      channel,
+      user: body.user.id,
+      text: '등록되지 않은 사용자입니다. 수현님에게 Slack 멤버 ID 등록을 요청해 주세요.'
+    });
+    return;
+  }
+
+  if (user.key !== config.leadUserKey) {
+    await client.chat.postEphemeral({
+      channel,
+      user: body.user.id,
+      text: `${formatDisplayName(user)}, Speaker 매핑은 수현님만 실행할 수 있습니다.`
+    });
+    return;
+  }
+
+  try {
+    const metadata = parseSpeakerMappingValue(body.actions[0].value);
+    const result = await meetingService.handleSpeakerMapping(metadata);
+
+    await client.chat.postEphemeral({
+      channel,
+      user: body.user.id,
+      text: result.text,
+      blocks: buildTextMessageBlocks(result.text)
+    });
+
+    logger.info?.('Meeting speaker mapping saved');
+  } catch (error) {
+    logger.error?.(error);
+
+    const text = 'Speaker 매핑을 저장하지 못했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.';
+    await client.chat.postEphemeral({
+      channel,
+      user: body.user.id,
+      text,
+      blocks: buildTextMessageBlocks(text)
+    });
+  }
 }
 
 export async function handleTaskActionButton({ ack, body, client, logger = console, inProcessService }) {
@@ -419,6 +502,19 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
   });
 }
 
+function registerMeetingActionHandlers(app, config, logger, meetingService) {
+  app.action('meeting_map_speaker', async ({ ack, body, client }) => {
+    await handleMeetingSpeakerMappingButton({
+      ack,
+      body,
+      client,
+      config,
+      logger,
+      meetingService
+    });
+  });
+}
+
 export function createSlackApp({
   config,
   logger = console,
@@ -453,12 +549,23 @@ export function createSlackApp({
   const meetings = meetingService ?? createMeetingService({
     store,
     config,
-    logger
+    logger,
+    fileDownloader: createSlackFileDownloader({
+      botToken: config.slack.botToken,
+      slackClient: app.client
+    }),
+    audioTranscriber: config.gemini.apiKey
+      ? createGeminiMeetingTranscriber({
+        apiKey: config.gemini.apiKey,
+        model: config.gemini.transcriptionModel
+      })
+      : null
   });
 
   registerDmHandlers(app, config, logger, service);
   registerMeetingHandlers(app, logger, meetings);
   registerTaskActionHandlers(app, config, logger, service);
+  registerMeetingActionHandlers(app, config, logger, meetings);
 
   return { app, receiver };
 }

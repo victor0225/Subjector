@@ -104,6 +104,83 @@ test('createMeetingFromAudioUpload inserts an uploaded meeting record', async ()
   assert.equal(insert[2].audio_file_name, '졸작회의.m4a');
 });
 
+test('markMeetingTranscribing updates a meeting by source message', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.markMeetingTranscribing({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'transcribing');
+  assert.equal(update[2].error_message, null);
+  assert.ok(supabase.calls.some((call) => call[0] === 'meetings' && call[1] === 'eq' && call[2] === 'source_channel_id' && call[3] === 'C_MEETING'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'meetings' && call[1] === 'eq' && call[2] === 'source_message_ts' && call[3] === '1710000000.000100'));
+});
+
+test('completeMeetingTranscription stores transcript summary and waits for speaker mapping', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.completeMeetingTranscription({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    transcript: {
+      meetingTitle: '졸작 회의',
+      speakers: [{ label: 'Speaker A' }],
+      segments: []
+    }
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'needs_speaker_mapping');
+  assert.equal(update[2].summary.transcript.meetingTitle, '졸작 회의');
+  assert.equal(update[2].error_message, null);
+});
+
+test('failMeetingTranscription stores the error message', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.failMeetingTranscription({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    errorMessage: 'download failed'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'transcription_failed');
+  assert.equal(update[2].error_message, 'download failed');
+});
+
+test('saveMeetingSpeakerMapping merges a new speaker mapping', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        speaker_mapping: {
+          'Speaker B': 'joeun'
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.saveMeetingSpeakerMapping({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    speakerLabel: 'Speaker A',
+    userKey: 'suhyeon'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
+  assert.equal(update[2].status, 'needs_speaker_mapping');
+  assert.equal(update[2].speaker_mapping['Speaker A'], 'suhyeon');
+  assert.equal(update[2].speaker_mapping['Speaker B'], 'joeun');
+  assert.equal(result.speakerMapping['Speaker A'], 'suhyeon');
+});
+
 test('endWorkSession upserts by user and work date with ended time', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);
