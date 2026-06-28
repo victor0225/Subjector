@@ -73,8 +73,11 @@ test('buildSpeakerMappingBlocks renders team member buttons for each speaker', (
   });
 
   const actionBlocks = blocks.filter((block) => block.type === 'actions');
+  const actionIds = actionBlocks.flatMap((block) => block.elements.map((element) => element.action_id));
+
   assert.equal(actionBlocks.length, 2);
-  assert.equal(actionBlocks[0].elements[0].action_id, 'meeting_map_speaker');
+  assert.equal(new Set(actionIds).size, actionIds.length);
+  assert.ok(actionBlocks[0].elements[0].action_id.startsWith('meeting_map_speaker_'));
   assert.equal(actionBlocks[0].elements[0].text.text, '수현님');
 
   const value = JSON.parse(actionBlocks[0].elements[0].value);

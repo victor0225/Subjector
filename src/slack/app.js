@@ -524,7 +524,7 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
 }
 
 function registerMeetingActionHandlers(app, config, logger, meetingService) {
-  app.action('meeting_map_speaker', async ({ ack, body, client }) => {
+  app.action(/^meeting_map_speaker_/, async ({ ack, body, client }) => {
     await handleMeetingSpeakerMappingButton({
       ack,
       body,

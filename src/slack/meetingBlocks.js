@@ -22,6 +22,18 @@ function buttonValue({ sourceChannelId, sourceMessageTs, speakerLabel, userKey }
   });
 }
 
+function actionIdPart(value) {
+  return String(value ?? '')
+    .trim()
+    .replaceAll(/[^A-Za-z0-9_-]/g, '_')
+    .replaceAll(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function speakerMappingActionId({ speakerLabel, userKey }) {
+  return `meeting_map_speaker_${actionIdPart(speakerLabel)}_${actionIdPart(userKey)}`;
+}
+
 export function buildSpeakerMappingBlocks({ text, transcript, users, sourceChannelId, sourceMessageTs }) {
   const blocks = [
     {
@@ -41,7 +53,10 @@ export function buildSpeakerMappingBlocks({ text, transcript, users, sourceChann
       block_id: `meeting_map_${speaker.label.replaceAll(' ', '_')}`,
       elements: users.map((user) => ({
         type: 'button',
-        action_id: 'meeting_map_speaker',
+        action_id: speakerMappingActionId({
+          speakerLabel: speaker.label,
+          userKey: user.key
+        }),
         text: plainText(`${user.displayName}님`),
         value: buttonValue({
           sourceChannelId,
