@@ -199,6 +199,16 @@ export function createInProcessService({ store, slackClient, config, users = con
     };
   }
 
+  async function handleRefreshInProcess({ user }) {
+    const now = clock();
+    const result = await renderBoard({ user, now });
+
+    return {
+      ...result,
+      dmText: `${formatDisplayName(user)}, #in-process task 영역을 최신화했습니다.`
+    };
+  }
+
   async function createFinalsPreviewForWorkDate(workDate) {
     const [tasks, results, changeRequests] = await Promise.all([
       store.listAllTasks({ limit: 100 }),
@@ -494,6 +504,7 @@ export function createInProcessService({ store, slackClient, config, users = con
 
   return {
     handleStartWork,
+    handleRefreshInProcess,
     handleEndWork,
     handleFinalsPreview,
     handleFinalsApproval,

@@ -99,6 +99,37 @@ test('handleDirectDmMessage reports #in-process update failures to the user', as
   assert.match(replies[0].text, /Render 로그/);
 });
 
+test('handleDirectDmMessage refreshes #in-process for 최신화 commands', async () => {
+  const replies = [];
+  const serviceCalls = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      user: 'U1',
+      text: '최신화'
+    },
+    say: async (payload) => replies.push(payload),
+    config,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleRefreshInProcess(input) {
+        serviceCalls.push(input);
+        return {
+          action: 'updated',
+          taskCount: 2,
+          dmText: '수현님, #in-process task 영역을 최신화했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].user.key, 'suhyeon');
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /최신화했습니다/);
+});
+
 test('handleDirectDmMessage sends a daily summary for 퇴근 commands', async () => {
   const replies = [];
   const serviceCalls = [];

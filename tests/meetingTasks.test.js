@@ -88,6 +88,7 @@ test('buildMeetingTaskApprovalBlocks asks the lead to approve extracted task can
 
   assert.match(text, /task 후보 추출이 완료되었습니다/);
   assert.match(text, /승인하면 #in-process에 반영할 task로 저장합니다/);
+  assert.match(buildMeetingTaskApprovalText({ taskCandidates }), /최신화/);
   assert.equal(blocks[1].elements[0].action_id, 'meeting_approve_tasks');
 
   const value = JSON.parse(blocks[1].elements[0].value);

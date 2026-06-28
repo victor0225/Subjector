@@ -98,6 +98,22 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
     }
   }
 
+  if (response.refreshInProcess && inProcessService) {
+    try {
+      const result = await inProcessService.handleRefreshInProcess({ user });
+      await say({
+        text: result.dmText,
+        blocks: buildTextMessageBlocks(result.dmText)
+      });
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, #in-process 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
   if (response.createDailySummary && inProcessService) {
     try {
       const result = await inProcessService.handleEndWork({ user });

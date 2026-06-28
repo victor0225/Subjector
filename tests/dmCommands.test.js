@@ -27,6 +27,20 @@ test('출근 requests #in-process update', () => {
   assert.match(result.text, /#in-process/);
 });
 
+test('최신화 refreshes #in-process without starting work', () => {
+  const result = handleDmCommand({
+    text: '최신화',
+    user: config.users[0],
+    config
+  });
+
+  assert.equal(result.type, 'refresh_in_process');
+  assert.equal(result.refreshInProcess, true);
+  assert.equal(result.updateInProcess, undefined);
+  assert.match(result.text, /수현님/);
+  assert.match(result.text, /#in-process/);
+});
+
 test('퇴근 requests daily summary generation', () => {
   const result = handleDmCommand({
     text: '퇴근',
@@ -74,5 +88,6 @@ test('unknown command returns short help text', () => {
 
   assert.equal(result.type, 'help');
   assert.match(result.text, /출근/);
+  assert.match(result.text, /최신화/);
   assert.match(result.text, /퇴근/);
 });

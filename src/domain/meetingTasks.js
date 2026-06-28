@@ -94,6 +94,7 @@ export function buildMeetingTaskApprovalText({ taskCandidates = [] }) {
     `- 후보 task: ${taskCandidates.length}개`,
     '- 상태: 수현님 승인 대기',
     '승인하면 #in-process에 반영할 task로 저장합니다.',
+    '승인 후 담당자는 Subjector Bot DM에 `최신화`를 보내 새 task를 확인합니다.',
     '',
     '[후보 목록]'
   ];
@@ -108,6 +109,6 @@ export function buildMeetingTaskApprovalText({ taskCandidates = [] }) {
 export function buildMeetingTaskApprovalResultText({ taskCandidates = [] }) {
   return [
     `회의 기반 task ${taskCandidates.length}개를 생성했습니다.`,
-    '다음 출근 또는 #in-process 새로고침 때 각자의 task 보드에서 확인할 수 있습니다.'
+    '담당자가 Subjector Bot DM에 `최신화`를 보내면 #in-process task 보드에서 확인할 수 있습니다.'
   ].join('\n');
 }

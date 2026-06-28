@@ -82,7 +82,19 @@ Expected reply:
 수현님, 오늘 할 일 맥락을 정리했습니다. #in-process에도 최신 task를 반영하겠습니다.
 ```
 
-3. Send:
+3. After meeting task approval or when you only want to refresh #in-process, send:
+
+```text
+최신화
+```
+
+Expected reply:
+
+```text
+수현님, #in-process task 영역을 최신화했습니다.
+```
+
+4. Send:
 
 ```text
 퇴근
@@ -94,7 +106,7 @@ Expected reply:
 수현님, 오늘 한 일 요약입니다...
 ```
 
-4. As 조수현 only, send:
+5. As 조수현 only, send:
 
 ```text
 finals 업데이트
