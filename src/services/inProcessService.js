@@ -44,6 +44,26 @@ function taskIdFromDetailPurpose(purpose) {
   return text.startsWith('task_detail:') ? text.slice('task_detail:'.length) : '';
 }
 
+function compactResultText(rawText) {
+  const lines = String(rawText ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.slice(0, 3).join(' / ');
+}
+
+function buildTaskCompletionThreadText({ user, task, rawText }) {
+  const summary = compactResultText(rawText);
+  return [
+    '[task 완료 기록]',
+    `- 담당자: ${formatDisplayName(user)}`,
+    `- task: ${task?.title ?? 'task'}`,
+    '- 상태: 완료',
+    summary ? `- 제출 요약: ${summary}` : null
+  ].filter(Boolean).join('\n');
+}
+
 export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date(), taskEvaluator = null }) {
   async function postBoardMessage({ channelId, message, purpose }) {
     const posted = await slackClient.chat.postMessage({
@@ -545,6 +565,30 @@ export function createInProcessService({ store, slackClient, config, users = con
 
     const owner = users.find((candidate) => candidate.key === ownerKey);
     if (owner) {
+      if (finalStatus === '완료' && task?.status !== '완료') {
+        const channelId = config.channels.inProcess;
+        const boardMessage = await store.findSlackMessage({
+          purpose: buildInProcessMessagePurpose(owner),
+          channelId
+        });
+        const threadTs = boardMessage?.threadTs ?? boardMessage?.messageTs;
+
+        if (threadTs) {
+          const text = buildTaskCompletionThreadText({
+            user: owner,
+            task,
+            rawText
+          });
+
+          await slackClient.chat.postMessage({
+            channel: channelId,
+            thread_ts: threadTs,
+            text,
+            blocks: buildTextMessageBlocks(text)
+          });
+        }
+      }
+
       await renderBoard({ user: owner, now });
     }
 

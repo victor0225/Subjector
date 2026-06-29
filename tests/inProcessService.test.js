@@ -568,6 +568,42 @@ test('handleTaskActionSubmission stores completed task output and refreshes the 
   assert.equal(slackClient.calls.at(-1)[0], 'update');
 });
 
+test('handleTaskActionSubmission posts a completion record in the board thread', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001',
+      threadTs: '1700000000.000001'
+    }
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  await service.handleTaskActionSubmission({
+    actionId: 'task_complete',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: '[완료 제출 결과]'
+  });
+
+  const completionPost = slackClient.calls.find(([name, input]) => (
+    name === 'postMessage'
+    && input.thread_ts === '1700000000.000001'
+    && /완료 기록/.test(input.text)
+  ));
+
+  assert.ok(completionPost);
+  assert.match(completionPost[1].text, /센서 후보 정리/);
+  assert.match(completionPost[1].text, /수현님/);
+});
+
 test('handleTaskActionSubmission completes a task only after sufficient LLM evaluation', async () => {
   const evaluator = createFakeTaskEvaluator({
     verdict: 'sufficient',
