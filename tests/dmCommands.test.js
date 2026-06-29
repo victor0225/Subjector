@@ -79,6 +79,41 @@ test('finals 업데이트 is rejected for non-lead user', () => {
   assert.match(result.text, /수현님만/);
 });
 
+test('테스트 task 정리 is allowed for lead user', () => {
+  const result = handleDmCommand({
+    text: '테스트 task 정리',
+    user: config.users[0],
+    config
+  });
+
+  assert.equal(result.type, 'archive_test_tasks');
+  assert.equal(result.archiveTestTasks, true);
+  assert.match(result.text, /테스트 task/);
+});
+
+test('테스트 task 정리 is rejected for non-lead user', () => {
+  const result = handleDmCommand({
+    text: '테스트 task 정리',
+    user: config.users[1],
+    config
+  });
+
+  assert.equal(result.type, 'not_allowed');
+  assert.match(result.text, /수현님만/);
+});
+
+test('회의 기록 command captures raw meeting text', () => {
+  const result = handleDmCommand({
+    text: '회의 기록: ESP32 기준으로 진행하기로 함',
+    user: config.users[0],
+    config
+  });
+
+  assert.equal(result.type, 'raw_meeting_text');
+  assert.equal(result.createRawMeeting, true);
+  assert.equal(result.rawMeetingText, 'ESP32 기준으로 진행하기로 함');
+});
+
 test('unknown command returns short help text', () => {
   const result = handleDmCommand({
     text: '메뉴',

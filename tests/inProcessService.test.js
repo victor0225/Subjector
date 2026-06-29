@@ -201,6 +201,9 @@ function createFakeStore({
     async getFinalsUpdateForDate(input) {
       calls.push(['getFinalsUpdateForDate', input]);
       return finalsUpdateForDate;
+    },
+    async archiveTestTasks(input) {
+      calls.push(['archiveTestTasks', input]);
     }
   };
 }
@@ -378,6 +381,31 @@ test('handleRefreshInProcess deletes stale task detail thread messages', async (
     channelId: 'C_IN_PROCESS',
     messageTs: '1700000000.000012'
   });
+});
+
+test('handleArchiveTestTasks archives test tasks and refreshes the board', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1710000000.000001',
+      threadTs: '1710000000.000001'
+    },
+    tasks: []
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: allUsers
+  });
+
+  const result = await service.handleArchiveTestTasks({ user });
+
+  assert.deepEqual(store.calls[0], ['archiveTestTasks', { keyword: '테스트' }]);
+  assert.ok(slackClient.calls.some((call) => call[0] === 'update'));
+  assert.match(result.dmText, /테스트 task/);
+  assert.match(result.dmText, /보관 처리/);
 });
 
 test('handleStartWork posts task detail threads for tasks that do not have one yet', async () => {

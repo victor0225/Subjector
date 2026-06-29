@@ -126,6 +126,42 @@ export function createMeetingService({
     };
   }
 
+  async function handleRawMeetingText({ sourceChannelId, sourceMessageTs, submittedByUserKey, rawText }) {
+    const participantUserKeys = config.users.map((user) => user.key);
+
+    await store.createMeetingFromRawText({
+      sourceChannelId,
+      sourceMessageTs,
+      uploaderUserKey: submittedByUserKey,
+      rawText,
+      participantUserKeys
+    });
+
+    return {
+      text: '수동 회의 기록을 저장했습니다. 팀원에게 중요하다고 보는 일을 입력하라는 DM을 보냈습니다.',
+      directMessages: config.users
+        .filter((participant) => participant?.slackId)
+        .map((participant) => {
+          const dmText = buildParticipantTaskInputDmText({
+            user: participant,
+            meetingTitle: '수동 회의 기록'
+          });
+
+          return {
+            userKey: participant.key,
+            slackId: participant.slackId,
+            text: dmText,
+            blocks: buildMeetingParticipantInputBlocks({
+              text: dmText,
+              sourceChannelId,
+              sourceMessageTs,
+              userKey: participant.key
+            })
+          };
+        })
+    };
+  }
+
   async function processMeetingAudioUpload({ message }) {
     if (!isMeetingUploadMessage({
       message,
@@ -415,6 +451,7 @@ export function createMeetingService({
 
   return {
     handleMeetingFileMessage,
+    handleRawMeetingText,
     processMeetingAudioUpload,
     handleSpeakerMapping,
     handleParticipantTaskInput,

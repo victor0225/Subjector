@@ -70,7 +70,7 @@ function registerHealthRoute(receiver, config) {
   });
 }
 
-export async function handleDirectDmMessage({ message, say, client = null, config, logger = console, inProcessService }) {
+export async function handleDirectDmMessage({ message, say, client = null, config, logger = console, inProcessService, meetingService = null }) {
   if (!isDirectUserMessage(message)) {
     return;
   }
@@ -161,6 +161,51 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
     }
   }
 
+  if (response.archiveTestTasks && inProcessService) {
+    try {
+      const result = await inProcessService.handleArchiveTestTasks({ user });
+      await say({
+        text: result.dmText,
+        blocks: buildTextMessageBlocks(result.dmText)
+      });
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, 테스트 task 정리에 실패했습니다. Render 로그를 확인한 뒤 다시 '테스트 task 정리'를 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
+  if (response.createRawMeeting && meetingService) {
+    try {
+      const result = await meetingService.handleRawMeetingText({
+        sourceChannelId: message.channel,
+        sourceMessageTs: message.ts,
+        submittedByUserKey: user.key,
+        rawText: response.rawMeetingText
+      });
+
+      await say({
+        text: result.text,
+        blocks: buildTextMessageBlocks(result.text)
+      });
+
+      if (client && result.directMessages?.length > 0) {
+        await sendDirectMessages({
+          client,
+          messages: result.directMessages
+        });
+      }
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, 회의 기록 저장에 실패했습니다. Render 로그를 확인한 뒤 다시 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
   await say({
     text: response.text,
     blocks: buildTextMessageBlocks(response.text)
@@ -202,7 +247,7 @@ async function sendDirectMessages({ client, messages = [] }) {
   }
 }
 
-function registerDmHandlers(app, config, logger, inProcessService) {
+function registerDmHandlers(app, config, logger, inProcessService, meetingService) {
   app.message(async ({ message, say, client }) => {
     await handleDirectDmMessage({
       message,
@@ -210,7 +255,8 @@ function registerDmHandlers(app, config, logger, inProcessService) {
       client,
       config,
       logger,
-      inProcessService
+      inProcessService,
+      meetingService
     });
   });
 }
@@ -308,6 +354,38 @@ function registerMeetingHandlers(app, logger, meetingService) {
 
 function parseSpeakerMappingValue(value) {
   return JSON.parse(value);
+}
+
+function blockContainsCandidateIndex(block, candidateIndex) {
+  return (block.elements ?? []).some((element) => {
+    if (!element.value) {
+      return false;
+    }
+
+    try {
+      return Number(parseSpeakerMappingValue(element.value).candidateIndex) === Number(candidateIndex);
+    } catch {
+      return false;
+    }
+  });
+}
+
+function removeReviewedCandidateActionBlocks({ blocks = [], candidateIndex, resultText }) {
+  const reviewedText = [
+    '*처리 완료*',
+    resultText
+  ].join('\n');
+
+  return [
+    ...blocks.filter((block) => !(block.type === 'actions' && blockContainsCandidateIndex(block, candidateIndex))),
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: reviewedText
+      }
+    }
+  ];
 }
 
 export async function handleMeetingSpeakerMappingButton({ ack, body, client, config, logger = console, meetingService }) {
@@ -602,6 +680,19 @@ export async function handleMeetingCandidateDecisionButton({ ack, body, client, 
       text: result.text,
       blocks: buildTextMessageBlocks(result.text)
     });
+
+    if (body.message?.ts && body.message?.blocks && client.chat.update) {
+      await client.chat.update({
+        channel,
+        ts: body.message.ts,
+        text: body.message.text ?? result.text,
+        blocks: removeReviewedCandidateActionBlocks({
+          blocks: body.message.blocks,
+          candidateIndex: metadata.candidateIndex,
+          resultText: result.text
+        })
+      });
+    }
 
     logger.info?.(`Meeting task candidate reviewed: ${decision}`);
   } catch (error) {
@@ -1092,7 +1183,7 @@ export function createSlackApp({
     taskExtractor: createMeetingTaskExtractor({ config })
   });
 
-  registerDmHandlers(app, config, logger, service);
+  registerDmHandlers(app, config, logger, service, meetings);
   registerMeetingHandlers(app, logger, meetings);
   registerTaskActionHandlers(app, config, logger, service);
   registerMeetingActionHandlers(app, config, logger, meetings);

@@ -229,3 +229,25 @@ test('buildInProcessBoardMessage highlights needs-revision tasks as red', () => 
 
   assert.match(message.text, /🔴 `보완 필요`/);
 });
+
+test('buildInProcessBoardMessage lets users submit revisions for needs-revision tasks', () => {
+  const message = buildInProcessBoardMessage({
+    user,
+    workDate: '2026-06-28',
+    tasks: [
+      {
+        id: 'task-1',
+        title: '센서 후보 정리',
+        status: '보완 필요',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+
+  const actions = message.blocks.find((block) => block.type === 'actions');
+
+  assert.equal(actions.elements[1].action_id, 'task_complete');
+  assert.equal(actions.elements[1].text.text, '보완 제출');
+});

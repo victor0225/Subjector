@@ -85,6 +85,33 @@ test('handleMeetingFileMessage ignores non-meeting messages', async () => {
   assert.equal(calls.length, 0);
 });
 
+test('handleRawMeetingText records manual meeting text and asks participants for input', async () => {
+  const calls = [];
+  const service = createMeetingService({
+    config: teamConfig,
+    store: {
+      async createMeetingFromRawText(input) {
+        calls.push(input);
+      }
+    }
+  });
+
+  const result = await service.handleRawMeetingText({
+    sourceChannelId: 'D_LEAD',
+    sourceMessageTs: '1710000000.000200',
+    submittedByUserKey: 'suhyeon',
+    rawText: 'ESP32 기준으로 진행하기로 함'
+  });
+
+  assert.equal(calls[0].sourceChannelId, 'D_LEAD');
+  assert.equal(calls[0].sourceMessageTs, '1710000000.000200');
+  assert.equal(calls[0].uploaderUserKey, 'suhyeon');
+  assert.deepEqual(calls[0].participantUserKeys, ['suhyeon', 'joeun']);
+  assert.match(result.text, /수동 회의 기록을 저장했습니다/);
+  assert.equal(result.directMessages.length, 2);
+  assert.equal(result.directMessages[0].blocks[1].elements[0].action_id, 'meeting_participant_task_input');
+});
+
 test('processMeetingAudioUpload downloads, transcribes, stores, and asks for speaker mapping', async () => {
   const calls = [];
   const service = createMeetingService({

@@ -13,13 +13,16 @@ export function buildHelpText(displayName) {
     '- `출근`: 오늘 업무 시작을 기록하고 #in-process task 영역을 만들거나 갱신합니다.',
     '- `최신화`: 출근 기록은 건드리지 않고 #in-process task 영역만 갱신합니다.',
     '- `퇴근`: 오늘 한 일 요약을 DM으로 받습니다.',
-    '- `finals 업데이트`: 수현님만 사용할 수 있는 명령입니다. #finals 미리보기 생성은 다음 구현 단계에서 연결됩니다.'
+    '- `finals 업데이트`: 수현님만 사용할 수 있는 명령입니다. #finals 미리보기를 생성합니다.',
+    '- `회의 기록: 내용`: 녹음 없이 회의 내용을 텍스트로 저장하고 task 후보 흐름을 시작합니다.',
+    '- `테스트 task 정리`: 수현님만 사용할 수 있는 명령입니다. 제목에 테스트가 들어간 task를 보관 처리합니다.'
   ].join('\n');
 }
 
 export function handleDmCommand({ text, user, config }) {
   const command = normalizeCommand(text);
   const displayName = formatDisplayName(user);
+  const rawMeetingMatch = command.match(/^회의\s*(?:기록|결과)\s*[:：]\s*(.+)$/);
 
   if (command === '출근') {
     return {
@@ -57,6 +60,30 @@ export function handleDmCommand({ text, user, config }) {
       type: 'force_finals_preview',
       text: `${displayName}, finals 업데이트 명령을 확인했습니다. #finals 누적 업데이트 미리보기를 생성하겠습니다.`,
       createFinalsPreview: true
+    };
+  }
+
+  if (command === '테스트 task 정리') {
+    if (user?.key !== config.leadUserKey) {
+      return {
+        type: 'not_allowed',
+        text: `${displayName}, 테스트 task 정리는 수현님만 실행할 수 있습니다.`
+      };
+    }
+
+    return {
+      type: 'archive_test_tasks',
+      text: `${displayName}, 테스트 task 정리 명령을 확인했습니다. 제목에 테스트가 들어간 task를 보관 처리하겠습니다.`,
+      archiveTestTasks: true
+    };
+  }
+
+  if (rawMeetingMatch?.[1]) {
+    return {
+      type: 'raw_meeting_text',
+      text: `${displayName}, 회의 기록을 확인했습니다. 팀원 의견 입력 흐름을 시작하겠습니다.`,
+      createRawMeeting: true,
+      rawMeetingText: rawMeetingMatch[1].trim()
     };
   }
 

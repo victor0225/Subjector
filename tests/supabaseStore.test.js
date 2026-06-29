@@ -19,6 +19,10 @@ function createFakeSupabase({ tableData = {}, singleData = {}, errors = {} } = {
         calls.push([table, 'like', column, value]);
         return builder;
       },
+      ilike(column, value) {
+        calls.push([table, 'ilike', column, value]);
+        return builder;
+      },
       in(column, values) {
         calls.push([table, 'in', column, values]);
         return builder;
@@ -110,6 +114,28 @@ test('createMeetingFromAudioUpload inserts an uploaded meeting record', async ()
   assert.equal(insert[2].uploader_user_key, 'suhyeon');
   assert.equal(insert[2].status, 'uploaded');
   assert.equal(insert[2].audio_file_name, '졸작회의.m4a');
+});
+
+test('createMeetingFromRawText inserts a manual meeting record that waits for participant input', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.createMeetingFromRawText({
+    sourceChannelId: 'D_LEAD',
+    sourceMessageTs: '1710000000.000200',
+    uploaderUserKey: 'suhyeon',
+    rawText: 'ESP32 기준으로 진행하기로 함',
+    participantUserKeys: ['suhyeon', 'joeun']
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'insert');
+  assert.equal(insert[2].source_channel_id, 'D_LEAD');
+  assert.equal(insert[2].source_message_ts, '1710000000.000200');
+  assert.equal(insert[2].uploader_user_key, 'suhyeon');
+  assert.equal(insert[2].status, 'needs_participant_input');
+  assert.equal(insert[2].summary.rawText, 'ESP32 기준으로 진행하기로 함');
+  assert.deepEqual(insert[2].summary.participantUserKeys, ['suhyeon', 'joeun']);
+  assert.equal(insert[2].summary.transcript.meetingTitle, '수동 회의 기록');
 });
 
 test('markMeetingTranscribing updates a meeting by source message', async () => {
@@ -350,15 +376,55 @@ test('reviewMeetingTaskCandidate accepts one candidate and creates a task', asyn
     decision: 'accepted'
   });
 
-  const insert = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'insert');
-  assert.equal(insert[2].assignee_user_key, 'joeun');
-  assert.equal(insert[2].title, '센서 후보 비교');
-  assert.equal(insert[2].source_id, 'meeting-1');
+  const upsert = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'upsert');
+  assert.equal(upsert[2].assignee_user_key, 'joeun');
+  assert.equal(upsert[2].title, '센서 후보 비교');
+  assert.equal(upsert[2].source_id, 'meeting-1');
+  assert.equal(upsert[2].external_key, 'meeting:meeting-1:candidate:0');
+  assert.equal(upsert[2].context.meetingCandidateIndex, 0);
+  assert.equal(upsert[3].onConflict, 'external_key');
+  assert.equal(upsert[3].ignoreDuplicates, true);
 
   const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
   assert.equal(update[2].status, 'candidate_reviewed');
   assert.equal(update[2].summary.taskCandidates[0].review.status, 'accepted');
   assert.equal(result.taskCandidate.title, '센서 후보 비교');
+});
+
+test('reviewMeetingTaskCandidate does not write a new task when the candidate was already reviewed', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      meetings: {
+        id: 'meeting-1',
+        status: 'candidate_reviewed',
+        summary: {
+          taskCandidates: [
+            {
+              assigneeUserKey: 'joeun',
+              title: '센서 후보 비교',
+              importance: '🔴 상',
+              coordination: '🟡 중',
+              context: {},
+              review: { status: 'accepted' }
+            }
+          ]
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.reviewMeetingTaskCandidate({
+    sourceChannelId: 'C_MEETING',
+    sourceMessageTs: '1710000000.000100',
+    candidateIndex: 0,
+    reviewedByUserKey: 'joeun',
+    decision: 'accepted'
+  });
+
+  assert.equal(result.alreadyReviewed, true);
+  assert.equal(supabase.calls.some((call) => call[0] === 'tasks' && ['insert', 'upsert'].includes(call[1])), false);
+  assert.equal(supabase.calls.some((call) => call[0] === 'meetings' && call[1] === 'update'), false);
 });
 
 test('reviewMeetingTaskCandidate can reject a candidate without creating a task', async () => {
@@ -392,7 +458,7 @@ test('reviewMeetingTaskCandidate can reject a candidate without creating a task'
     decision: 'rejected'
   });
 
-  assert.equal(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'insert'), false);
+  assert.equal(supabase.calls.some((call) => call[0] === 'tasks' && ['insert', 'upsert'].includes(call[1])), false);
   const update = supabase.calls.find((call) => call[0] === 'meetings' && call[1] === 'update');
   assert.equal(update[2].summary.taskCandidates[0].review.status, 'rejected');
 });
@@ -515,6 +581,18 @@ test('markAcceptedTasksUnresolvedForUser changes accepted tasks to unresolved', 
   assert.equal(update[2].status, '미정리');
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'assignee_user_key' && call[3] === 'suhyeon'));
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'status' && call[3] === '수락'));
+});
+
+test('archiveTestTasks hides open test tasks from in-process boards', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.archiveTestTasks({ keyword: '테스트' });
+
+  const update = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'update');
+  assert.equal(update[2].status, '보관');
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'ilike' && call[2] === 'title' && call[3] === '%테스트%'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[2] === 'status'));
 });
 
 test('listDailyTasksForUser reads task states for a user summary', async () => {

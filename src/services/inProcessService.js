@@ -255,6 +255,16 @@ export function createInProcessService({ store, slackClient, config, users = con
     };
   }
 
+  async function handleArchiveTestTasks({ user }) {
+    const now = clock();
+    await store.archiveTestTasks({ keyword: '테스트' });
+    await renderBoard({ user, now });
+
+    return {
+      dmText: `${formatDisplayName(user)}, 테스트 task를 보관 처리하고 #in-process task 영역을 최신화했습니다.`
+    };
+  }
+
   async function createFinalsPreviewForWorkDate(workDate) {
     const [tasks, results, changeRequests] = await Promise.all([
       store.listAllTasks({ limit: 100 }),
@@ -564,6 +574,7 @@ export function createInProcessService({ store, slackClient, config, users = con
   return {
     handleStartWork,
     handleRefreshInProcess,
+    handleArchiveTestTasks,
     handleEndWork,
     handleFinalsPreview,
     handleFinalsApproval,

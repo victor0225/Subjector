@@ -37,6 +37,13 @@ test('initial Supabase migration uses updated_at triggers for mutable records', 
   }
 });
 
+test('task candidate migration adds a unique external key for idempotent meeting task creation', () => {
+  const migration = fs.readFileSync(new URL('../supabase/migrations/0002_task_external_key.sql', import.meta.url), 'utf8');
+
+  assert.match(migration, /alter table tasks add column if not exists external_key text;/);
+  assert.match(migration, /create unique index if not exists idx_tasks_external_key/);
+});
+
 test('initial Supabase migration does not contain real secrets', () => {
   assert.doesNotMatch(migration, /xoxb-/);
   assert.doesNotMatch(migration, /service_role_key/i);

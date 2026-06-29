@@ -265,6 +265,95 @@ test('handleDirectDmMessage sends a finals preview for lead finals update comman
   assert.equal(replies[0].blocks[1].elements[0].action_id, 'finals_approve_latest');
 });
 
+test('handleDirectDmMessage archives test tasks for lead cleanup commands', async () => {
+  const replies = [];
+  const serviceCalls = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      channel: 'D_LEAD',
+      user: 'U1',
+      text: '테스트 task 정리'
+    },
+    say: async (payload) => replies.push(payload),
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleArchiveTestTasks(input) {
+        serviceCalls.push(input);
+        return {
+          dmText: '수현님, 테스트 task를 보관 처리했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].user.key, 'suhyeon');
+  assert.match(replies[0].text, /보관 처리/);
+});
+
+test('handleDirectDmMessage records raw meeting text and sends participant input DMs', async () => {
+  const replies = [];
+  const serviceCalls = [];
+  const openedDms = [];
+  const postedMessages = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      channel: 'D_LEAD',
+      ts: '1710000000.000200',
+      user: 'U1',
+      text: '회의 기록: ESP32 기준으로 진행하기로 함'
+    },
+    say: async (payload) => replies.push(payload),
+    client: {
+      conversations: {
+        open: async (input) => {
+          openedDms.push(input);
+          return { channel: { id: `D_${input.users}` } };
+        }
+      },
+      chat: {
+        postMessage: async (input) => postedMessages.push(input)
+      }
+    },
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleRawMeetingText(input) {
+        serviceCalls.push(input);
+        return {
+          text: '수동 회의 기록을 저장했습니다.',
+          directMessages: [
+            {
+              slackId: 'U1',
+              text: '수현님, 중요하다고 보는 일을 적어 주세요.',
+              blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '수현님' } }]
+            },
+            {
+              slackId: 'U2',
+              text: '조은님, 중요하다고 보는 일을 적어 주세요.',
+              blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '조은님' } }]
+            }
+          ]
+        };
+      }
+    }
+  });
+
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].sourceChannelId, 'D_LEAD');
+  assert.equal(serviceCalls[0].sourceMessageTs, '1710000000.000200');
+  assert.equal(serviceCalls[0].submittedByUserKey, 'suhyeon');
+  assert.equal(serviceCalls[0].rawText, 'ESP32 기준으로 진행하기로 함');
+  assert.match(replies[0].text, /저장했습니다/);
+  assert.equal(openedDms.length, 2);
+  assert.match(postedMessages[1].text, /조은님/);
+});
+
 test('handleDirectDmMessage reports finals preview failures to the lead', async () => {
   const replies = [];
   const errors = [];
@@ -756,6 +845,7 @@ test('handleMeetingCandidateDecisionButton stores an accepted candidate', async 
   let acked = false;
   const serviceCalls = [];
   const postedMessages = [];
+  const updatedMessages = [];
 
   await handleMeetingCandidateDecisionButton({
     ack: async () => {
@@ -763,6 +853,31 @@ test('handleMeetingCandidateDecisionButton stores an accepted candidate', async 
     },
     body: {
       channel: { id: 'D_U2' },
+      message: {
+        ts: '1700000000.000200',
+        text: '조은님, 후보를 확인해 주세요.',
+        blocks: [
+          { type: 'section', text: { type: 'mrkdwn', text: '후보 안내' } },
+          { type: 'section', text: { type: 'mrkdwn', text: '1. 센서 후보 비교' } },
+          {
+            type: 'actions',
+            block_id: 'meeting_candidate_review_0',
+            elements: [
+              {
+                type: 'button',
+                action_id: 'meeting_candidate_accept',
+                text: { type: 'plain_text', text: '채택' },
+                value: JSON.stringify({
+                  sourceChannelId: 'C_MEETING',
+                  sourceMessageTs: '1710000000.000100',
+                  candidateIndex: 0,
+                  assigneeUserKey: 'joeun'
+                })
+              }
+            ]
+          }
+        ]
+      },
       user: { id: 'U2' },
       actions: [
         {
@@ -777,7 +892,8 @@ test('handleMeetingCandidateDecisionButton stores an accepted candidate', async 
     },
     client: {
       chat: {
-        postMessage: async (input) => postedMessages.push(input)
+        postMessage: async (input) => postedMessages.push(input),
+        update: async (input) => updatedMessages.push(input)
       }
     },
     config: teamConfig,
@@ -797,6 +913,10 @@ test('handleMeetingCandidateDecisionButton stores an accepted candidate', async 
   assert.equal(serviceCalls[0].reviewedByUserKey, 'joeun');
   assert.equal(serviceCalls[0].decision, 'accepted');
   assert.match(postedMessages[0].text, /#in-process/);
+  assert.equal(updatedMessages[0].channel, 'D_U2');
+  assert.equal(updatedMessages[0].ts, '1700000000.000200');
+  assert.equal(updatedMessages[0].blocks.some((block) => block.block_id === 'meeting_candidate_review_0'), false);
+  assert.match(updatedMessages[0].blocks.at(-1).text.text, /처리 완료/);
 });
 
 test('handleMeetingCandidateEditButton opens a modal with the candidate text', async () => {

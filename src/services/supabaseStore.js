@@ -18,6 +18,7 @@ function throwIfError(result, context) {
 function mapTask(row) {
   return {
     id: row.id,
+    externalKey: row.external_key,
     assigneeUserKey: row.assignee_user_key,
     title: row.title,
     status: row.status,
@@ -146,8 +147,13 @@ function mergeEditedCandidate(candidate, editedCandidate = {}) {
   };
 }
 
-function candidateTaskRow({ meeting, candidate }) {
+function candidateTaskExternalKey({ meeting, candidateIndex }) {
+  return `meeting:${meeting.id}:candidate:${candidateIndex}`;
+}
+
+function candidateTaskRow({ meeting, candidate, candidateIndex }) {
   return {
+    external_key: candidateTaskExternalKey({ meeting, candidateIndex }),
     assignee_user_key: candidate.assigneeUserKey,
     title: candidate.title,
     status: '미시작',
@@ -155,7 +161,10 @@ function candidateTaskRow({ meeting, candidate }) {
     coordination: candidate.coordination,
     source_type: 'meeting',
     source_id: meeting.id,
-    context: candidate.context ?? {}
+    context: {
+      ...(candidate.context ?? {}),
+      meetingCandidateIndex: candidateIndex
+    }
   };
 }
 
@@ -206,6 +215,37 @@ export function createSupabaseStore(supabase) {
       });
 
     throwIfError(result, 'Failed to create meeting from audio upload');
+  }
+
+  async function createMeetingFromRawText({ sourceChannelId, sourceMessageTs, uploaderUserKey, rawText, participantUserKeys }) {
+    const result = await supabase
+      .from('meetings')
+      .insert({
+        source_channel_id: sourceChannelId,
+        source_message_ts: sourceMessageTs,
+        uploader_user_key: uploaderUserKey,
+        status: 'needs_participant_input',
+        summary: {
+          rawText,
+          participantUserKeys,
+          participantTaskInputs: {},
+          transcript: {
+            meetingTitle: '수동 회의 기록',
+            conciseSummary: rawText,
+            speakers: [],
+            segments: [
+              {
+                speaker: uploaderUserKey,
+                text: rawText
+              }
+            ],
+            decisions: [],
+            actionItems: []
+          }
+        }
+      });
+
+    throwIfError(result, 'Failed to create meeting from raw text');
   }
 
   async function updateMeetingBySource({ sourceChannelId, sourceMessageTs, update, context }) {
@@ -440,14 +480,18 @@ export function createSupabaseStore(supabase) {
       : existingCandidate;
 
     if (decision === 'accepted' || decision === 'edited_accepted') {
-      const insert = await supabase
+      const upsert = await supabase
         .from('tasks')
-        .insert(candidateTaskRow({
+        .upsert(candidateTaskRow({
           meeting,
-          candidate: acceptedCandidate
-        }));
+          candidate: acceptedCandidate,
+          candidateIndex: index
+        }), {
+          onConflict: 'external_key',
+          ignoreDuplicates: true
+        });
 
-      throwIfError(insert, 'Failed to create reviewed meeting task');
+      throwIfError(upsert, 'Failed to create reviewed meeting task');
     }
 
     const reviewedCandidate = {
@@ -549,6 +593,16 @@ export function createSupabaseStore(supabase) {
       .eq('status', '수락');
 
     throwIfError(result, 'Failed to mark accepted tasks unresolved');
+  }
+
+  async function archiveTestTasks({ keyword = '테스트' }) {
+    const result = await supabase
+      .from('tasks')
+      .update({ status: '보관' })
+      .ilike('title', `%${keyword}%`)
+      .in('status', OPEN_TASK_STATUSES);
+
+    throwIfError(result, 'Failed to archive test tasks');
   }
 
   async function listDailyTasksForUser({ userKey }) {
@@ -811,6 +865,7 @@ export function createSupabaseStore(supabase) {
     startWorkSession,
     endWorkSession,
     createMeetingFromAudioUpload,
+    createMeetingFromRawText,
     markMeetingTranscribing,
     completeMeetingTranscription,
     failMeetingTranscription,
@@ -826,6 +881,7 @@ export function createSupabaseStore(supabase) {
     listEndedWorkSessionsForDate,
     listOpenTasksForUser,
     markAcceptedTasksUnresolvedForUser,
+    archiveTestTasks,
     listDailyTasksForUser,
     listAllTasks,
     findSlackMessage,

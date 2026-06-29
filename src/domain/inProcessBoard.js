@@ -166,8 +166,9 @@ function codexPromptCopyButton(task) {
 }
 
 function taskActionsBlock({ task, user }) {
+  const completeButtonText = task.status === '보완 필요' ? '보완 제출' : '완료';
   const elements = [
-    taskActionButton({ actionId: 'task_complete', text: '완료', task, user }),
+    taskActionButton({ actionId: 'task_complete', text: completeButtonText, task, user }),
     taskActionButton({ actionId: 'task_stop_today', text: '오늘은 여기까지', task, user }),
     taskActionButton({ actionId: 'task_change_request', text: '변경 요청', task, user, style: 'danger' })
   ];
