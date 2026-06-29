@@ -6,6 +6,8 @@ import { createDefaultHealthStatus, renderHealthPage } from '../domain/health.js
 import {
   TASK_ACTION_CALLBACK_ID,
   buildTaskActionModalView,
+  extractTaskActionSubmissionAttachmentNote,
+  extractTaskActionSubmissionAttachments,
   extractTaskActionSubmissionText,
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
@@ -845,6 +847,20 @@ export async function handleTaskAcceptButton({ ack, body, logger = console, inPr
   logger.info?.('Task accepted and Codex prompt generated');
 }
 
+export async function handleTaskAcceptDirectButton({ ack, body, logger = console, inProcessService }) {
+  await ack();
+
+  const actionPayload = body.actions[0];
+  const metadata = parseTaskActionMetadata(actionPayload.value);
+
+  await inProcessService.handleTaskAcceptDirect({
+    taskId: metadata.taskId,
+    assigneeUserKey: metadata.assigneeUserKey
+  });
+
+  logger.info?.('Task accepted for direct work');
+}
+
 export async function handleCodexPromptCopyButton({ ack, body, client, logger = console, inProcessService }) {
   await ack();
 
@@ -889,11 +905,23 @@ export async function handleTaskActionViewSubmission({ ack, body, view, client =
   }
 
   const rawText = extractTaskActionSubmissionText(view);
+  const attachments = extractTaskActionSubmissionAttachments(view);
+  const attachmentNote = extractTaskActionSubmissionAttachmentNote(view);
   if (!rawText) {
     await ack({
       response_action: 'errors',
       errors: {
         task_action_input: '내용을 입력해 주세요.'
+      }
+    });
+    return;
+  }
+
+  if (attachments.length && !attachmentNote) {
+    await ack({
+      response_action: 'errors',
+      errors: {
+        task_action_attachment_note: '첨부 파일 설명을 입력해 주세요.'
       }
     });
     return;
@@ -907,7 +935,9 @@ export async function handleTaskActionViewSubmission({ ack, body, view, client =
       taskId: metadata.taskId,
       assigneeUserKey: metadata.assigneeUserKey,
       submittedByUserKey: submittedBy.key,
-      rawText
+      rawText,
+      attachments,
+      attachmentNote
     });
 
     logger.info?.(`Task action submitted: ${metadata.actionId}`);
@@ -978,6 +1008,15 @@ export async function handleFinalsApproveButton({ ack, body, client, config, log
 function registerTaskActionHandlers(app, config, logger, inProcessService) {
   app.action('task_accept_generate_prompt', async ({ ack, body }) => {
     await handleTaskAcceptButton({
+      ack,
+      body,
+      logger,
+      inProcessService
+    });
+  });
+
+  app.action('task_accept_direct', async ({ ack, body }) => {
+    await handleTaskAcceptDirectButton({
       ack,
       body,
       logger,

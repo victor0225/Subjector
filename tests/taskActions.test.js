@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TASK_ACTION_CALLBACK_ID,
+  extractTaskActionSubmissionAttachments,
+  extractTaskActionSubmissionAttachmentNote,
   buildTaskActionModalView,
   parseTaskActionMetadata,
   taskActionFromActionId
@@ -50,6 +52,71 @@ test('buildTaskActionModalView customizes prompt labels for each action', () => 
 
   assert.match(stopView.blocks[1].label.text, /오늘의 진행 상태/);
   assert.match(changeView.blocks[1].label.text, /변경 요청 초안/);
+});
+
+test('completion and stop-for-today modals accept optional evidence files', () => {
+  const completeView = buildTaskActionModalView({
+    actionId: 'task_complete',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    taskTitle: '센서 후보 정리'
+  });
+  const stopView = buildTaskActionModalView({
+    actionId: 'task_stop_today',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    taskTitle: '센서 후보 정리'
+  });
+  const changeView = buildTaskActionModalView({
+    actionId: 'task_change_request',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    taskTitle: '센서 후보 정리'
+  });
+
+  assert.equal(completeView.blocks[2].element.type, 'file_input');
+  assert.equal(completeView.blocks[3].element.action_id, 'attachment_note');
+  assert.equal(stopView.blocks[2].element.type, 'file_input');
+  assert.equal(stopView.blocks[3].element.action_id, 'attachment_note');
+  assert.equal(changeView.blocks.some((block) => block.element?.type === 'file_input'), false);
+});
+
+test('extractTaskActionSubmissionAttachments reads Slack file input state', () => {
+  const view = {
+    state: {
+      values: {
+        task_action_files: {
+          files: {
+            files: [
+              {
+                id: 'F1',
+                name: '정리.docx',
+                mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                filetype: 'docx',
+                size: 12000
+              }
+            ]
+          }
+        },
+        task_action_attachment_note: {
+          attachment_note: {
+            value: 'Word 파일에 비교표를 정리했습니다.'
+          }
+        }
+      }
+    }
+  };
+
+  assert.deepEqual(extractTaskActionSubmissionAttachments(view), [
+    {
+      id: 'F1',
+      name: '정리.docx',
+      mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      filetype: 'docx',
+      size: 12000
+    }
+  ]);
+  assert.equal(extractTaskActionSubmissionAttachmentNote(view), 'Word 파일에 비교표를 정리했습니다.');
 });
 
 test('change request modal asks for the Codex draft structure', () => {

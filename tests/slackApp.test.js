@@ -15,6 +15,7 @@ import {
   handleMeetingSpeakerMappingButton,
   handleMeetingTaskApprovalButton,
   handleTaskAcceptButton,
+  handleTaskAcceptDirectButton,
   handleTaskActionButton,
   handleTaskActionViewSubmission
 } from '../src/slack/app.js';
@@ -1318,6 +1319,44 @@ test('handleTaskAcceptButton accepts a task and generates a Codex prompt', async
   assert.equal(serviceCalls[0].assigneeUserKey, 'suhyeon');
 });
 
+test('handleTaskAcceptDirectButton accepts a task without generating a Codex prompt', async () => {
+  let acked = false;
+  const serviceCalls = [];
+
+  await handleTaskAcceptDirectButton({
+    ack: async () => { acked = true; },
+    body: {
+      actions: [
+        {
+          action_id: 'task_accept_direct',
+          value: JSON.stringify({
+            actionId: 'task_accept_direct',
+            taskId: 'task-1',
+            assigneeUserKey: 'suhyeon'
+          })
+        }
+      ]
+    },
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleTaskAcceptDirect(input) {
+        serviceCalls.push(input);
+        return {
+          status: '수락',
+          responseText: '수현님, 직접 진행으로 수락했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 1);
+  assert.deepEqual(serviceCalls[0], {
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon'
+  });
+});
+
 test('handleCodexPromptCopyButton acknowledges and sends a copyable ephemeral prompt', async () => {
   let acked = false;
   const serviceCalls = [];
@@ -1411,6 +1450,129 @@ test('handleTaskActionViewSubmission stores modal input through the in-process s
   assert.equal(serviceCalls.length, 1);
   assert.equal(serviceCalls[0].submittedByUserKey, 'suhyeon');
   assert.equal(serviceCalls[0].rawText, '[완료 제출 결과]');
+});
+
+test('handleTaskActionViewSubmission passes attachment metadata and note to the service', async () => {
+  let acked = false;
+  const serviceCalls = [];
+
+  await handleTaskActionViewSubmission({
+    ack: async (payload) => {
+      acked = payload ?? true;
+    },
+    body: {
+      user: { id: 'U1' }
+    },
+    view: {
+      private_metadata: JSON.stringify({
+        actionId: 'task_complete',
+        taskId: 'task-1',
+        assigneeUserKey: 'suhyeon'
+      }),
+      state: {
+        values: {
+          task_action_input: {
+            raw_text: {
+              value: '직접 조사 결과를 정리했습니다.'
+            }
+          },
+          task_action_files: {
+            files: {
+              files: [
+                {
+                  id: 'F1',
+                  name: '조사정리.docx',
+                  mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  filetype: 'docx',
+                  size: 12000
+                }
+              ]
+            }
+          },
+          task_action_attachment_note: {
+            attachment_note: {
+              value: '첨부 Word 파일에 표와 결론이 있습니다.'
+            }
+          }
+        }
+      }
+    },
+    config,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleTaskActionSubmission(input) {
+        serviceCalls.push(input);
+        return {
+          status: '완료',
+          responseText: '수현님, task 상태를 완료로 변경했습니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(acked, true);
+  assert.equal(serviceCalls[0].attachmentNote, '첨부 Word 파일에 표와 결론이 있습니다.');
+  assert.equal(serviceCalls[0].attachments[0].id, 'F1');
+  assert.equal(serviceCalls[0].attachments[0].name, '조사정리.docx');
+});
+
+test('handleTaskActionViewSubmission requires a note when files are attached', async () => {
+  let ackPayload = null;
+  const serviceCalls = [];
+
+  await handleTaskActionViewSubmission({
+    ack: async (payload) => {
+      ackPayload = payload;
+    },
+    body: {
+      user: { id: 'U1' }
+    },
+    view: {
+      private_metadata: JSON.stringify({
+        actionId: 'task_stop_today',
+        taskId: 'task-1',
+        assigneeUserKey: 'suhyeon'
+      }),
+      state: {
+        values: {
+          task_action_input: {
+            raw_text: {
+              value: '오늘 진행한 그림을 첨부합니다.'
+            }
+          },
+          task_action_files: {
+            files: {
+              files: [
+                {
+                  id: 'F2',
+                  name: '흐름도.png',
+                  mimetype: 'image/png',
+                  filetype: 'png',
+                  size: 9000
+                }
+              ]
+            }
+          },
+          task_action_attachment_note: {
+            attachment_note: {
+              value: ' '
+            }
+          }
+        }
+      }
+    },
+    config,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async handleTaskActionSubmission(input) {
+        serviceCalls.push(input);
+      }
+    }
+  });
+
+  assert.equal(ackPayload.response_action, 'errors');
+  assert.match(ackPayload.errors.task_action_attachment_note, /첨부 파일 설명/);
+  assert.equal(serviceCalls.length, 0);
 });
 
 test('handleTaskActionViewSubmission acknowledges before evaluation and sends ephemeral feedback', async () => {

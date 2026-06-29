@@ -640,6 +640,55 @@ test('handleTaskActionSubmission completes a task only after sufficient LLM eval
   assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '완료');
 });
 
+test('handleTaskActionSubmission includes attachment evidence in evaluation and stored result', async () => {
+  const evaluator = createFakeTaskEvaluator({
+    verdict: 'sufficient',
+    score: 90,
+    summary: '첨부 산출물과 설명이 충분합니다.',
+    reasons: ['파일 설명과 제출 요약이 있습니다.'],
+    missingItems: [],
+    feedbackToUser: '완료 처리 가능합니다.',
+    blocksCompletion: false
+  });
+  const store = createFakeStore({ existingMessage: { channelId: 'C_IN_PROCESS', messageTs: '1700000000.000001' } });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    taskEvaluator: evaluator,
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  await service.handleTaskActionSubmission({
+    actionId: 'task_complete',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: '직접 조사 결과를 정리했습니다.',
+    attachmentNote: '첨부 Word 파일에 비교표와 결론이 있습니다.',
+    attachments: [
+      {
+        id: 'F1',
+        name: '비교표.docx',
+        mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        filetype: 'docx',
+        size: 12000
+      }
+    ]
+  });
+
+  assert.match(evaluator.calls[0].rawText, /첨부 Word 파일/);
+  assert.match(evaluator.calls[0].rawText, /비교표\.docx/);
+
+  const inserted = store.calls.find(([name]) => name === 'submitTaskResult')[1];
+  assert.match(inserted.rawText, /직접 조사 결과/);
+  assert.match(inserted.rawText, /첨부 파일/);
+  assert.equal(inserted.parsedSummary.verdict, 'sufficient');
+  assert.equal(inserted.parsedSummary.attachmentNote, '첨부 Word 파일에 비교표와 결론이 있습니다.');
+  assert.equal(inserted.parsedSummary.attachments[0].name, '비교표.docx');
+});
+
 test('handleTaskActionSubmission keeps weak completion as needs revision', async () => {
   const evaluator = createFakeTaskEvaluator({
     verdict: 'needs_revision',
@@ -714,6 +763,38 @@ test('handleTaskAcceptAndPrompt accepts a task and posts the Codex prompt in the
   assert.equal(promptInsert[1].taskId, 'task-1');
   assert.match(promptInsert[1].prompt, /센서 후보 정리/);
   assert.equal(promptInsert[1].slackMessageTs, '1710000000.000001');
+});
+
+test('handleTaskAcceptDirect accepts a task without creating a Codex prompt', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001',
+      threadTs: '1700000000.000001'
+    }
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskAcceptDirect({
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon'
+  });
+
+  assert.equal(result.status, '수락');
+  assert.match(result.responseText, /직접 진행으로 수락했습니다/);
+  const statusUpdate = store.calls.find(([name]) => name === 'updateTaskStatus');
+  assert.equal(statusUpdate[1].status, '수락');
+  assert.equal(statusUpdate[1].acceptedAt, '2026-06-28T02:00:00.000Z');
+  assert.equal(store.calls.some(([name]) => name === 'createCodexPrompt'), false);
+  assert.equal(slackClient.calls.some(([name]) => name === 'postMessage'), false);
+  assert.equal(slackClient.calls.at(-1)[0], 'update');
 });
 
 test('handleCodexPromptCopyRequest returns a copyable prompt message', async () => {

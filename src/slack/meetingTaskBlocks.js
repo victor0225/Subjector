@@ -229,7 +229,7 @@ export function buildMeetingCandidateEditModal({ metadata, taskCandidate }) {
           type: 'plain_text_input',
           action_id: 'completionCriteria',
           multiline: true,
-          initial_value: criteria || '결과를 Codex 완료 제출 템플릿으로 정리한다.'
+          initial_value: criteria || '결과를 완료 제출 템플릿으로 정리한다.'
         }
       }
     ]

@@ -175,7 +175,8 @@ function taskActionsBlock({ task, user }) {
 
   if (task.status === '미시작') {
     elements.unshift(
-      taskActionButton({ actionId: 'task_accept_generate_prompt', text: '수락 및 Codex 프롬프트 생성', task, user, style: 'primary' })
+      taskActionButton({ actionId: 'task_accept_generate_prompt', text: '수락 및 Codex 프롬프트 생성', task, user, style: 'primary' }),
+      taskActionButton({ actionId: 'task_accept_direct', text: '수락하고 직접 진행', task, user })
     );
   } else {
     elements.unshift(codexPromptCopyButton(task));

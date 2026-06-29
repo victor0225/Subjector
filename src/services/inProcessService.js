@@ -53,6 +53,56 @@ function compactResultText(rawText) {
   return lines.slice(0, 3).join(' / ');
 }
 
+function normalizeSubmissionAttachments(attachments = []) {
+  return attachments
+    .filter((file) => file?.id || file?.name)
+    .map((file) => ({
+      id: file.id,
+      name: file.name,
+      mimetype: file.mimetype,
+      filetype: file.filetype,
+      size: file.size
+    }));
+}
+
+function formatAttachmentLine(file) {
+  const details = [
+    file.filetype,
+    file.mimetype,
+    typeof file.size === 'number' ? `${file.size} bytes` : null
+  ].filter(Boolean).join(', ');
+
+  return `- ${file.name ?? file.id}${details ? ` (${details})` : ''}`;
+}
+
+function buildSubmissionText({ rawText, attachments = [], attachmentNote = '' }) {
+  const trimmedText = String(rawText ?? '').trim();
+  const trimmedNote = String(attachmentNote ?? '').trim();
+  const normalizedAttachments = normalizeSubmissionAttachments(attachments);
+
+  return [
+    trimmedText,
+    trimmedNote ? `[첨부 설명]\n${trimmedNote}` : null,
+    normalizedAttachments.length ? `[첨부 파일]\n${normalizedAttachments.map(formatAttachmentLine).join('\n')}` : null
+  ].filter(Boolean).join('\n\n');
+}
+
+function buildParsedSummary({ evaluation, attachments = [], attachmentNote = '' }) {
+  const parsedSummary = evaluation ? { ...evaluation } : {};
+  const normalizedAttachments = normalizeSubmissionAttachments(attachments);
+  const trimmedNote = String(attachmentNote ?? '').trim();
+
+  if (trimmedNote) {
+    parsedSummary.attachmentNote = trimmedNote;
+  }
+
+  if (normalizedAttachments.length) {
+    parsedSummary.attachments = normalizedAttachments;
+  }
+
+  return Object.keys(parsedSummary).length ? parsedSummary : null;
+}
+
 function buildTaskCompletionThreadText({ user, task, rawText }) {
   const summary = compactResultText(rawText);
   return [
@@ -508,7 +558,31 @@ export function createInProcessService({ store, slackClient, config, users = con
     };
   }
 
-  async function handleTaskActionSubmission({ actionId, taskId, assigneeUserKey, submittedByUserKey, rawText }) {
+  async function handleTaskAcceptDirect({ taskId, assigneeUserKey }) {
+    const now = clock();
+    const task = await store.getTaskById(taskId);
+    const ownerKey = task?.assigneeUserKey ?? assigneeUserKey;
+    const owner = users.find((candidate) => candidate.key === ownerKey);
+
+    if (!owner) {
+      throw new Error(`Unknown task owner: ${ownerKey}`);
+    }
+
+    await store.updateTaskStatus({
+      taskId,
+      status: '수락',
+      acceptedAt: now.toISOString()
+    });
+
+    await renderBoard({ user: owner, now });
+
+    return {
+      status: '수락',
+      responseText: `${formatDisplayName(owner)}, 직접 진행으로 수락했습니다. 작업이 끝나면 완료 또는 오늘은 여기까지로 결과를 제출해 주세요.`
+    };
+  }
+
+  async function handleTaskActionSubmission({ actionId, taskId, assigneeUserKey, submittedByUserKey, rawText, attachments = [], attachmentNote = '' }) {
     const action = taskActionFromActionId(actionId);
     if (!action) {
       throw new Error(`Unknown task action: ${actionId}`);
@@ -517,6 +591,7 @@ export function createInProcessService({ store, slackClient, config, users = con
     const now = clock();
     const task = await store.getTaskById(taskId);
     const ownerKey = task?.assigneeUserKey ?? assigneeUserKey;
+    const submissionText = buildSubmissionText({ rawText, attachments, attachmentNote });
     let evaluation = null;
     let finalStatus = action.status;
 
@@ -525,7 +600,7 @@ export function createInProcessService({ store, slackClient, config, users = con
         actionId,
         actionLabel: action.label,
         task,
-        rawText
+        rawText: submissionText
       }));
 
       if (actionId === 'task_complete' && evaluation.blocksCompletion) {
@@ -543,11 +618,12 @@ export function createInProcessService({ store, slackClient, config, users = con
       const resultInput = {
         taskId,
         resultType: action.resultType,
-        rawText,
+        rawText: submissionText,
         submittedByUserKey
       };
-      if (evaluation) {
-        resultInput.parsedSummary = evaluation;
+      const resultParsedSummary = buildParsedSummary({ evaluation, attachments, attachmentNote });
+      if (resultParsedSummary) {
+        resultInput.parsedSummary = resultParsedSummary;
       }
 
       await store.submitTaskResult(resultInput);
@@ -577,7 +653,7 @@ export function createInProcessService({ store, slackClient, config, users = con
           const text = buildTaskCompletionThreadText({
             user: owner,
             task,
-            rawText
+            rawText: submissionText
           });
 
           await slackClient.chat.postMessage({
@@ -623,6 +699,7 @@ export function createInProcessService({ store, slackClient, config, users = con
     handleFinalsPreview,
     handleFinalsApproval,
     handleTaskAcceptAndPrompt,
+    handleTaskAcceptDirect,
     handleCodexPromptCopyRequest,
     handleTaskActionSubmission,
     getTaskTitle

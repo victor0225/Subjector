@@ -141,7 +141,7 @@ test('buildTaskDetailThreadMessage uses task goal as rationale fallback', () => 
   assert.match(message.text, /ESP32와 라즈베리파이를 비교한다/);
 });
 
-test('buildInProcessBoardMessage attaches the four MVP task action buttons', () => {
+test('buildInProcessBoardMessage attaches task action buttons including direct work acceptance', () => {
   const message = buildInProcessBoardMessage({
     user,
     workDate: '2026-06-28',
@@ -162,12 +162,14 @@ test('buildInProcessBoardMessage attaches the four MVP task action buttons', () 
   assert.ok(actions);
   assert.deepEqual(actions.elements.map((element) => element.action_id), [
     'task_accept_generate_prompt',
+    'task_accept_direct',
     'task_complete',
     'task_stop_today',
     'task_change_request'
   ]);
   assert.deepEqual(actions.elements.map((element) => element.text.text), [
     '수락 및 Codex 프롬프트 생성',
+    '수락하고 직접 진행',
     '완료',
     '오늘은 여기까지',
     '변경 요청'
