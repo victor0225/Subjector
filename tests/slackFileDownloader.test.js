@@ -51,6 +51,25 @@ test('createSlackFileDownloader reports missing private download URLs', async ()
   );
 });
 
+test('createSlackFileDownloader labels network failures during private file download', async () => {
+  const downloader = createSlackFileDownloader({
+    botToken: 'xoxb-token',
+    fetchImpl: async () => {
+      throw new Error('fetch failed');
+    }
+  });
+
+  await assert.rejects(
+    () => downloader.downloadFile({
+      file: {
+        name: '회의.m4a',
+        url_private_download: 'https://files.slack.com/private-download'
+      }
+    }),
+    /Slack file download request failed: fetch failed/
+  );
+});
+
 test('createSlackFileDownloader falls back to files.info when the event file has no download URL', async () => {
   const fileInfoCalls = [];
   const fetchCalls = [];

@@ -120,3 +120,26 @@ test('createGeminiMeetingTranscriber reports Gemini API failures without leaking
     }
   );
 });
+
+test('createGeminiMeetingTranscriber labels network failures during upload start', async () => {
+  const transcriber = createGeminiMeetingTranscriber({
+    apiKey: 'secret-gemini-key',
+    fetchImpl: async () => {
+      throw new Error('fetch failed secret-gemini-key');
+    }
+  });
+
+  await assert.rejects(
+    () => transcriber.transcribeMeeting({
+      bytes: new Uint8Array([1]),
+      mimeType: 'audio/mp4',
+      fileName: '회의.m4a',
+      teamMembers: []
+    }),
+    (error) => {
+      assert.match(error.message, /Gemini file upload start request failed: fetch failed/);
+      assert.doesNotMatch(error.message, /secret-gemini-key/);
+      return true;
+    }
+  );
+});

@@ -27,11 +27,16 @@ export function createSlackFileDownloader({ botToken, fetchImpl = globalThis.fet
       throw new Error('Slack file is missing a private download URL');
     }
 
-    const response = await fetchImpl(url, {
-      headers: {
-        Authorization: `Bearer ${botToken}`
-      }
-    });
+    let response;
+    try {
+      response = await fetchImpl(url, {
+        headers: {
+          Authorization: `Bearer ${botToken}`
+        }
+      });
+    } catch (error) {
+      throw new Error(`Slack file download request failed: ${error.message}`, { cause: error });
+    }
 
     if (!response.ok) {
       throw new Error(`Slack file download failed: ${response.status}`);

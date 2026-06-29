@@ -87,6 +87,15 @@ async function readErrorBody(response) {
   }
 }
 
+async function fetchGemini({ fetchImpl, url, options, stage, apiKey }) {
+  try {
+    return await fetchImpl(url, options);
+  } catch (error) {
+    const message = sanitizeErrorBody(error.message, apiKey);
+    throw new Error(`Gemini ${stage} request failed: ${message}`, { cause: error });
+  }
+}
+
 export function createGeminiMeetingTranscriber({ apiKey, model = 'gemini-3.5-flash', fetchImpl = globalThis.fetch } = {}) {
   if (!apiKey) {
     throw new Error('Gemini meeting transcriber requires an API key');
@@ -97,21 +106,27 @@ export function createGeminiMeetingTranscriber({ apiKey, model = 'gemini-3.5-fla
   }
 
   async function uploadAudio({ bytes, mimeType, fileName }) {
-    const startResponse = await fetchImpl(GEMINI_UPLOAD_URL, {
-      method: 'POST',
-      headers: {
-        'x-goog-api-key': apiKey,
-        'Content-Type': 'application/json',
-        'X-Goog-Upload-Protocol': 'resumable',
-        'X-Goog-Upload-Command': 'start',
-        'X-Goog-Upload-Header-Content-Length': String(bytes.byteLength),
-        'X-Goog-Upload-Header-Content-Type': mimeType
-      },
-      body: JSON.stringify({
-        file: {
-          display_name: fileName
-        }
-      })
+    const startResponse = await fetchGemini({
+      fetchImpl,
+      url: GEMINI_UPLOAD_URL,
+      stage: 'file upload start',
+      apiKey,
+      options: {
+        method: 'POST',
+        headers: {
+          'x-goog-api-key': apiKey,
+          'Content-Type': 'application/json',
+          'X-Goog-Upload-Protocol': 'resumable',
+          'X-Goog-Upload-Command': 'start',
+          'X-Goog-Upload-Header-Content-Length': String(bytes.byteLength),
+          'X-Goog-Upload-Header-Content-Type': mimeType
+        },
+        body: JSON.stringify({
+          file: {
+            display_name: fileName
+          }
+        })
+      }
     });
 
     if (!startResponse.ok) {
@@ -124,14 +139,20 @@ export function createGeminiMeetingTranscriber({ apiKey, model = 'gemini-3.5-fla
       throw new Error('Gemini file upload failed: missing upload URL');
     }
 
-    const finalizeResponse = await fetchImpl(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Length': String(bytes.byteLength),
-        'X-Goog-Upload-Offset': '0',
-        'X-Goog-Upload-Command': 'upload, finalize'
-      },
-      body: bytes
+    const finalizeResponse = await fetchGemini({
+      fetchImpl,
+      url: uploadUrl,
+      stage: 'file upload finalize',
+      apiKey,
+      options: {
+        method: 'POST',
+        headers: {
+          'Content-Length': String(bytes.byteLength),
+          'X-Goog-Upload-Offset': '0',
+          'X-Goog-Upload-Command': 'upload, finalize'
+        },
+        body: bytes
+      }
     });
 
     if (!finalizeResponse.ok) {
@@ -149,31 +170,37 @@ export function createGeminiMeetingTranscriber({ apiKey, model = 'gemini-3.5-fla
 
   async function transcribeMeeting({ bytes, mimeType, fileName, teamMembers = [] }) {
     const file = await uploadAudio({ bytes, mimeType, fileName });
-    const response = await fetchImpl(`${GEMINI_GENERATE_BASE_URL}/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { text: buildTranscriptionPrompt({ teamMembers }) },
-              {
-                file_data: {
-                  mime_type: file.mimeType || mimeType,
-                  file_uri: file.uri
+    const response = await fetchGemini({
+      fetchImpl,
+      url: `${GEMINI_GENERATE_BASE_URL}/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      stage: 'meeting transcription',
+      apiKey,
+      options: {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: buildTranscriptionPrompt({ teamMembers }) },
+                {
+                  file_data: {
+                    mime_type: file.mimeType || mimeType,
+                    file_uri: file.uri
+                  }
                 }
-              }
-            ]
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: MEETING_TRANSCRIPT_SCHEMA
           }
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: MEETING_TRANSCRIPT_SCHEMA
-        }
-      })
+        })
+      }
     });
 
     if (!response.ok) {
