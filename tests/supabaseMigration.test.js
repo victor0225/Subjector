@@ -44,6 +44,15 @@ test('task candidate migration adds a unique external key for idempotent meeting
   assert.match(migration, /create unique index if not exists idx_tasks_external_key/);
 });
 
+test('task candidate conflict target migration recreates a full unique external key index', () => {
+  const migration = fs.readFileSync(new URL('../supabase/migrations/0003_task_external_key_conflict_target.sql', import.meta.url), 'utf8');
+
+  assert.match(migration, /alter table tasks add column if not exists external_key text;/);
+  assert.match(migration, /drop index if exists idx_tasks_external_key;/);
+  assert.match(migration, /create unique index idx_tasks_external_key\s+on tasks\(external_key\);/);
+  assert.doesNotMatch(migration, /where external_key is not null/i);
+});
+
 test('initial Supabase migration does not contain real secrets', () => {
   assert.doesNotMatch(migration, /xoxb-/);
   assert.doesNotMatch(migration, /service_role_key/i);
