@@ -17,6 +17,7 @@ const REQUIRED_ENV = [
 
 const EVALUATION_PROVIDERS = new Set(['openai', 'gemini']);
 const MEETING_TASK_PROVIDERS = new Set(['openai', 'gemini']);
+const FINALS_SUMMARY_PROVIDERS = new Set(['openai', 'gemini']);
 
 export { formatDisplayName, getUserByKey, getUserBySlackId };
 
@@ -57,9 +58,15 @@ export function loadConfigFromEnv(env = process.env) {
     throw new Error('MEETING_TASK_PROVIDER must be one of: openai, gemini');
   }
 
+  const finalsSummaryProvider = (env.FINALS_SUMMARY_PROVIDER?.trim().toLowerCase() || meetingTaskProvider);
+  if (!FINALS_SUMMARY_PROVIDERS.has(finalsSummaryProvider)) {
+    throw new Error('FINALS_SUMMARY_PROVIDER must be one of: openai, gemini');
+  }
+
   const requiredAiKeys = new Set([
     evaluationProvider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY',
-    meetingTaskProvider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY'
+    meetingTaskProvider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY',
+    finalsSummaryProvider === 'gemini' ? 'GEMINI_API_KEY' : 'OPENAI_API_KEY'
   ]);
   for (const selectedProviderKey of requiredAiKeys) {
     if (!env[selectedProviderKey] || env[selectedProviderKey].trim() === '') {
@@ -93,12 +100,16 @@ export function loadConfigFromEnv(env = process.env) {
     },
     ai: {
       evaluationProvider,
-      meetingTaskProvider
+      meetingTaskProvider,
+      finalsSummaryProvider
     },
     openai: {
       apiKey: env.OPENAI_API_KEY?.trim() || '',
       evaluationModel: env.OPENAI_EVALUATION_MODEL?.trim() || 'gpt-5.2',
-      taskExtractionModel: env.OPENAI_TASK_EXTRACTION_MODEL?.trim() || 'gpt-5.4'
+      taskExtractionModel: env.OPENAI_TASK_EXTRACTION_MODEL?.trim() || 'gpt-5.4',
+      finalsSummaryModel: env.OPENAI_FINALS_SUMMARY_MODEL?.trim()
+        || env.OPENAI_TASK_EXTRACTION_MODEL?.trim()
+        || 'gpt-5.4'
     },
     gemini: {
       apiKey: env.GEMINI_API_KEY?.trim() || '',
@@ -107,6 +118,11 @@ export function loadConfigFromEnv(env = process.env) {
         || env.GEMINI_EVALUATION_MODEL?.trim()
         || 'gemini-3.5-flash',
       taskExtractionModel: env.GEMINI_TASK_EXTRACTION_MODEL?.trim()
+        || env.GEMINI_TRANSCRIPTION_MODEL?.trim()
+        || env.GEMINI_EVALUATION_MODEL?.trim()
+        || 'gemini-3.5-flash',
+      finalsSummaryModel: env.GEMINI_FINALS_SUMMARY_MODEL?.trim()
+        || env.GEMINI_TASK_EXTRACTION_MODEL?.trim()
         || env.GEMINI_TRANSCRIPTION_MODEL?.trim()
         || env.GEMINI_EVALUATION_MODEL?.trim()
         || 'gemini-3.5-flash'

@@ -1055,6 +1055,68 @@ test('handleFinalsPreview stores a cumulative preview and returns a DM message',
   assert.ok(store.calls.some(([name]) => name === 'listAllChangeRequests'));
 });
 
+test('handleFinalsPreview stores an LLM narrative when a finals narrator is configured', async () => {
+  const store = createFakeStore();
+  const narratorCalls = [];
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    finalsNarrator: {
+      async narrate(input) {
+        narratorCalls.push(input);
+        return {
+          projectOverview: '프로젝트는 ESP32 연결 검증 단계로 넘어가고 있습니다.',
+          memberProgress: [
+            '수현님은 센서 후보 정리를 완료했습니다.'
+          ],
+          nextFocus: [
+            '내일은 회로 연결 위험을 먼저 확인합니다.'
+          ]
+        };
+      }
+    },
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleFinalsPreview({ user });
+
+  assert.equal(narratorCalls.length, 1);
+  assert.equal(narratorCalls[0].workDate, '2026-06-28');
+  assert.match(result.dmText, /ESP32 연결 검증 단계/);
+  const previewCall = store.calls.find(([name]) => name === 'createFinalsPreview');
+  assert.match(previewCall[1].preview.narrative.projectOverview, /ESP32 연결 검증/);
+});
+
+test('handleFinalsPreview falls back to deterministic narrative when the finals narrator fails', async () => {
+  const loggerCalls = [];
+  const store = createFakeStore();
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    logger: {
+      warn(...input) {
+        loggerCalls.push(input);
+      }
+    },
+    finalsNarrator: {
+      async narrate() {
+        throw new Error('quota exceeded');
+      }
+    },
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleFinalsPreview({ user });
+
+  assert.match(result.dmText, /프로젝트 진행 요약/);
+  assert.match(result.dmText, /센서 후보 정리/);
+  assert.equal(loggerCalls.length, 1);
+});
+
 test('handleFinalsApproval posts the latest preview to #finals when no message exists', async () => {
   const store = createFakeStore();
   const slackClient = createFakeSlackClient();

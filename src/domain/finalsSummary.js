@@ -18,6 +18,13 @@ function section(title, rows) {
   ].join('\n');
 }
 
+function paragraphSection(title, text) {
+  return [
+    `[${title}]`,
+    String(text ?? '').trim() || '아직 정리된 내용이 없습니다.'
+  ].join('\n');
+}
+
 function assigneeLabel(task, users = []) {
   const user = users.find((candidate) => candidate.key === task?.assigneeUserKey);
   if (user?.displayName) {
@@ -31,7 +38,59 @@ function taskByTitle(tasks = []) {
   return new Map(tasks.map((task) => [task.title, task]));
 }
 
-export function buildFinalsPreviewRecord({ workDate, tasks = [], results = [], changeRequests = [], users = [] }) {
+function normalizeNarrative(raw = {}) {
+  return {
+    projectOverview: String(raw.projectOverview ?? '').trim(),
+    memberProgress: Array.isArray(raw.memberProgress)
+      ? raw.memberProgress.map((row) => String(row).trim()).filter(Boolean)
+      : [],
+    nextFocus: Array.isArray(raw.nextFocus)
+      ? raw.nextFocus.map((row) => String(row).trim()).filter(Boolean)
+      : []
+  };
+}
+
+function resultByTaskTitle(results = []) {
+  const grouped = new Map();
+  for (const result of results) {
+    if (!grouped.has(result.taskTitle)) {
+      grouped.set(result.taskTitle, []);
+    }
+    grouped.get(result.taskTitle).push(result);
+  }
+
+  return grouped;
+}
+
+function buildDefaultNarrative({ tasks = [], results = [], users = [] }) {
+  const resultsByTitle = resultByTaskTitle(results);
+  const completedCount = tasks.filter((task) => task.status === '완료').length;
+  const openTasks = tasks.filter((task) => ['미시작', '수락', '오늘은 여기까지', '미정리', '변경 요청 중', '회의 필요'].includes(task.status));
+
+  const memberProgress = tasks.map((task) => {
+    const assignee = assigneeLabel(task, users);
+    const taskResults = resultsByTitle.get(task.title) ?? [];
+    const compactOutputs = taskResults
+      .map((result) => `${result.resultType}: ${compactRawText(result.rawText)}`)
+      .join(' / ');
+
+    if (task.status === '완료') {
+      return `${assignee}은 ${task.title}를 완료했습니다.${compactOutputs ? ` 결과: ${compactOutputs}` : ''}`;
+    }
+
+    return `${assignee}은 ${task.title}를 이어서 진행해야 합니다. 현재 상태: ${task.status}.`;
+  });
+
+  const nextFocus = openTasks.map((task) => `${assigneeLabel(task, users)} 담당 ${task.title}의 다음 진행 기준을 확인합니다.`);
+
+  return {
+    projectOverview: `프로젝트는 현재 완료된 항목 ${completedCount}개와 진행 중인 항목 ${openTasks.length}개를 기준으로 다음 작업을 정리해야 합니다.`,
+    memberProgress,
+    nextFocus
+  };
+}
+
+export function buildFinalsPreviewRecord({ workDate, tasks = [], results = [], changeRequests = [], users = [], narrative = null }) {
   const tasksByTitle = taskByTitle(tasks);
   const completed = tasks
     .filter((task) => task.status === '완료')
@@ -47,13 +106,17 @@ export function buildFinalsPreviewRecord({ workDate, tasks = [], results = [], c
     return `${owner}${result.taskTitle}의 ${result.resultType} 결과는 ${compactRawText(result.rawText)}입니다.`;
   });
   const changeHistory = changeRequests.map((request) => `${request.taskTitle}에는 ${request.status} 상태의 변경 요청이 있습니다.`);
+  const normalizedNarrative = narrative
+    ? normalizeNarrative(narrative)
+    : buildDefaultNarrative({ tasks, results, users });
 
   return {
     workDate,
     completed,
     inProgress,
     outputs,
-    changeHistory
+    changeHistory,
+    narrative: normalizedNarrative
   };
 }
 
@@ -62,12 +125,11 @@ export function buildFinalsPreviewMessage(preview) {
     `#finals 누적 업데이트 미리보기 (${preview.workDate})`,
     '아직 #finals에는 반영하지 않았습니다. 수현님 확인 후 승인 기능에서 실제 반영합니다.',
     '',
-    section('확정/완료된 결과', [
-      ...preview.completed,
-      ...preview.outputs
-    ]),
+    paragraphSection('프로젝트 진행 요약', preview.narrative?.projectOverview),
     '',
-    section('진행 중/미완료', preview.inProgress),
+    section('사람별 진행 맥락', preview.narrative?.memberProgress ?? []),
+    '',
+    section('다음 회의/내일 볼 것', preview.narrative?.nextFocus ?? []),
     '',
     section('충돌/변경 이력', preview.changeHistory)
   ].join('\n');
@@ -77,12 +139,11 @@ export function buildFinalsChannelMessage(preview) {
   return [
     `#finals 누적 정리 (${preview.workDate})`,
     '',
-    section('확정/완료된 결과', [
-      ...preview.completed,
-      ...preview.outputs
-    ]),
+    paragraphSection('프로젝트 진행 요약', preview.narrative?.projectOverview),
     '',
-    section('진행 중/미완료', preview.inProgress),
+    section('사람별 진행 맥락', preview.narrative?.memberProgress ?? []),
+    '',
+    section('다음 회의/내일 볼 것', preview.narrative?.nextFocus ?? []),
     '',
     section('충돌/변경 이력', preview.changeHistory)
   ].join('\n');

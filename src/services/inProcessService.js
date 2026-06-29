@@ -114,7 +114,16 @@ function buildTaskCompletionThreadText({ user, task, rawText }) {
   ].filter(Boolean).join('\n');
 }
 
-export function createInProcessService({ store, slackClient, config, users = config.users, clock = () => new Date(), taskEvaluator = null }) {
+export function createInProcessService({
+  store,
+  slackClient,
+  config,
+  users = config.users,
+  clock = () => new Date(),
+  taskEvaluator = null,
+  finalsNarrator = null,
+  logger = console
+}) {
   async function postBoardMessage({ channelId, message, purpose }) {
     const posted = await slackClient.chat.postMessage({
       channel: channelId,
@@ -341,12 +350,28 @@ export function createInProcessService({ store, slackClient, config, users = con
       store.listAllTaskResults({ limit: 100 }),
       store.listAllChangeRequests({ limit: 100 })
     ]);
+    let narrative = null;
+    if (finalsNarrator) {
+      try {
+        narrative = await finalsNarrator.narrate({
+          workDate,
+          tasks,
+          results,
+          changeRequests,
+          users
+        });
+      } catch (error) {
+        logger.warn?.('Finals narration failed; falling back to deterministic summary', error);
+      }
+    }
+
     const preview = buildFinalsPreviewRecord({
       workDate,
       tasks,
       results,
       changeRequests,
-      users
+      users,
+      narrative
     });
 
     await store.createFinalsPreview({

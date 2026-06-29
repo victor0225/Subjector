@@ -14,6 +14,7 @@ import {
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
 import { createGeminiMeetingTranscriber } from '../services/geminiMeetingTranscriber.js';
+import { createFinalsNarrator } from '../services/finalsNarratorFactory.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createMeetingTaskExtractor } from '../services/meetingTaskExtractorFactory.js';
 import { createMeetingService } from '../services/meetingService.js';
@@ -1215,7 +1216,8 @@ export function createSlackApp({
     slackClient: app.client,
     config,
     logger,
-    taskEvaluator: createTaskEvaluator({ config })
+    taskEvaluator: createTaskEvaluator({ config }),
+    finalsNarrator: createFinalsNarrator({ config })
   });
 
   const meetings = meetingService ?? createMeetingService({

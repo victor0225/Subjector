@@ -50,11 +50,14 @@ test('loadConfigFromEnv builds app config from environment values', () => {
   assert.equal(config.users.length, 3);
   assert.equal(config.ai.evaluationProvider, 'openai');
   assert.equal(config.ai.meetingTaskProvider, 'openai');
+  assert.equal(config.ai.finalsSummaryProvider, 'openai');
   assert.equal(config.openai.evaluationModel, 'gpt-5.2');
   assert.equal(config.openai.taskExtractionModel, 'gpt-5.4');
+  assert.equal(config.openai.finalsSummaryModel, 'gpt-5.4');
   assert.equal(config.gemini.evaluationModel, 'gemini-3.5-flash');
   assert.equal(config.gemini.transcriptionModel, 'gemini-3.5-flash');
   assert.equal(config.gemini.taskExtractionModel, 'gemini-3.5-flash');
+  assert.equal(config.gemini.finalsSummaryModel, 'gemini-3.5-flash');
 });
 
 test('loadConfigFromEnv allows overriding AI model selections', () => {
@@ -70,8 +73,10 @@ test('loadConfigFromEnv allows overriding AI model selections', () => {
     GEMINI_API_KEY: 'gemini-key',
     OPENAI_EVALUATION_MODEL: 'gpt-5.2-mini',
     OPENAI_TASK_EXTRACTION_MODEL: 'gpt-5.4-mini',
+    OPENAI_FINALS_SUMMARY_MODEL: 'gpt-5.4-finals',
     GEMINI_TRANSCRIPTION_MODEL: 'gemini-3.5-flash-lite',
     GEMINI_TASK_EXTRACTION_MODEL: 'gemini-3.5-pro',
+    GEMINI_FINALS_SUMMARY_MODEL: 'gemini-3.5-finals',
     MEETING_CHANNEL_ID: 'C1',
     IN_PROCESS_CHANNEL_ID: 'C2',
     FINALS_CHANNEL_ID: 'C3',
@@ -81,8 +86,10 @@ test('loadConfigFromEnv allows overriding AI model selections', () => {
 
   assert.equal(config.openai.evaluationModel, 'gpt-5.2-mini');
   assert.equal(config.openai.taskExtractionModel, 'gpt-5.4-mini');
+  assert.equal(config.openai.finalsSummaryModel, 'gpt-5.4-finals');
   assert.equal(config.gemini.transcriptionModel, 'gemini-3.5-flash-lite');
   assert.equal(config.gemini.taskExtractionModel, 'gemini-3.5-pro');
+  assert.equal(config.gemini.finalsSummaryModel, 'gemini-3.5-finals');
 });
 
 test('loadConfigFromEnv enables participant skip only with an explicit test flag', () => {
@@ -121,6 +128,7 @@ test('loadConfigFromEnv supports Gemini task evaluation provider', () => {
     SUPABASE_SERVICE_ROLE_KEY: 'service-key',
     AI_EVALUATION_PROVIDER: 'gemini',
     MEETING_TASK_PROVIDER: 'gemini',
+    FINALS_SUMMARY_PROVIDER: 'gemini',
     GEMINI_API_KEY: 'gemini-key',
     GEMINI_EVALUATION_MODEL: 'gemini-3.5-flash-lite',
     MEETING_CHANNEL_ID: 'C1',
@@ -132,6 +140,7 @@ test('loadConfigFromEnv supports Gemini task evaluation provider', () => {
 
   assert.equal(config.ai.evaluationProvider, 'gemini');
   assert.equal(config.ai.meetingTaskProvider, 'gemini');
+  assert.equal(config.ai.finalsSummaryProvider, 'gemini');
   assert.equal(config.gemini.apiKey, 'gemini-key');
   assert.equal(config.gemini.evaluationModel, 'gemini-3.5-flash-lite');
   assert.equal(config.openai.apiKey, '');
