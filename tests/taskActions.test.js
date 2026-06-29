@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TASK_ACTION_CALLBACK_ID,
+  extractTaskActionSubmissionActionId,
   extractTaskActionSubmissionAttachments,
   extractTaskActionSubmissionAttachmentNote,
   buildTaskActionModalView,
@@ -54,7 +55,7 @@ test('buildTaskActionModalView customizes prompt labels for each action', () => 
   assert.match(changeView.blocks[1].label.text, /변경 요청 초안/);
 });
 
-test('completion and stop-for-today modals accept optional evidence files', () => {
+test('completion and stop-for-today modals stay text-only so empty attachments do not block submit', () => {
   const completeView = buildTaskActionModalView({
     actionId: 'task_complete',
     taskId: 'task-1',
@@ -74,11 +75,25 @@ test('completion and stop-for-today modals accept optional evidence files', () =
     taskTitle: '센서 후보 정리'
   });
 
-  assert.equal(completeView.blocks[2].element.type, 'file_input');
-  assert.equal(completeView.blocks[3].element.action_id, 'attachment_note');
-  assert.equal(stopView.blocks[2].element.type, 'file_input');
-  assert.equal(stopView.blocks[3].element.action_id, 'attachment_note');
+  assert.equal(completeView.blocks.some((block) => block.element?.type === 'file_input'), false);
+  assert.equal(stopView.blocks.some((block) => block.element?.type === 'file_input'), false);
   assert.equal(changeView.blocks.some((block) => block.element?.type === 'file_input'), false);
+});
+
+test('file submission modal requires a result type and evidence files', () => {
+  const view = buildTaskActionModalView({
+    actionId: 'task_file_submission',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    taskTitle: '센서 후보 정리'
+  });
+
+  assert.equal(view.title.text, '파일 첨부 제출');
+  assert.equal(view.blocks[1].element.type, 'static_select');
+  assert.equal(view.blocks[2].element.action_id, 'raw_text');
+  assert.equal(view.blocks[3].element.type, 'file_input');
+  assert.equal(view.blocks[3].optional, false);
+  assert.equal(view.blocks[4].element.action_id, 'attachment_note');
 });
 
 test('extractTaskActionSubmissionAttachments reads Slack file input state', () => {
@@ -117,6 +132,25 @@ test('extractTaskActionSubmissionAttachments reads Slack file input state', () =
     }
   ]);
   assert.equal(extractTaskActionSubmissionAttachmentNote(view), 'Word 파일에 비교표를 정리했습니다.');
+});
+
+test('extractTaskActionSubmissionActionId reads selected result type for file submissions', () => {
+  const view = {
+    state: {
+      values: {
+        task_action_result_type: {
+          result_type: {
+            selected_option: {
+              value: 'task_stop_today'
+            }
+          }
+        }
+      }
+    }
+  };
+
+  assert.equal(extractTaskActionSubmissionActionId(view, 'task_file_submission'), 'task_stop_today');
+  assert.equal(extractTaskActionSubmissionActionId(view, 'task_complete'), 'task_complete');
 });
 
 test('change request modal asks for the Codex draft structure', () => {

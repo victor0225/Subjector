@@ -201,16 +201,19 @@ test('buildInProcessBoardMessage replaces accept button with prompt copy after t
     'copy_codex_prompt',
     'task_complete',
     'task_stop_today',
+    'task_file_submission',
     'task_change_request'
   ]);
   assert.deepEqual(actions.elements.map((element) => element.text.text), [
     'Codex 프롬프트 보기/복사',
     '완료',
     '오늘은 여기까지',
+    '파일 첨부 제출',
     '변경 요청'
   ]);
   assert.equal(actions.elements[0].value, 'task-1');
   assert.equal(actions.elements.some((element) => element.action_id === 'task_accept_generate_prompt'), false);
+  assert.equal(actions.elements.some((element) => element.action_id === 'task_file_submission'), true);
 });
 
 test('buildInProcessBoardMessage highlights needs-revision tasks as red', () => {

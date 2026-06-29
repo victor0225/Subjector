@@ -5,7 +5,9 @@ import { handleDmCommand } from '../domain/dmCommands.js';
 import { createDefaultHealthStatus, renderHealthPage } from '../domain/health.js';
 import {
   TASK_ACTION_CALLBACK_ID,
+  TASK_FILE_SUBMISSION_ACTION_ID,
   buildTaskActionModalView,
+  extractTaskActionSubmissionActionId,
   extractTaskActionSubmissionAttachmentNote,
   extractTaskActionSubmissionAttachments,
   extractTaskActionSubmissionText,
@@ -892,6 +894,7 @@ export async function handleCodexPromptCopyButton({ ack, body, client, logger = 
 
 export async function handleTaskActionViewSubmission({ ack, body, view, client = null, config, logger = console, inProcessService }) {
   const metadata = parseTaskActionMetadata(view.private_metadata);
+  const actionId = extractTaskActionSubmissionActionId(view, metadata.actionId);
   const submittedBy = getUserBySlackId(config.users, body.user.id);
 
   if (!submittedBy) {
@@ -917,6 +920,16 @@ export async function handleTaskActionViewSubmission({ ack, body, view, client =
     return;
   }
 
+  if (metadata.actionId === TASK_FILE_SUBMISSION_ACTION_ID && !attachments.length) {
+    await ack({
+      response_action: 'errors',
+      errors: {
+        task_action_files: '파일 첨부 제출은 파일을 첨부해야 합니다.'
+      }
+    });
+    return;
+  }
+
   if (attachments.length && !attachmentNote) {
     await ack({
       response_action: 'errors',
@@ -931,7 +944,7 @@ export async function handleTaskActionViewSubmission({ ack, body, view, client =
 
   try {
     const result = await inProcessService.handleTaskActionSubmission({
-      actionId: metadata.actionId,
+      actionId,
       taskId: metadata.taskId,
       assigneeUserKey: metadata.assigneeUserKey,
       submittedByUserKey: submittedBy.key,
@@ -1034,7 +1047,7 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
     });
   });
 
-  for (const actionId of ['task_complete', 'task_stop_today', 'task_change_request']) {
+  for (const actionId of ['task_complete', 'task_stop_today', 'task_file_submission', 'task_change_request']) {
     app.action(actionId, async ({ ack, body, client }) => {
       await handleTaskActionButton({
         ack,

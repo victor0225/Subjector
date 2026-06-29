@@ -180,6 +180,7 @@ function taskActionsBlock({ task, user }) {
     );
   } else {
     elements.unshift(codexPromptCopyButton(task));
+    elements.splice(3, 0, taskActionButton({ actionId: 'task_file_submission', text: '파일 첨부 제출', task, user }));
   }
 
   return {
