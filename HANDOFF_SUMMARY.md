@@ -1,14 +1,42 @@
 # Subjector Handoff Summary
 
-Last updated: 2026-06-28
+## 2026-06-30 Direction Update
+
+The current MVP product name is now `IDEA CRUISE`.
+
+Subjector remains the existing Slack bot, Render service, Supabase store, and execution layer, but it is no longer the parent product concept. The new direction is:
+
+```text
+IDEA CRUISE local meeting alignment
+-> criteria-aligned task packets
+-> Subjector Slack task delivery
+-> method-neutral work support
+-> handoff readiness
+-> #finals cumulative project memory
+```
+
+Authoritative integration spec:
+
+- `docs/superpowers/specs/2026-06-30-idea-cruise-subjector-integration-design.md`
+
+Key product-language changes:
+
+- Replace `점수/검수/보완 필요` framing with `handoff readiness/인수인계 점검/이어받기 전 확인 필요`.
+- Do not explain readiness with `상/중/하` or numeric scores. Explain what is useful, what is missing, and what to clarify next.
+- Treat Codex as one possible work method, not a required path.
+- Use the local IDEA CRUISE web app for meeting criteria alignment instead of forcing the whole meeting flow into Slack.
+
+The older Subjector MVP notes below remain historical context and may contain superseded decisions such as finals preview approval and Slack-only UI assumptions.
+
+Last updated: 2026-06-30
 
 This file preserves the current product context so the project can continue even if the Codex conversation is compacted or restarted.
 
-## Authoritative MVP Lock
+## Historical MVP Lock
 
-The current MVP scope is locked as of 2026-06-27.
+The earlier Subjector-only MVP scope was locked as of 2026-06-27. It is now historical context for the IDEA CRUISE integrated MVP direction.
 
-Authoritative design spec:
+Earlier design spec:
 
 - `docs/superpowers/specs/2026-06-27-subjector-mvp-design.md`
 

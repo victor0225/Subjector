@@ -1,5 +1,10 @@
 # Subjector MVP Design
 
+> Historical note: this document describes the earlier Slack-centered Subjector MVP.
+> As of 2026-06-30, the product direction is superseded by
+> `docs/superpowers/specs/2026-06-30-idea-cruise-subjector-integration-design.md`.
+> The current MVP name is `IDEA CRUISE`, with Subjector treated as the execution and handoff layer.
+
 Date: 2026-06-27
 Status: Scope locked for user review
 
