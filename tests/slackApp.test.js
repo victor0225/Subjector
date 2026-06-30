@@ -4,7 +4,6 @@ import {
   buildBootHealthStatus,
   handleDirectDmMessage,
   handleCodexPromptCopyButton,
-  handleFinalsApproveButton,
   handleMeetingCandidateDecisionButton,
   handleMeetingCandidateEditButton,
   handleMeetingCandidateEditViewSubmission,
@@ -166,10 +165,8 @@ test('handleDirectDmMessage sends a daily summary for 퇴근 commands', async ()
   assert.match(replies[0].text, /오늘 한 일 요약/);
 });
 
-test('handleDirectDmMessage sends an automatic finals preview to the lead after everyone ends work', async () => {
+test('handleDirectDmMessage reports automatic finals update after everyone ends work', async () => {
   const replies = [];
-  const openedDms = [];
-  const postedMessages = [];
 
   await handleDirectDmMessage({
     message: {
@@ -178,25 +175,13 @@ test('handleDirectDmMessage sends an automatic finals preview to the lead after 
       text: '퇴근'
     },
     say: async (payload) => replies.push(payload),
-    client: {
-      conversations: {
-        open: async (input) => {
-          openedDms.push(input);
-          return { channel: { id: 'D_LEAD' } };
-        }
-      },
-      chat: {
-        postMessage: async (input) => postedMessages.push(input)
-      }
-    },
     config: teamConfig,
     logger: { info() {}, error() {} },
     inProcessService: {
       async handleEndWork(input) {
         return {
           dmText: `${input.user.displayName}님, 오늘 한 일 요약입니다.`,
-          finalsPreviewDmText: '#finals 누적 업데이트 미리보기\n아직 #finals에는 반영하지 않았습니다.',
-          leadUser: teamConfig.users[0]
+          finalsUpdated: true
         };
       }
     }
@@ -204,10 +189,6 @@ test('handleDirectDmMessage sends an automatic finals preview to the lead after 
 
   assert.equal(replies.length, 1);
   assert.match(replies[0].text, /민성님, 오늘 한 일 요약입니다/);
-  assert.equal(openedDms[0].users, 'U1');
-  assert.equal(postedMessages[0].channel, 'D_LEAD');
-  assert.match(postedMessages[0].text, /#finals 누적 업데이트 미리보기/);
-  assert.equal(postedMessages[0].blocks[1].elements[0].action_id, 'finals_approve_latest');
 });
 
 test('handleDirectDmMessage reports daily summary failures to the user', async () => {
@@ -236,7 +217,7 @@ test('handleDirectDmMessage reports daily summary failures to the user', async (
   assert.match(replies[0].text, /Render 로그/);
 });
 
-test('handleDirectDmMessage sends a finals preview for lead finals update commands', async () => {
+test('handleDirectDmMessage directly updates finals for lead finals update commands', async () => {
   const replies = [];
   const serviceCalls = [];
 
@@ -253,7 +234,7 @@ test('handleDirectDmMessage sends a finals preview for lead finals update comman
       async handleFinalsPreview(input) {
         serviceCalls.push(input);
         return {
-          dmText: '#finals 누적 업데이트 미리보기\n아직 #finals에는 반영하지 않았습니다.'
+          dmText: '#finals 누적 정리를 업데이트했습니다.'
         };
       }
     }
@@ -262,8 +243,8 @@ test('handleDirectDmMessage sends a finals preview for lead finals update comman
   assert.equal(serviceCalls.length, 1);
   assert.equal(serviceCalls[0].user.key, 'suhyeon');
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /#finals 누적 업데이트 미리보기/);
-  assert.equal(replies[0].blocks[1].elements[0].action_id, 'finals_approve_latest');
+  assert.match(replies[0].text, /#finals 누적 정리를 업데이트했습니다/);
+  assert.equal(replies[0].blocks.some((block) => block.type === 'actions'), false);
 });
 
 test('handleDirectDmMessage archives test tasks for lead cleanup commands', async () => {
@@ -377,7 +358,7 @@ test('handleDirectDmMessage reports finals preview failures to the lead', async 
 
   assert.equal(errors.length, 1);
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /#finals 미리보기 생성에 실패했습니다/);
+  assert.match(replies[0].text, /#finals 업데이트에 실패했습니다/);
   assert.match(replies[0].text, /Render 로그/);
 });
 
@@ -1172,76 +1153,6 @@ test('handleMeetingSpeakerMappingButton rejects non-lead users', async () => {
   assert.equal(acked, true);
   assert.equal(serviceCalls.length, 0);
   assert.match(postedMessages[0].text, /Speaker 매핑은 수현님만/);
-});
-
-test('handleFinalsApproveButton lets the lead approve the latest finals preview', async () => {
-  let acked = false;
-  const serviceCalls = [];
-  const replies = [];
-
-  await handleFinalsApproveButton({
-    ack: async () => { acked = true; },
-    body: {
-      user: { id: 'U1' },
-      channel: { id: 'D1' }
-    },
-    client: {
-      chat: {
-        postMessage: async (input) => replies.push(input)
-      }
-    },
-    config,
-    logger: { info() {}, error() {} },
-    inProcessService: {
-      async handleFinalsApproval(input) {
-        serviceCalls.push(input);
-        return {
-          responseText: '#finals 누적 정리를 반영했습니다.'
-        };
-      }
-    }
-  });
-
-  assert.equal(acked, true);
-  assert.equal(serviceCalls.length, 1);
-  assert.equal(serviceCalls[0].approvedByUserKey, 'suhyeon');
-  assert.equal(replies[0].channel, 'D1');
-  assert.match(replies[0].text, /반영했습니다/);
-});
-
-test('handleFinalsApproveButton rejects non-lead users', async () => {
-  let acked = false;
-  const replies = [];
-
-  await handleFinalsApproveButton({
-    ack: async () => { acked = true; },
-    body: {
-      user: { id: 'U2' },
-      channel: { id: 'D2' }
-    },
-    client: {
-      chat: {
-        postMessage: async (input) => replies.push(input)
-      }
-    },
-    config: {
-      ...config,
-      users: [
-        ...config.users,
-        { key: 'joeun', slackId: 'U2', fullName: '김조은', displayName: '조은' }
-      ]
-    },
-    logger: { info() {}, error() {} },
-    inProcessService: {
-      async handleFinalsApproval() {
-        throw new Error('should not be called');
-      }
-    }
-  });
-
-  assert.equal(acked, true);
-  assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /수현님만/);
 });
 
 test('handleTaskActionButton opens the matching Slack modal', async () => {

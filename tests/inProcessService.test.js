@@ -177,6 +177,9 @@ function createFakeStore({
     async createFinalsPreview(input) {
       calls.push(['createFinalsPreview', input]);
     },
+    async createFinalsUpdate(input) {
+      calls.push(['createFinalsUpdate', input]);
+    },
     async getLatestFinalsPreview() {
       calls.push(['getLatestFinalsPreview']);
       return {
@@ -958,7 +961,7 @@ test('handleEndWork refreshes #in-process after marking accepted tasks unresolve
   assert.match(update[1].text, /미정리/);
 });
 
-test('handleEndWork creates a finals preview when all users have ended work and no preview exists', async () => {
+test('handleEndWork updates #finals when all users have ended work and no update exists', async () => {
   const store = createFakeStore({
     endedSessions: [
       { userKey: 'suhyeon', workDate: '2026-06-28', endedAt: '2026-06-28T10:00:00.000Z' },
@@ -977,10 +980,10 @@ test('handleEndWork creates a finals preview when all users have ended work and 
   const result = await service.handleEndWork({ user: minsung });
 
   assert.match(result.dmText, /민성님, 오늘 한 일 요약입니다/);
-  assert.match(result.finalsPreviewDmText, /#finals 누적 업데이트 미리보기/);
-  assert.equal(result.leadUser.key, 'suhyeon');
+  assert.match(result.dmText, /#finals 누적 정리도 업데이트했습니다/);
   assert.equal(store.calls.find(([name]) => name === 'getFinalsUpdateForDate')[1].workDate, '2026-06-28');
-  assert.equal(store.calls.find(([name]) => name === 'createFinalsPreview')[1].workDate, '2026-06-28');
+  assert.equal(store.calls.find(([name]) => name === 'createFinalsUpdate')[1].workDate, '2026-06-28');
+  assert.equal(store.calls.find(([name]) => name === 'createFinalsUpdate')[1].reason, 'all_ended');
 });
 
 test('handleEndWork does not create a finals preview until every user has ended work', async () => {
@@ -1000,8 +1003,8 @@ test('handleEndWork does not create a finals preview until every user has ended 
 
   const result = await service.handleEndWork({ user: minsung });
 
-  assert.equal(result.finalsPreviewDmText, undefined);
-  assert.equal(store.calls.some(([name]) => name === 'createFinalsPreview'), false);
+  assert.doesNotMatch(result.dmText, /#finals 누적 정리도 업데이트했습니다/);
+  assert.equal(store.calls.some(([name]) => name === 'createFinalsUpdate'), false);
 });
 
 test('handleEndWork does not create a duplicate finals preview for the same date', async () => {
@@ -1028,15 +1031,16 @@ test('handleEndWork does not create a duplicate finals preview for the same date
 
   const result = await service.handleEndWork({ user: minsung });
 
-  assert.equal(result.finalsPreviewDmText, undefined);
-  assert.equal(store.calls.some(([name]) => name === 'createFinalsPreview'), false);
+  assert.doesNotMatch(result.dmText, /#finals 누적 정리도 업데이트했습니다/);
+  assert.equal(store.calls.some(([name]) => name === 'createFinalsUpdate'), false);
 });
 
-test('handleFinalsPreview stores a cumulative preview and returns a DM message', async () => {
+test('handleFinalsPreview directly updates #finals and returns a DM message', async () => {
   const store = createFakeStore();
+  const slackClient = createFakeSlackClient();
   const service = createInProcessService({
     store,
-    slackClient: createFakeSlackClient(),
+    slackClient,
     config,
     users: [user],
     clock: () => new Date('2026-06-28T12:00:00.000Z')
@@ -1044,15 +1048,70 @@ test('handleFinalsPreview stores a cumulative preview and returns a DM message',
 
   const result = await service.handleFinalsPreview({ user });
 
-  assert.match(result.dmText, /#finals 누적 업데이트 미리보기/);
-  assert.match(result.dmText, /센서 후보 정리/);
-  assert.match(result.dmText, /ESP32 우선 추천/);
-  const previewCall = store.calls.find(([name]) => name === 'createFinalsPreview');
-  assert.equal(previewCall[1].workDate, '2026-06-28');
-  assert.equal(previewCall[1].preview.workDate, '2026-06-28');
+  assert.match(result.dmText, /#finals 누적 정리를 업데이트했습니다/);
+  const updateCall = store.calls.find(([name]) => name === 'createFinalsUpdate');
+  assert.equal(updateCall[1].workDate, '2026-06-28');
+  assert.equal(updateCall[1].preview.workDate, '2026-06-28');
+  assert.equal(updateCall[1].reason, 'manual');
+  assert.equal(slackClient.calls.find(([name]) => name === 'postMessage')[1].channel, 'C_FINALS');
   assert.ok(store.calls.some(([name]) => name === 'listAllTasks'));
   assert.ok(store.calls.some(([name]) => name === 'listAllTaskResults'));
   assert.ok(store.calls.some(([name]) => name === 'listAllChangeRequests'));
+});
+
+test('handleFinalsPreview updates the existing #finals cumulative message', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_FINALS',
+      messageTs: '1700000000.000001'
+    }
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  await service.handleFinalsPreview({ user });
+
+  const update = slackClient.calls.find(([name]) => name === 'update');
+  assert.equal(update[1].channel, 'C_FINALS');
+  assert.equal(update[1].ts, '1700000000.000001');
+  assert.equal(store.calls.some(([name]) => name === 'upsertSlackMessage'), false);
+});
+
+test('handleFinalsPreview reposts #finals when the stored Slack message was deleted', async () => {
+  const deletedMessageError = new Error('message_not_found');
+  deletedMessageError.data = { error: 'message_not_found' };
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_FINALS',
+      messageTs: '1700000000.000001'
+    }
+  });
+  const slackClient = createFakeSlackClient({
+    updateError: deletedMessageError
+  });
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  await service.handleFinalsPreview({ user });
+
+  assert.equal(slackClient.calls[0][0], 'update');
+  assert.equal(slackClient.calls[1][0], 'postMessage');
+  assert.equal(slackClient.calls[1][1].channel, 'C_FINALS');
+  const upsert = store.calls.find(([name]) => name === 'upsertSlackMessage');
+  assert.equal(upsert[1].purpose, 'finals:cumulative');
+  assert.equal(upsert[1].messageTs, '1710000000.000001');
+  assert.ok(store.calls.find(([name]) => name === 'createFinalsUpdate'));
 });
 
 test('handleFinalsPreview stores an LLM narrative when a finals narrator is configured', async () => {
@@ -1084,9 +1143,9 @@ test('handleFinalsPreview stores an LLM narrative when a finals narrator is conf
 
   assert.equal(narratorCalls.length, 1);
   assert.equal(narratorCalls[0].workDate, '2026-06-28');
-  assert.match(result.dmText, /ESP32 연결 검증 단계/);
-  const previewCall = store.calls.find(([name]) => name === 'createFinalsPreview');
-  assert.match(previewCall[1].preview.narrative.projectOverview, /ESP32 연결 검증/);
+  assert.match(result.dmText, /#finals 누적 정리를 업데이트했습니다/);
+  const updateCall = store.calls.find(([name]) => name === 'createFinalsUpdate');
+  assert.match(updateCall[1].preview.narrative.projectOverview, /ESP32 연결 검증/);
 });
 
 test('handleFinalsPreview falls back to deterministic narrative when the finals narrator fails', async () => {
@@ -1112,84 +1171,68 @@ test('handleFinalsPreview falls back to deterministic narrative when the finals 
 
   const result = await service.handleFinalsPreview({ user });
 
-  assert.match(result.dmText, /프로젝트 진행 요약/);
-  assert.match(result.dmText, /센서 후보 정리/);
+  assert.match(result.dmText, /#finals 누적 정리를 업데이트했습니다/);
+  assert.ok(store.calls.find(([name]) => name === 'createFinalsUpdate'));
   assert.equal(loggerCalls.length, 1);
 });
 
-test('handleFinalsApproval posts the latest preview to #finals when no message exists', async () => {
+test('handleScheduledFinalsUpdate does nothing before 18:00 KST', async () => {
+  const store = createFakeStore();
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: allUsers,
+    clock: () => new Date('2026-06-28T08:59:00.000Z')
+  });
+
+  const result = await service.handleScheduledFinalsUpdate();
+
+  assert.equal(result.updated, false);
+  assert.equal(result.reason, 'before_cutoff');
+  assert.equal(store.calls.some(([name]) => name === 'createFinalsUpdate'), false);
+});
+
+test('handleScheduledFinalsUpdate updates #finals once after 18:00 KST', async () => {
   const store = createFakeStore();
   const slackClient = createFakeSlackClient();
   const service = createInProcessService({
     store,
     slackClient,
     config,
-    users: [user],
-    clock: () => new Date('2026-06-28T12:00:00.000Z')
+    users: allUsers,
+    clock: () => new Date('2026-06-28T09:00:00.000Z')
   });
 
-  const result = await service.handleFinalsApproval({ approvedByUserKey: 'suhyeon' });
+  const result = await service.handleScheduledFinalsUpdate();
 
-  assert.match(result.responseText, /#finals 누적 정리를 반영했습니다/);
-  const post = slackClient.calls.find(([name]) => name === 'postMessage');
-  assert.equal(post[1].channel, 'C_FINALS');
-  assert.match(post[1].text, /#finals 누적 정리/);
-  assert.equal(store.calls.find(([name]) => name === 'upsertSlackMessage')[1].purpose, 'finals:cumulative');
-  assert.equal(store.calls.find(([name]) => name === 'approveFinalsUpdate')[1].id, 'finals-1');
+  assert.equal(result.updated, true);
+  assert.equal(result.reason, 'scheduled');
+  assert.equal(store.calls.find(([name]) => name === 'getFinalsUpdateForDate')[1].workDate, '2026-06-28');
+  assert.equal(store.calls.find(([name]) => name === 'createFinalsUpdate')[1].reason, 'scheduled');
+  assert.equal(slackClient.calls.find(([name]) => name === 'postMessage')[1].channel, 'C_FINALS');
 });
 
-test('handleFinalsApproval updates the existing #finals cumulative message', async () => {
+test('handleScheduledFinalsUpdate skips when a finals update already exists for the day', async () => {
   const store = createFakeStore({
-    existingMessage: {
-      channelId: 'C_FINALS',
-      messageTs: '1700000000.000001'
+    finalsUpdateForDate: {
+      id: 'finals-1',
+      workDate: '2026-06-28',
+      status: '승인됨',
+      preview: {}
     }
-  });
-  const slackClient = createFakeSlackClient();
-  const service = createInProcessService({
-    store,
-    slackClient,
-    config,
-    users: [user],
-    clock: () => new Date('2026-06-28T12:00:00.000Z')
-  });
-
-  await service.handleFinalsApproval({ approvedByUserKey: 'suhyeon' });
-
-  const update = slackClient.calls.find(([name]) => name === 'update');
-  assert.equal(update[1].channel, 'C_FINALS');
-  assert.equal(update[1].ts, '1700000000.000001');
-  assert.equal(store.calls.some(([name]) => name === 'upsertSlackMessage'), false);
-});
-
-test('handleFinalsApproval reposts #finals when the stored Slack message was deleted', async () => {
-  const deletedMessageError = new Error('message_not_found');
-  deletedMessageError.data = { error: 'message_not_found' };
-  const store = createFakeStore({
-    existingMessage: {
-      channelId: 'C_FINALS',
-      messageTs: '1700000000.000001'
-    }
-  });
-  const slackClient = createFakeSlackClient({
-    updateError: deletedMessageError
   });
   const service = createInProcessService({
     store,
-    slackClient,
+    slackClient: createFakeSlackClient(),
     config,
-    users: [user],
-    clock: () => new Date('2026-06-28T12:00:00.000Z')
+    users: allUsers,
+    clock: () => new Date('2026-06-28T09:00:00.000Z')
   });
 
-  const result = await service.handleFinalsApproval({ approvedByUserKey: 'suhyeon' });
+  const result = await service.handleScheduledFinalsUpdate();
 
-  assert.match(result.responseText, /#finals 누적 정리를 반영했습니다/);
-  assert.equal(slackClient.calls[0][0], 'update');
-  assert.equal(slackClient.calls[1][0], 'postMessage');
-  assert.equal(slackClient.calls[1][1].channel, 'C_FINALS');
-  const upsert = store.calls.find(([name]) => name === 'upsertSlackMessage');
-  assert.equal(upsert[1].purpose, 'finals:cumulative');
-  assert.equal(upsert[1].messageTs, '1710000000.000001');
-  assert.equal(store.calls.find(([name]) => name === 'approveFinalsUpdate')[1].id, 'finals-1');
+  assert.equal(result.updated, false);
+  assert.equal(result.reason, 'already_updated');
+  assert.equal(store.calls.some(([name]) => name === 'createFinalsUpdate'), false);
 });

@@ -115,7 +115,7 @@ finals 업데이트
 Expected reply:
 
 ```text
-수현님, #finals 업데이트 미리보기를 생성하겠습니다.
+수현님, #finals 누적 정리를 업데이트했습니다.
 ```
 
 If the bot does not reply:

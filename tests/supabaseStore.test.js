@@ -936,6 +936,30 @@ test('createFinalsPreview stores a pending finals preview', async () => {
   assert.equal(insert[2].preview.confirmed[0], '센서 후보 정리');
 });
 
+test('createFinalsUpdate stores an approved finals update without extra schema columns', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.createFinalsUpdate({
+    workDate: '2026-06-28',
+    preview: {
+      workDate: '2026-06-28',
+      confirmed: ['센서 후보 정리']
+    },
+    approvedByUserKey: 'suhyeon',
+    approvedAt: '2026-06-28T09:00:00.000Z',
+    reason: 'scheduled'
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'finals_updates' && call[1] === 'insert');
+  assert.equal(insert[2].work_date, '2026-06-28');
+  assert.equal(insert[2].status, '승인됨');
+  assert.equal(insert[2].preview.confirmed[0], '센서 후보 정리');
+  assert.equal(insert[2].approved_by_user_key, 'suhyeon');
+  assert.equal(insert[2].approved_at, '2026-06-28T09:00:00.000Z');
+  assert.equal(Object.hasOwn(insert[2], 'metadata'), false);
+});
+
 test('getLatestFinalsPreview reads the latest pending preview', async () => {
   const supabase = createFakeSupabase({
     singleData: {

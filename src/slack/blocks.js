@@ -50,26 +50,7 @@ export function buildTextMessageBlocks(text) {
 }
 
 export function buildFinalsPreviewBlocks(text) {
-  return [
-    {
-      type: 'section',
-      text: mrkdwn('*#finals 미리보기 생성됨*\n검토 후 승인하면 #finals 누적 정리에 반영합니다.')
-    },
-    {
-      type: 'actions',
-      block_id: 'finals_preview_actions',
-      elements: [
-        {
-          type: 'button',
-          action_id: 'finals_approve_latest',
-          text: plainText('승인하고 #finals 반영'),
-          value: 'latest',
-          style: 'primary'
-        }
-      ]
-    },
-    ...buildTextMessageBlocks(text)
-  ];
+  return buildTextMessageBlocks(text);
 }
 
 export function buildCodexPromptBlocks({ taskId, prompt }) {

@@ -39,6 +39,20 @@ function isSlackMessageNotFound(error) {
     || error?.message === 'message_not_found';
 }
 
+function kstHour(date) {
+  const hour = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date).find((part) => part.type === 'hour')?.value;
+
+  return Number(hour);
+}
+
+function isAtOrAfterFinalsCutoff(date) {
+  return kstHour(date) >= 18;
+}
+
 function taskIdFromDetailPurpose(purpose) {
   const text = String(purpose ?? '');
   return text.startsWith('task_detail:') ? text.slice('task_detail:'.length) : '';
@@ -344,7 +358,7 @@ export function createInProcessService({
     };
   }
 
-  async function createFinalsPreviewForWorkDate(workDate) {
+  async function buildFinalsPreviewForWorkDate(workDate) {
     const [tasks, results, changeRequests] = await Promise.all([
       store.listAllTasks({ limit: 100 }),
       store.listAllTaskResults({ limit: 100 }),
@@ -365,7 +379,7 @@ export function createInProcessService({
       }
     }
 
-    const preview = buildFinalsPreviewRecord({
+    return buildFinalsPreviewRecord({
       workDate,
       tasks,
       results,
@@ -373,111 +387,11 @@ export function createInProcessService({
       users,
       narrative
     });
-
-    await store.createFinalsPreview({
-      workDate,
-      preview
-    });
-
-    return {
-      dmText: buildFinalsPreviewMessage(preview)
-    };
   }
 
-  async function maybeCreateAutomaticFinalsPreview({ workDate }) {
-    const sessions = await store.listEndedWorkSessionsForDate({ workDate });
-    if (!allUsersEndedWork({ users, sessions })) {
-      return null;
-    }
-
-    const existingFinalsUpdate = await store.getFinalsUpdateForDate({ workDate });
-    if (existingFinalsUpdate) {
-      return null;
-    }
-
-    const result = await createFinalsPreviewForWorkDate(workDate);
-    const leadUser = users.find((candidate) => candidate.key === config.leadUserKey);
-
-    return {
-      finalsPreviewDmText: result.dmText,
-      leadUser
-    };
-  }
-
-  async function handleEndWork({ user }) {
-    const now = clock();
-    const workDate = formatKstDate(now);
-    const { fromIso, toIso } = kstDayRange(workDate);
-
-    await store.endWorkSession({
-      userKey: user.key,
-      workDate,
-      endedAt: now.toISOString()
-    });
-
-    await store.markAcceptedTasksUnresolvedForUser({
-      userKey: user.key
-    });
-
-    await renderBoard({ user, now });
-
-    const [tasks, results, changeRequests] = await Promise.all([
-      store.listDailyTasksForUser({ userKey: user.key }),
-      store.listDailyTaskResultsForUser({ userKey: user.key, fromIso, toIso }),
-      store.listDailyChangeRequestsForUser({ userKey: user.key, fromIso, toIso })
-    ]);
-    const automaticFinals = await maybeCreateAutomaticFinalsPreview({ workDate });
-
-    return {
-      dmText: buildDailySummaryMessage({
-        user,
-        workDate,
-        tasks,
-        results,
-        changeRequests
-      }),
-      ...(automaticFinals ?? {})
-    };
-  }
-
-  async function handleCodexPromptCopyRequest({ taskId }) {
-    const record = await store.getLatestCodexPromptForTask(taskId);
-
-    if (!record?.prompt) {
-      const text = '저장된 Codex 프롬프트를 찾지 못했습니다. task에서 `수락 및 Codex 프롬프트 생성`을 다시 실행해 주세요.';
-      return {
-        text,
-        blocks: buildTextMessageBlocks(text)
-      };
-    }
-
-    const text = 'Codex 프롬프트 복사용 본문입니다. Slack 메시지에서 아래 본문을 선택해 복사해 주세요.';
-    return {
-      text,
-      blocks: buildCodexPromptCopyBlocks({
-        prompt: record.prompt
-      })
-    };
-  }
-
-  async function handleFinalsPreview({ user }) {
-    const now = clock();
-    const workDate = formatKstDate(now);
-    return createFinalsPreviewForWorkDate(workDate);
-  }
-
-  async function handleFinalsApproval({ approvedByUserKey }) {
-    const now = clock();
+  async function publishFinalsMessage(preview) {
     const channelId = config.channels.finals;
-    const latest = await store.getLatestFinalsPreview();
-
-    if (!latest) {
-      return {
-        responseText: '승인할 #finals 미리보기가 없습니다. 먼저 `finals 업데이트`를 보내 주세요.'
-      };
-    }
-
-    const text = buildFinalsChannelMessage(latest.preview);
+    const text = buildFinalsChannelMessage(preview);
     const existingMessage = await store.findSlackMessage({
       purpose: 'finals:cumulative',
       channelId
@@ -515,14 +429,152 @@ export function createInProcessService({
       await postFinalsMessage();
     }
 
-    await store.approveFinalsUpdate({
-      id: latest.id,
-      approvedByUserKey,
-      approvedAt: now.toISOString()
+    return text;
+  }
+
+  async function createAndPublishFinalsUpdateForWorkDate(workDate, {
+    updatedByUserKey = null,
+    reason = 'manual',
+    now = clock()
+  } = {}) {
+    const preview = await buildFinalsPreviewForWorkDate(workDate);
+
+    await publishFinalsMessage(preview);
+    await store.createFinalsUpdate({
+      workDate,
+      preview,
+      approvedByUserKey: updatedByUserKey,
+      approvedAt: now.toISOString(),
+      reason
     });
 
     return {
-      responseText: '#finals 누적 정리를 반영했습니다.'
+      dmText: buildFinalsPreviewMessage(preview),
+      preview
+    };
+  }
+
+  async function maybePublishAutomaticFinalsUpdate({ workDate, now }) {
+    const sessions = await store.listEndedWorkSessionsForDate({ workDate });
+    if (!allUsersEndedWork({ users, sessions })) {
+      return null;
+    }
+
+    const existingFinalsUpdate = await store.getFinalsUpdateForDate({ workDate });
+    if (existingFinalsUpdate) {
+      return null;
+    }
+
+    await createAndPublishFinalsUpdateForWorkDate(workDate, {
+      updatedByUserKey: config.leadUserKey,
+      reason: 'all_ended',
+      now
+    });
+
+    return {
+      finalsUpdated: true
+    };
+  }
+
+  async function handleEndWork({ user }) {
+    const now = clock();
+    const workDate = formatKstDate(now);
+    const { fromIso, toIso } = kstDayRange(workDate);
+
+    await store.endWorkSession({
+      userKey: user.key,
+      workDate,
+      endedAt: now.toISOString()
+    });
+
+    await store.markAcceptedTasksUnresolvedForUser({
+      userKey: user.key
+    });
+
+    await renderBoard({ user, now });
+
+    const [tasks, results, changeRequests] = await Promise.all([
+      store.listDailyTasksForUser({ userKey: user.key }),
+      store.listDailyTaskResultsForUser({ userKey: user.key, fromIso, toIso }),
+      store.listDailyChangeRequestsForUser({ userKey: user.key, fromIso, toIso })
+    ]);
+    const automaticFinals = await maybePublishAutomaticFinalsUpdate({ workDate, now });
+    const dailySummary = buildDailySummaryMessage({
+      user,
+      workDate,
+      tasks,
+      results,
+      changeRequests
+    });
+
+    return {
+      dmText: `${dailySummary}${automaticFinals ? '\n\n#finals 누적 정리도 업데이트했습니다.' : ''}`,
+      ...(automaticFinals ?? {})
+    };
+  }
+
+  async function handleCodexPromptCopyRequest({ taskId }) {
+    const record = await store.getLatestCodexPromptForTask(taskId);
+
+    if (!record?.prompt) {
+      const text = '저장된 Codex 프롬프트를 찾지 못했습니다. task에서 `수락 및 Codex 프롬프트 생성`을 다시 실행해 주세요.';
+      return {
+        text,
+        blocks: buildTextMessageBlocks(text)
+      };
+    }
+
+    const text = 'Codex 프롬프트 복사용 본문입니다. Slack 메시지에서 아래 본문을 선택해 복사해 주세요.';
+    return {
+      text,
+      blocks: buildCodexPromptCopyBlocks({
+        prompt: record.prompt
+      })
+    };
+  }
+
+  async function handleFinalsPreview({ user }) {
+    const now = clock();
+    const workDate = formatKstDate(now);
+    const result = await createAndPublishFinalsUpdateForWorkDate(workDate, {
+      updatedByUserKey: user.key,
+      reason: 'manual',
+      now
+    });
+
+    return {
+      ...result,
+      dmText: `${formatDisplayName(user)}, #finals 누적 정리를 업데이트했습니다.`
+    };
+  }
+
+  async function handleScheduledFinalsUpdate() {
+    const now = clock();
+    if (!isAtOrAfterFinalsCutoff(now)) {
+      return {
+        updated: false,
+        reason: 'before_cutoff'
+      };
+    }
+
+    const workDate = formatKstDate(now);
+    const existingFinalsUpdate = await store.getFinalsUpdateForDate({ workDate });
+    if (existingFinalsUpdate) {
+      return {
+        updated: false,
+        reason: 'already_updated'
+      };
+    }
+
+    await createAndPublishFinalsUpdateForWorkDate(workDate, {
+      updatedByUserKey: config.leadUserKey,
+      reason: 'scheduled',
+      now
+    });
+
+    return {
+      updated: true,
+      reason: 'scheduled'
     };
   }
 
@@ -722,7 +774,7 @@ export function createInProcessService({
     handleArchiveTestTasks,
     handleEndWork,
     handleFinalsPreview,
-    handleFinalsApproval,
+    handleScheduledFinalsUpdate,
     handleTaskAcceptAndPrompt,
     handleTaskAcceptDirect,
     handleCodexPromptCopyRequest,

@@ -134,13 +134,6 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
         text: result.dmText,
         blocks: buildTextMessageBlocks(result.dmText)
       });
-      if (result.finalsPreviewDmText && result.leadUser && client) {
-        await sendFinalsPreviewToLead({
-          client,
-          leadUser: result.leadUser,
-          text: result.finalsPreviewDmText
-        });
-      }
       return;
     } catch (error) {
       logger.error?.(error);
@@ -150,7 +143,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
     }
   }
 
-  if (response.createFinalsPreview && inProcessService) {
+  if (response.createFinalsUpdate && inProcessService) {
     try {
       const result = await inProcessService.handleFinalsPreview({ user });
       await say({
@@ -160,7 +153,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
       return;
     } catch (error) {
       logger.error?.(error);
-      const text = `${formatDisplayName(user)}, #finals 미리보기 생성에 실패했습니다. Render 로그를 확인한 뒤 다시 'finals 업데이트'를 보내 주세요.`;
+      const text = `${formatDisplayName(user)}, #finals 업데이트에 실패했습니다. Render 로그를 확인한 뒤 다시 'finals 업데이트'를 보내 주세요.`;
       await say({ text, blocks: buildTextMessageBlocks(text) });
       return;
     }
@@ -214,18 +207,6 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
   await say({
     text: response.text,
     blocks: buildTextMessageBlocks(response.text)
-  });
-}
-
-async function sendFinalsPreviewToLead({ client, leadUser, text }) {
-  const opened = await client.conversations.open({
-    users: leadUser.slackId
-  });
-
-  await client.chat.postMessage({
-    channel: opened.channel.id,
-    text,
-    blocks: buildFinalsPreviewBlocks(text)
   });
 }
 
@@ -979,46 +960,6 @@ export async function handleTaskActionViewSubmission({ ack, body, view, client =
   }
 }
 
-export async function handleFinalsApproveButton({ ack, body, client, config, logger = console, inProcessService }) {
-  await ack();
-
-  const user = getUserBySlackId(config.users, body.user.id);
-  const channel = body.channel?.id;
-
-  if (!user) {
-    await client.chat.postMessage({
-      channel,
-      text: '등록되지 않은 사용자입니다. 수현님에게 Slack 멤버 ID 등록을 요청해 주세요.'
-    });
-    return;
-  }
-
-  if (user.key !== config.leadUserKey) {
-    await client.chat.postMessage({
-      channel,
-      text: `${formatDisplayName(user)}, #finals 반영은 수현님만 실행할 수 있습니다.`
-    });
-    return;
-  }
-
-  try {
-    const result = await inProcessService.handleFinalsApproval({
-      approvedByUserKey: user.key
-    });
-
-    await client.chat.postMessage({
-      channel,
-      text: result.responseText
-    });
-  } catch (error) {
-    logger.error?.(error);
-    await client.chat.postMessage({
-      channel,
-      text: `${formatDisplayName(user)}, #finals 반영에 실패했습니다. Render 로그를 확인한 뒤 다시 시도해 주세요.`
-    });
-  }
-}
-
 function registerTaskActionHandlers(app, config, logger, inProcessService) {
   app.action('task_accept_generate_prompt', async ({ ack, body }) => {
     await handleTaskAcceptButton({
@@ -1072,16 +1013,6 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
     });
   });
 
-  app.action('finals_approve_latest', async ({ ack, body, client }) => {
-    await handleFinalsApproveButton({
-      ack,
-      body,
-      client,
-      config,
-      logger,
-      inProcessService
-    });
-  });
 }
 
 function registerMeetingActionHandlers(app, config, logger, meetingService) {
@@ -1188,12 +1119,29 @@ function registerMeetingActionHandlers(app, config, logger, meetingService) {
   });
 }
 
+function registerScheduledFinalsUpdates({ service, logger = console, intervalMs = 5 * 60 * 1000 }) {
+  const timer = setInterval(async () => {
+    try {
+      const result = await service.handleScheduledFinalsUpdate();
+      if (result?.updated) {
+        logger.info?.('Scheduled #finals update completed');
+      }
+    } catch (error) {
+      logger.error?.(error);
+    }
+  }, intervalMs);
+
+  timer.unref?.();
+  return timer;
+}
+
 export function createSlackApp({
   config,
   logger = console,
   deferInitialization = false,
   inProcessService = null,
-  meetingService = null
+  meetingService = null,
+  enableScheduledFinalsUpdates = true
 }) {
   const receiver = new ExpressReceiver({
     signingSecret: config.slack.signingSecret
@@ -1242,5 +1190,9 @@ export function createSlackApp({
   registerTaskActionHandlers(app, config, logger, service);
   registerMeetingActionHandlers(app, config, logger, meetings);
 
-  return { app, receiver };
+  const scheduledFinalsTimer = enableScheduledFinalsUpdates
+    ? registerScheduledFinalsUpdates({ service, logger })
+    : null;
+
+  return { app, receiver, scheduledFinalsTimer };
 }

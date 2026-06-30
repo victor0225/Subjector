@@ -779,6 +779,20 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to create finals preview');
   }
 
+  async function createFinalsUpdate({ workDate, preview, approvedByUserKey = null, approvedAt = null }) {
+    const result = await supabase
+      .from('finals_updates')
+      .insert({
+        work_date: workDate,
+        status: '승인됨',
+        preview,
+        approved_by_user_key: approvedByUserKey,
+        approved_at: approvedAt
+      });
+
+    throwIfError(result, 'Failed to create finals update');
+  }
+
   async function getLatestFinalsPreview() {
     const result = await supabase
       .from('finals_updates')
@@ -895,6 +909,7 @@ export function createSupabaseStore(supabase) {
     listDailyChangeRequestsForUser,
     listAllChangeRequests,
     createFinalsPreview,
+    createFinalsUpdate,
     getLatestFinalsPreview,
     getFinalsUpdateForDate,
     approveFinalsUpdate,

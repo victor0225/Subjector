@@ -122,8 +122,8 @@ export function buildFinalsPreviewRecord({ workDate, tasks = [], results = [], c
 
 export function buildFinalsPreviewMessage(preview) {
   return [
-    `#finals 누적 업데이트 미리보기 (${preview.workDate})`,
-    '아직 #finals에는 반영하지 않았습니다. 수현님 확인 후 승인 기능에서 실제 반영합니다.',
+    `#finals 누적 정리 업데이트 (${preview.workDate})`,
+    '#finals에 바로 반영된 내용입니다.',
     '',
     paragraphSection('프로젝트 진행 요약', preview.narrative?.projectOverview),
     '',

@@ -43,14 +43,12 @@ test('buildCodexPromptBlocks splits long prompt into Slack-sized body chunks', (
   assert.ok(promptBlocks.every((block) => block.text.text.length <= 3000));
 });
 
-test('buildFinalsPreviewBlocks includes an approve action before the preview body', () => {
-  const blocks = buildFinalsPreviewBlocks('#finals 누적 업데이트 미리보기\n아직 #finals에는 반영하지 않았습니다.');
+test('buildFinalsPreviewBlocks renders finals text without an approval action', () => {
+  const blocks = buildFinalsPreviewBlocks('#finals 누적 정리를 업데이트했습니다.');
 
   assert.equal(blocks[0].type, 'section');
-  assert.equal(blocks[1].type, 'actions');
-  assert.equal(blocks[1].elements[0].action_id, 'finals_approve_latest');
-  assert.match(blocks[1].elements[0].text.text, /승인/);
-  assert.match(blocks[2].text.text, /#finals 누적 업데이트 미리보기/);
+  assert.equal(blocks.some((block) => block.type === 'actions'), false);
+  assert.match(blocks[0].text.text, /#finals 누적 정리/);
 });
 
 test('buildCodexPromptCopyBlocks shows a copyable prompt body', () => {
