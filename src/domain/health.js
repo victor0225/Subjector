@@ -23,6 +23,9 @@ export function createDefaultHealthStatus() {
       inProcess: { ok: false, message: '#in-process not checked' },
       finals: { ok: false, message: '#finals not checked' }
     },
+    web: {
+      ideaCruise: { ok: false, message: '/idea-cruise not checked' }
+    },
     recentEvents: []
   };
 }
@@ -82,6 +85,7 @@ export function renderHealthPage({ pin, config, status = createDefaultHealthStat
         ${statusRow('Slack', status.slack)}
         ${statusRow('Supabase', status.supabase)}
         ${statusRow('OpenAI', status.openai)}
+        ${statusRow('IDEA CRUISE', status.web?.ideaCruise)}
         ${statusRow('#회의-결과록', status.channels?.meeting)}
         ${statusRow('#in-process', status.channels?.inProcess)}
         ${statusRow('#finals', status.channels?.finals)}

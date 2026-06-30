@@ -58,9 +58,20 @@ export function loadConfigFromEnv(env = process.env) {
     throw new Error('MEETING_TASK_PROVIDER must be one of: openai, gemini');
   }
 
-  const finalsSummaryProvider = (env.FINALS_SUMMARY_PROVIDER?.trim().toLowerCase() || meetingTaskProvider);
+  const rawFinalsSummaryProvider = env.FINALS_SUMMARY_PROVIDER?.trim() || '';
+  let inferredFinalsSummaryModel = '';
+  let finalsSummaryProvider = (rawFinalsSummaryProvider.toLowerCase() || meetingTaskProvider);
   if (!FINALS_SUMMARY_PROVIDERS.has(finalsSummaryProvider)) {
-    throw new Error('FINALS_SUMMARY_PROVIDER must be one of: openai, gemini');
+    if (finalsSummaryProvider.startsWith('gemini-')) {
+      finalsSummaryProvider = 'gemini';
+      inferredFinalsSummaryModel = rawFinalsSummaryProvider;
+    } else {
+      throw new Error(
+        'FINALS_SUMMARY_PROVIDER must be openai or gemini. '
+        + 'If you are choosing a Gemini model, set FINALS_SUMMARY_PROVIDER=gemini and GEMINI_FINALS_SUMMARY_MODEL=<model name>. '
+        + 'If you are choosing an OpenAI model, set FINALS_SUMMARY_PROVIDER=openai and OPENAI_FINALS_SUMMARY_MODEL=<model name>.'
+      );
+    }
   }
 
   const requiredAiKeys = new Set([
@@ -122,6 +133,7 @@ export function loadConfigFromEnv(env = process.env) {
         || env.GEMINI_EVALUATION_MODEL?.trim()
         || 'gemini-3.5-flash',
       finalsSummaryModel: env.GEMINI_FINALS_SUMMARY_MODEL?.trim()
+        || (finalsSummaryProvider === 'gemini' ? inferredFinalsSummaryModel : '')
         || env.GEMINI_TASK_EXTRACTION_MODEL?.trim()
         || env.GEMINI_TRANSCRIPTION_MODEL?.trim()
         || env.GEMINI_EVALUATION_MODEL?.trim()

@@ -189,6 +189,30 @@ test('loadConfigFromEnv requires the selected meeting task provider key', () => 
   );
 });
 
+test('loadConfigFromEnv treats a Gemini finals provider model name as the finals model', () => {
+  const config = loadConfigFromEnv({
+    PORT: '3333',
+    BASE_URL: 'https://subjector.onrender.com',
+    HEALTH_PIN: '2468',
+    SLACK_BOT_TOKEN: 'xoxb-token',
+    SLACK_SIGNING_SECRET: 'secret',
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+    AI_EVALUATION_PROVIDER: 'gemini',
+    MEETING_TASK_PROVIDER: 'gemini',
+    FINALS_SUMMARY_PROVIDER: 'gemini-3.5-flash-lite',
+    GEMINI_API_KEY: 'gemini-key',
+    MEETING_CHANNEL_ID: 'C1',
+    IN_PROCESS_CHANNEL_ID: 'C2',
+    FINALS_CHANNEL_ID: 'C3',
+    LEAD_USER_KEY: 'suhyeon',
+    USERS_JSON: usersJson
+  });
+
+  assert.equal(config.ai.finalsSummaryProvider, 'gemini');
+  assert.equal(config.gemini.finalsSummaryModel, 'gemini-3.5-flash-lite');
+});
+
 test('loadConfigFromEnv reports missing required variables', () => {
   assert.throws(
     () => loadConfigFromEnv({ USERS_JSON: usersJson }),

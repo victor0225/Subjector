@@ -55,6 +55,12 @@ export function buildBootHealthStatus(config) {
           : 'missing env')
         : 'not selected'
     },
+    web: {
+      ideaCruise: {
+        ok: true,
+        message: `${config.baseUrl}/idea-cruise`
+      }
+    },
     channels: {
       meeting: { ok: Boolean(config.channels?.meeting), message: config.channels?.meeting ? '#회의-결과록 configured' : 'missing channel id' },
       inProcess: { ok: Boolean(config.channels?.inProcess), message: config.channels?.inProcess ? '#in-process configured' : 'missing channel id' },

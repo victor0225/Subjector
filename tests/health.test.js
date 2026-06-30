@@ -55,6 +55,9 @@ test('renderHealthPage with valid PIN shows service statuses and channel checks'
         inProcess: { ok: true, message: '#in-process' },
         finals: { ok: false, message: 'not invited' }
       },
+      web: {
+        ideaCruise: { ok: true, message: 'https://subjector.onrender.com/idea-cruise' }
+      },
       recentEvents: ['server started']
     }
   });
@@ -62,6 +65,8 @@ test('renderHealthPage with valid PIN shows service statuses and channel checks'
   assert.match(html, /Slack/);
   assert.match(html, /Supabase/);
   assert.match(html, /OpenAI/);
+  assert.match(html, /IDEA CRUISE/);
+  assert.match(html, /\/idea-cruise/);
   assert.match(html, /#회의-결과록/);
   assert.match(html, /not invited/);
   assert.doesNotMatch(html, /xoxb-secret/);
