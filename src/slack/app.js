@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { formatDisplayName, getUserBySlackId } from '../config.js';
 import { handleDmCommand } from '../domain/dmCommands.js';
 import { createDefaultHealthStatus, renderHealthPage } from '../domain/health.js';
+import { renderIdeaCruisePage } from '../domain/ideaCruisePage.js';
 import {
   TASK_ACTION_CALLBACK_ID,
   TASK_FILE_SUBMISSION_ACTION_ID,
@@ -72,6 +73,12 @@ function registerHealthRoute(receiver, config) {
     });
 
     res.status(200).type('html').send(html);
+  });
+}
+
+export function registerIdeaCruiseRoute(receiver) {
+  receiver.router.get('/idea-cruise', (req, res) => {
+    res.status(200).type('html').send(renderIdeaCruisePage());
   });
 }
 
@@ -1148,6 +1155,7 @@ export function createSlackApp({
   });
 
   registerHealthRoute(receiver, config);
+  registerIdeaCruiseRoute(receiver);
 
   const app = new App({
     token: config.slack.botToken,

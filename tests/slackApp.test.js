@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildBootHealthStatus,
+  registerIdeaCruiseRoute,
   handleDirectDmMessage,
   handleCodexPromptCopyButton,
   handleMeetingCandidateDecisionButton,
@@ -45,6 +46,47 @@ test('buildBootHealthStatus reports OpenAI when meeting task extraction uses Ope
 
   assert.equal(status.openai.ok, true);
   assert.match(status.openai.message, /task extraction/);
+});
+
+test('registerIdeaCruiseRoute serves the local criteria alignment workspace', () => {
+  const routes = [];
+  const receiver = {
+    router: {
+      get(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver);
+
+  assert.equal(routes.length, 1);
+  assert.equal(routes[0].path, '/idea-cruise');
+
+  const response = {
+    statusCode: null,
+    contentType: null,
+    body: '',
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    type(type) {
+      this.contentType = type;
+      return this;
+    },
+    send(body) {
+      this.body = body;
+      return this;
+    }
+  };
+
+  routes[0].handler({}, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.contentType, 'html');
+  assert.match(response.body, /IDEA CRUISE/);
+  assert.match(response.body, /기준 정렬 패킷 복사/);
 });
 
 test('handleDirectDmMessage updates #in-process for 출근 commands', async () => {
