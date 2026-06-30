@@ -1,0 +1,23 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Local databases and generated runtime state
+*.sqlite
+*.sqlite3
+*.db
+data/
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Microsoft Office temporary lock files
+~$*
