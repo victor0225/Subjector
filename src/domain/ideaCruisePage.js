@@ -442,12 +442,13 @@ export function renderIdeaCruisePage() {
       }).join('');
       rows.innerHTML = html;
 
-      rows.querySelectorAll('.intervention.collapsed').forEach(function(card) {
-        card.addEventListener('click', function() {
-          const row = card.parentElement;
-          row.querySelectorAll('.intervention').forEach(function(item) { item.classList.add('collapsed'); });
-          card.classList.remove('collapsed');
-        });
+      rows.addEventListener('click', function(event) {
+        if (event.target.closest('button')) return;
+        const card = event.target.closest('.intervention');
+        if (!card || !rows.contains(card)) return;
+        const row = card.parentElement;
+        row.querySelectorAll('.intervention').forEach(function(item) { item.classList.add('collapsed'); });
+        card.classList.remove('collapsed');
       });
 
       rows.querySelectorAll('button[data-action]').forEach(function(button) {

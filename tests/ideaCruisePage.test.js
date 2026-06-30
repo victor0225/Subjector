@@ -25,3 +25,10 @@ test('renderIdeaCruisePage documents model split and local draft behavior', () =
   assert.match(html, /gpt-5\.4/);
   assert.doesNotMatch(html, /기준 정렬 패킷|빠른 검증용|상\/중\/하/);
 });
+
+test('renderIdeaCruisePage delegates intervention card expansion clicks', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /rows\.addEventListener\('click'/);
+  assert.doesNotMatch(html, /querySelectorAll\('\.intervention\.collapsed'\)\.forEach/);
+});
