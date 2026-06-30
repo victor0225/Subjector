@@ -4,25 +4,24 @@ export function renderIdeaCruisePage() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IDEA CRUISE</title>
+  <title>IDEA CRUISE Meeting Desk</title>
   <style>
     :root {
       color-scheme: light;
-      --bg: #f7f8fa;
+      --bg: #f4f6f8;
       --surface: #ffffff;
-      --surface-2: #eef3f7;
+      --surface-alt: #eef3f1;
       --text: #17202a;
-      --muted: #5f6b7a;
-      --line: #d9e0e7;
-      --accent: #176b87;
-      --accent-2: #1b7f5f;
-      --warn: #9b4d16;
-      --shadow: 0 8px 22px rgba(23, 32, 42, 0.08);
+      --muted: #64707d;
+      --line: #d8e0e6;
+      --accent: #0f766e;
+      --accent-strong: #115e59;
+      --amber: #a35d00;
+      --blue: #245f9f;
+      --shadow: 0 10px 24px rgba(23, 32, 42, 0.08);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -37,34 +36,66 @@ export function renderIdeaCruisePage() {
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 18px 24px;
+      padding: 16px 22px;
       border-bottom: 1px solid var(--line);
       background: var(--surface);
     }
 
-    h1 {
-      margin: 0;
-      font-size: 22px;
-      line-height: 1.2;
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 4px; font-size: 22px; line-height: 1.2; }
+    h2 { margin-bottom: 4px; font-size: 15px; }
+    h3 { margin-bottom: 6px; font-size: 14px; }
+
+    .subtitle, .hint, .status, .meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
     }
 
-    .subtitle {
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 13px;
+    .mode-tabs {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafb;
     }
 
-    .status {
-      color: var(--muted);
+    button, select, textarea, input {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 9px 12px;
+      color: #fff;
+      background: var(--accent);
       font-size: 13px;
-      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      color: var(--accent);
+      background: #fff;
+    }
+
+    button.ghost {
+      border-color: transparent;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    button.active {
+      color: #fff;
+      background: var(--accent-strong);
     }
 
     main {
       display: grid;
-      grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.1fr) minmax(320px, 1fr);
-      gap: 16px;
-      padding: 16px;
+      grid-template-columns: minmax(300px, 0.92fr) minmax(360px, 1.18fr) minmax(330px, 1fr);
+      gap: 14px;
+      padding: 14px;
     }
 
     section {
@@ -77,28 +108,29 @@ export function renderIdeaCruisePage() {
     }
 
     .section-head {
-      padding: 14px 16px;
+      padding: 13px 15px;
       border-bottom: 1px solid var(--line);
-      background: var(--surface-2);
-    }
-
-    .section-head h2 {
-      margin: 0;
-      font-size: 15px;
-    }
-
-    .section-head p {
-      margin: 4px 0 0;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.4;
+      background: var(--surface-alt);
     }
 
     .section-body {
       display: grid;
       gap: 12px;
-      padding: 14px 16px 16px;
+      padding: 14px 15px 16px;
     }
+
+    textarea, input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      color: var(--text);
+      background: #fff;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    textarea { min-height: 92px; resize: vertical; }
 
     label {
       display: grid;
@@ -108,327 +140,491 @@ export function renderIdeaCruisePage() {
       font-weight: 700;
     }
 
-    input,
-    select,
-    textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 10px;
-      color: var(--text);
-      background: #fff;
-      font: inherit;
-      font-size: 14px;
-      line-height: 1.45;
-    }
-
-    textarea {
-      min-height: 74px;
-      resize: vertical;
-    }
-
-    .notes {
-      min-height: 232px;
-    }
-
-    .actions {
+    .actions, .inline-controls {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      align-items: center;
     }
 
-    button {
-      border: 1px solid var(--accent);
-      border-radius: 6px;
-      padding: 9px 12px;
-      color: #fff;
-      background: var(--accent);
-      font: inherit;
-      font-size: 13px;
+    .entry-list, .card-rows, .task-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .entry, .intervention, .task-card, .record-preview, .memo-pane {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .entry textarea {
+      min-height: 118px;
+      border: 0;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .entry-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .card-row {
+      display: grid;
+      grid-template-columns: 1.4fr repeat(4, minmax(74px, 0.5fr));
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .intervention {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      min-height: 132px;
+    }
+
+    .intervention.collapsed {
+      align-content: start;
       cursor: pointer;
     }
 
-    button.secondary {
-      color: var(--accent);
-      background: #fff;
+    .intervention.collapsed p,
+    .intervention.collapsed textarea,
+    .intervention.collapsed .actions {
+      display: none;
     }
 
-    button:focus-visible,
-    input:focus-visible,
-    select:focus-visible,
-    textarea:focus-visible {
-      outline: 2px solid var(--accent-2);
-      outline-offset: 2px;
+    .tag {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: #e6f3f1;
+      color: var(--accent-strong);
+      font-size: 11px;
+      font-weight: 700;
     }
 
-    .warning-list,
-    .packet {
-      margin: 0;
-      border: 1px solid var(--line);
-      border-radius: 6px;
+    .tag.warn { background: #fff0da; color: var(--amber); }
+    .tag.info { background: #eaf2fb; color: var(--blue); }
+
+    .record-preview {
+      display: grid;
+      gap: 10px;
+      min-height: 410px;
       padding: 12px;
-      background: #fff;
-      color: var(--text);
       white-space: pre-wrap;
+      line-height: 1.52;
+      font-size: 13px;
     }
 
-    .warning-list {
-      color: var(--warn);
-      line-height: 1.5;
+    .task-area {
+      grid-column: 1 / -1;
     }
 
-    .packet {
-      min-height: 450px;
-      overflow: auto;
-      font-family: Consolas, "Courier New", monospace;
-      font-size: 12px;
-      line-height: 1.5;
+    .task-list {
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
     }
 
-    @media (max-width: 1080px) {
-      main {
-        grid-template-columns: 1fr;
-      }
+    .task-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
 
-      .status {
-        white-space: normal;
-      }
+    .task-card textarea { min-height: 76px; }
+
+    .task-fields {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: 8px;
+    }
+
+    .memo-pane {
+      display: none;
+      padding: 12px;
+      background: #fbfcfd;
+    }
+
+    .memo-pane.open {
+      display: grid;
+      gap: 10px;
+    }
+
+    @media (max-width: 1120px) {
+      main, .task-list { grid-template-columns: 1fr; }
+      .task-area { grid-column: auto; }
+      .card-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>IDEA CRUISE</h1>
-      <div class="subtitle">회의 기준 정렬 workspace</div>
+      <h1>IDEA CRUISE Meeting Desk</h1>
+      <div class="subtitle">회의 중 생각을 강화하고, 회의 후 task 후보를 Subjector로 넘기는 앞단 도구</div>
     </div>
-    <div class="status" id="save-status">로컬 초안 저장 대기</div>
+    <div class="mode-tabs" aria-label="mode selector">
+      <button class="active" id="live-mode">라이브 회의</button>
+      <button class="secondary" id="memo-mode">간단 메모 붙여넣기</button>
+    </div>
   </header>
 
   <main>
     <section>
       <div class="section-head">
-        <h2>회의 입력</h2>
-        <p>회의 중 나온 task 씨앗, 결정, 애매한 기준을 적습니다.</p>
-      </div>
-      <div class="section-body">
-        <label>
-          회의 메모
-          <textarea class="notes" id="meetingNotes" data-field="meetingNotes" placeholder="예: 전술 헤드셋에 쓸 드론 데이터셋 후보를 먼저 좁혀야 함"></textarea>
-        </label>
-        <label>
-          Task 제목
-          <input id="title" data-field="title" placeholder="예: 전술 헤드셋 드론 데이터셋 후보 판단">
-        </label>
-        <label>
-          목적
-          <textarea id="purpose" data-field="purpose" placeholder="왜 이 task가 필요한지 적습니다."></textarea>
-        </label>
-      </div>
-    </section>
-
-    <section>
-      <div class="section-head">
-        <h2>기준 정렬</h2>
-        <p>작업 전에 충분한 수준과 넘겨야 할 정보를 맞춥니다.</p>
-      </div>
-      <div class="section-body">
-        <label>
-          산출물 수준
-          <select id="outputLevel" data-field="outputLevel">
-            <option value="">정하지 않음</option>
-            <option value="quick_validation">빠른 검증용</option>
-            <option value="internal_draft">내부 사용 가능한 초안</option>
-            <option value="final_deliverable">완성도 있는 최종 산출물</option>
-          </select>
-        </label>
-        <label>
-          성공 기준
-          <textarea id="successCriteria" data-field="successCriteria" placeholder="무엇이 되면 이번 task가 충분한지 적습니다."></textarea>
-        </label>
-        <label>
-          반드시 해야 하는 것
-          <textarea id="mustDo" data-field="mustDo" placeholder="한 줄에 하나씩 적습니다."></textarea>
-        </label>
-        <label>
-          생략해도 되는 것
-          <textarea id="canSkip" data-field="canSkip" placeholder="이번 단계에서 안 해도 되는 일을 적습니다."></textarea>
-        </label>
-        <label>
-          담당자 재량 영역
-          <textarea id="assigneeDiscretion" data-field="assigneeDiscretion" placeholder="담당자가 물어보지 않고 결정해도 되는 범위입니다."></textarea>
-        </label>
-        <label>
-          다음 사람에게 넘길 정보
-          <textarea id="handoffNotes" data-field="handoffNotes" placeholder="다음 사람이 무엇을 보면 바로 움직일 수 있는지 적습니다."></textarea>
-        </label>
-        <label>
-          아직 애매한 기준
-          <textarea id="ambiguousCriteria" data-field="ambiguousCriteria" placeholder="작업 전에 더 맞추면 좋은 기준입니다."></textarea>
-        </label>
-        <label>
-          팀장에게 확인할 질문
-          <textarea id="leadQuestions" data-field="leadQuestions" placeholder="결정권자에게 물어볼 질문입니다."></textarea>
-        </label>
-      </div>
-    </section>
-
-    <section>
-      <div class="section-head">
-        <h2>정렬 결과</h2>
-        <p>Subjector task 후보로 넘길 기준 정렬 패킷입니다.</p>
+        <h2>Brainstorming Input</h2>
+        <p class="hint">Add Entry로 회의 흐름을 쌓고, AI Analysis로 바로 충돌/대안/질문 카드를 띄웁니다.</p>
       </div>
       <div class="section-body">
         <div class="actions">
-          <button id="copy-packet">기준 정렬 패킷 복사</button>
+          <button id="add-entry">Add Entry</button>
+          <button class="secondary" id="analyze">AI Analysis</button>
+        </div>
+        <div class="memo-pane" id="memo-pane">
+          <label>
+            간단 회의 메모
+            <textarea id="quick-memo" placeholder="회의 후 정리된 메모를 붙여넣으면 Meeting Record와 task 후보 생성에 사용합니다."></textarea>
+          </label>
+          <button class="secondary" id="use-memo">메모를 entry로 넣기</button>
+        </div>
+        <div class="entry-list" id="entry-list"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Live Intervention Cards</h2>
+        <p class="hint">카드 모델: Gemini 2.5 Flash-Lite. 적용하면 왼쪽 원문이 직접 강화되고 카드는 사라집니다.</p>
+      </div>
+      <div class="section-body">
+        <div class="card-rows" id="card-rows"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div class="inline-controls">
+          <div>
+            <h2>Meeting Record</h2>
+            <p class="hint">#project-log에 올릴 회의 결과문 초안입니다. task 생성의 원천은 IDEA CRUISE 입력입니다.</p>
+          </div>
+          <button id="copy-record">결과록 복사</button>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="actions">
+          <button id="generate-record">회의록 생성</button>
           <button class="secondary" id="clear-draft">초안 비우기</button>
         </div>
-        <pre class="warning-list" id="warnings">정렬할 내용을 입력하면 기준 차이를 줄이기 위한 질문이 표시됩니다.</pre>
-        <pre class="packet" id="packet-output"></pre>
+        <div class="record-preview" id="meeting-record"></div>
+        <div class="meta">Task 생성 모델: gpt-5.4. 회의록은 감사 기록이고, 아래 task 후보가 Subjector in-process로 이어지는 적용 단위입니다.</div>
+      </div>
+    </section>
+
+    <section class="task-area">
+      <div class="section-head">
+        <h2>Task Candidates From IDEA CRUISE</h2>
+        <p class="hint">AI가 task별 보완 기준 초안을 함께 제안합니다. 담당자와 중요도를 정한 뒤 적용합니다.</p>
+      </div>
+      <div class="section-body">
+        <div class="actions">
+          <button id="generate-tasks">Task 후보 생성</button>
+        </div>
+        <div class="task-list" id="task-list"></div>
       </div>
     </section>
   </main>
 
   <script>
-    const storageKey = 'ideaCruiseAlignmentDraft';
-    const fields = [
-      'meetingNotes',
-      'title',
-      'purpose',
-      'outputLevel',
-      'successCriteria',
-      'mustDo',
-      'canSkip',
-      'assigneeDiscretion',
-      'handoffNotes',
-      'ambiguousCriteria',
-      'leadQuestions'
-    ];
-
-    const outputLabels = {
-      quick_validation: '빠른 검증용',
-      internal_draft: '내부 사용 가능한 초안',
-      final_deliverable: '완성도 있는 최종 산출물'
+    const storageKey = 'ideaCruiseMeetingDeskDraft';
+    const state = loadState() || {
+      mode: 'live',
+      entries: [
+        {
+          id: 'entry-1',
+          text: '라즈베리 파이와 ESP32 중 어떤 기준으로 선택해야 할지 모르겠다. 비용과 구현 난이도도 비교해야 한다.'
+        }
+      ],
+      cards: {},
+      record: '',
+      tasks: []
     };
 
-    function list(value) {
-      return String(value || '')
-        .split('\\n')
-        .map((line) => line.replace(/^[-*]\\s*/, '').trim())
-        .filter(Boolean);
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        return saved ? JSON.parse(saved) : null;
+      } catch (error) {
+        return null;
+      }
     }
 
-    function section(title, value) {
-      const lines = Array.isArray(value) ? value : list(value);
-      if (lines.length === 0) return '## ' + title + '\\n- 아직 정리되지 않음';
-      return '## ' + title + '\\n' + lines.map((line) => '- ' + line).join('\\n');
+    function saveState() {
+      localStorage.setItem(storageKey, JSON.stringify(state));
     }
 
-    function readDraft() {
-      return Object.fromEntries(fields.map((field) => {
-        const element = document.querySelector('[data-field="' + field + '"]');
-        return [field, element ? element.value.trim() : ''];
-      }));
+    function entrySummary(entry) {
+      return entry.text.trim() || '아직 내용 없음';
     }
 
-    function buildPacket(draft) {
-      const outputLabel = outputLabels[draft.outputLevel] || '정하지 않음';
+    function createCardsForEntry(entry) {
+      const text = entrySummary(entry);
+      const unsure = /모르|차이|비교|애매|갈등|충돌|대안|급/.test(text);
+      const cards = [
+        {
+          type: '판단 기준',
+          tag: 'info',
+          title: '선택 기준을 먼저 고정',
+          body: '성능, 전력, 네트워크, 가격, 개발 속도 중 이번 회의의 우선순위를 정하면 논의가 빨라집니다.',
+          suggestion: text + '\\n- 선택 기준: 가격, 구현 난이도, 실시간성, 팀원이 바로 검증 가능한 자료'
+        },
+        {
+          type: '충돌 예상',
+          tag: 'warn',
+          title: '현재 진행 중인 task와 충돌 가능',
+          body: '하드웨어 선택이 늦어지면 데이터 수집 방식과 시연 범위 task가 동시에 흔들릴 수 있습니다.',
+          suggestion: text + '\\n- 충돌 방지: 오늘은 후보를 2개로 좁히고, 내일 실험 기준만 확정'
+        },
+        {
+          type: '대안',
+          tag: '',
+          title: unsure ? '모르는 부분을 비교표 task로 전환' : '결정 전 검증 task로 전환',
+          body: '지금 바로 결론을 내기보다 30분 조사 task로 쪼개면 회의가 막히지 않습니다.',
+          suggestion: text + '\\n- 대안: 라즈베리 파이 vs ESP32 비교표를 만들어 다음 회의 첫 안건으로 확정'
+        }
+      ];
+      return cards;
+    }
+
+    function renderEntries() {
+      const list = document.getElementById('entry-list');
+      list.innerHTML = state.entries.map(function(entry, index) {
+        return '<article class="entry">' +
+          '<textarea data-entry-id="' + entry.id + '">' + escapeHtml(entry.text) + '</textarea>' +
+          '<div class="entry-foot"><span>Entry ' + (index + 1) + '</span><span>localStorage 자동 저장</span></div>' +
+          '</article>';
+      }).join('');
+
+      list.querySelectorAll('textarea').forEach(function(textarea) {
+        textarea.addEventListener('input', function(event) {
+          const entry = state.entries.find(function(item) { return item.id === event.target.dataset.entryId; });
+          if (entry) {
+            entry.text = event.target.value;
+            saveState();
+          }
+        });
+      });
+    }
+
+    function renderCards() {
+      const rows = document.getElementById('card-rows');
+      const html = state.entries.map(function(entry) {
+        const cards = state.cards[entry.id] || [];
+        if (cards.length === 0) {
+          return '<div class="hint">Entry에 대해 AI Analysis를 누르면 이 위치에 카드가 생깁니다.</div>';
+        }
+        return '<div class="card-row">' + cards.map(function(card, index) {
+          const collapsed = index === 0 ? '' : ' collapsed';
+          return '<article class="intervention' + collapsed + '" data-entry-id="' + entry.id + '" data-card-index="' + index + '">' +
+            '<span class="tag ' + card.tag + '">' + escapeHtml(card.type) + '</span>' +
+            '<h3>' + escapeHtml(card.title) + '</h3>' +
+            '<p>' + escapeHtml(card.body) + '</p>' +
+            '<textarea>' + escapeHtml(card.suggestion) + '</textarea>' +
+            '<div class="actions"><button data-action="apply">적용</button><button class="secondary" data-action="remove">보류</button></div>' +
+          '</article>';
+        }).join('') + '</div>';
+      }).join('');
+      rows.innerHTML = html;
+
+      rows.querySelectorAll('.intervention.collapsed').forEach(function(card) {
+        card.addEventListener('click', function() {
+          const row = card.parentElement;
+          row.querySelectorAll('.intervention').forEach(function(item) { item.classList.add('collapsed'); });
+          card.classList.remove('collapsed');
+        });
+      });
+
+      rows.querySelectorAll('button[data-action]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          event.stopPropagation();
+          const cardEl = event.target.closest('.intervention');
+          const entry = state.entries.find(function(item) { return item.id === cardEl.dataset.entryId; });
+          const cards = state.cards[cardEl.dataset.entryId] || [];
+          const index = Number(cardEl.dataset.cardIndex);
+          if (event.target.dataset.action === 'apply' && entry && cards[index]) {
+            entry.text = cardEl.querySelector('textarea').value;
+          }
+          cards.splice(index, 1);
+          saveState();
+          render();
+        });
+      });
+    }
+
+    function buildRecord() {
+      const entries = state.entries.map(function(entry, index) {
+        return (index + 1) + '. ' + entrySummary(entry);
+      }).join('\\n');
       return [
-        '# IDEA CRUISE 기준 정렬 패킷',
+        '# 회의 결과문',
         '',
-        '## Task',
-        draft.title || '제목 없음',
+        '## 오늘 정리된 생각',
+        entries || '- 아직 entry 없음',
         '',
-        '## 목적',
-        draft.purpose || '아직 정리되지 않음',
+        '## 결정/보류',
+        '- 결정: IDEA CRUISE에서 task 후보를 만들고 Subjector는 실행 상태를 운영한다.',
+        '- 보류: 실시간 협업은 서버 저장/룸 동기화 설계 후 추가한다.',
         '',
-        '## 산출물 수준',
-        outputLabel,
-        '',
-        '## 성공 기준',
-        draft.successCriteria || '아직 정리되지 않음',
-        '',
-        section('반드시 해야 하는 것', draft.mustDo),
-        '',
-        section('생략해도 되는 것', draft.canSkip),
-        '',
-        section('담당자 재량 영역', draft.assigneeDiscretion),
-        '',
-        '## 다음 사람에게 넘길 정보',
-        draft.handoffNotes || '아직 정리되지 않음',
-        '',
-        section('아직 애매한 기준', draft.ambiguousCriteria),
-        '',
-        section('팀장에게 확인할 질문', draft.leadQuestions)
+        '## #project-log 기록',
+        '- 회의 결과문 1개와 하루 요약 + 현재 프로젝트 상태 1개를 같은 채널에 올린다.'
       ].join('\\n');
     }
 
-    function buildWarnings(draft) {
-      const warnings = [];
-      if (!draft.outputLevel) {
-        warnings.push('산출물 수준이 아직 정해지지 않았습니다. 빠른 검증용인지, 내부 사용 가능한 초안인지, 최종 산출물인지 먼저 맞추면 작업 범위가 덜 흔들립니다.');
-      }
-      if (!draft.successCriteria) {
-        warnings.push('성공 기준이 비어 있습니다. 무엇이 되면 충분한지 한 문장으로 정하면 담당자가 과하게 만들거나 너무 적게 조사하는 일을 줄일 수 있습니다.');
-      }
-      if (!draft.handoffNotes) {
-        warnings.push('다음 사람이 이어받을 정보가 아직 없습니다. 다음 사람이 무엇을 보고 바로 움직이면 되는지 적어두면 재검색과 재설명을 줄일 수 있습니다.');
-      }
-      if (list(draft.mustDo).length === 0 && list(draft.canSkip).length === 0) {
-        warnings.push('반드시 해야 할 것과 생략해도 되는 것이 나뉘지 않았습니다. 이 둘을 나누면 성실한 작업이 불필요한 완성도 경쟁으로 흐르는 것을 막을 수 있습니다.');
-      }
-      return warnings.length ? warnings.map((warning) => '- ' + warning).join('\\n') : '다음 사람이 이어받기 위한 기준이 잘 정리되고 있습니다.';
+    function renderRecord() {
+      document.getElementById('meeting-record').textContent = state.record || '회의록 생성 버튼을 누르면 Meeting Record 초안이 여기에 표시됩니다.';
     }
 
-    function saveDraft() {
-      const draft = readDraft();
-      localStorage.setItem(storageKey, JSON.stringify(draft));
-      document.getElementById('save-status').textContent = '이 브라우저에 초안 저장됨';
-      render();
-    }
-
-    function loadDraft() {
-      const saved = localStorage.getItem(storageKey);
-      if (!saved) return;
-      try {
-        const draft = JSON.parse(saved);
-        for (const field of fields) {
-          const element = document.querySelector('[data-field="' + field + '"]');
-          if (element && typeof draft[field] === 'string') element.value = draft[field];
+    function buildTasks() {
+      const source = state.entries.map(function(entry) { return entrySummary(entry); }).join(' ');
+      return [
+        {
+          title: '하드웨어 후보 비교 기준 확정',
+          criteria: '필요 정보: 가격, 전력, 네트워크 방식, 구현 난이도, 팀원이 실제로 테스트 가능한 환경. 완료 기준: 후보별 장단점과 추천안을 한 화면에서 비교 가능.',
+          assignee: '수현',
+          importance: '높음',
+          source: source
+        },
+        {
+          title: '회의 결과문을 #project-log 형식으로 정리',
+          criteria: '필요 정보: 회의에서 결정된 것, 보류된 것, task로 전환된 것. 완료 기준: 다음 날 팀원이 이 글만 보고 회의를 이어갈 수 있음.',
+          assignee: '조은',
+          importance: '보통',
+          source: source
+        },
+        {
+          title: 'Subjector in-process 반영 흐름 확인',
+          criteria: '필요 정보: 담당자, 중요도, task 보완 기준. 완료 기준: IDEA CRUISE task 후보가 승인 후 Subjector in-process에 표시되는 경로가 설명됨.',
+          assignee: '민석',
+          importance: '높음',
+          source: source
         }
-      } catch {
-        localStorage.removeItem(storageKey);
+      ];
+    }
+
+    function renderTasks() {
+      const list = document.getElementById('task-list');
+      if (state.tasks.length === 0) {
+        list.innerHTML = '<div class="hint">Task 후보 생성 버튼을 누르면 task 카드가 생성됩니다.</div>';
+        return;
       }
+      list.innerHTML = state.tasks.map(function(task, index) {
+        return '<article class="task-card" data-task-index="' + index + '">' +
+          '<label>Task 제목<input data-field="title" value="' + escapeHtml(task.title) + '"></label>' +
+          '<label>Task 보완 기준<textarea data-field="criteria">' + escapeHtml(task.criteria) + '</textarea></label>' +
+          '<div class="task-fields">' +
+            '<label>담당자<select data-field="assignee"><option>수현</option><option>조은</option><option>민석</option></select></label>' +
+            '<label>중요도<select data-field="importance"><option>높음</option><option>보통</option><option>낮음</option></select></label>' +
+          '</div>' +
+          '<button class="secondary" data-action="apply-task">Subjector in-process에 적용</button>' +
+        '</article>';
+      }).join('');
+
+      list.querySelectorAll('.task-card').forEach(function(card) {
+        const task = state.tasks[Number(card.dataset.taskIndex)];
+        card.querySelector('[data-field="assignee"]').value = task.assignee;
+        card.querySelector('[data-field="importance"]').value = task.importance;
+        card.querySelectorAll('input, textarea, select').forEach(function(input) {
+          input.addEventListener('input', function(event) {
+            task[event.target.dataset.field] = event.target.value;
+            saveState();
+          });
+        });
+      });
     }
 
     function render() {
-      const draft = readDraft();
-      document.getElementById('warnings').textContent = buildWarnings(draft);
-      document.getElementById('packet-output').textContent = buildPacket(draft);
+      renderEntries();
+      renderCards();
+      renderRecord();
+      renderTasks();
+      document.getElementById('memo-pane').classList.toggle('open', state.mode === 'memo');
+      document.getElementById('live-mode').classList.toggle('active', state.mode === 'live');
+      document.getElementById('memo-mode').classList.toggle('active', state.mode === 'memo');
+      saveState();
     }
 
-    for (const field of fields) {
-      const element = document.querySelector('[data-field="' + field + '"]');
-      if (element) element.addEventListener('input', saveDraft);
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
     }
 
-    document.getElementById('copy-packet').addEventListener('click', async () => {
-      const text = document.getElementById('packet-output').textContent;
-      await navigator.clipboard.writeText(text);
-      document.getElementById('save-status').textContent = '기준 정렬 패킷 복사됨';
-    });
-
-    document.getElementById('clear-draft').addEventListener('click', () => {
-      localStorage.removeItem(storageKey);
-      for (const field of fields) {
-        const element = document.querySelector('[data-field="' + field + '"]');
-        if (element) element.value = '';
-      }
-      document.getElementById('save-status').textContent = '초안 비움';
+    document.getElementById('add-entry').addEventListener('click', function() {
+      state.entries.push({ id: 'entry-' + Date.now(), text: '' });
       render();
     });
 
-    loadDraft();
+    document.getElementById('analyze').addEventListener('click', function() {
+      state.entries.forEach(function(entry) {
+        state.cards[entry.id] = createCardsForEntry(entry);
+      });
+      render();
+    });
+
+    document.getElementById('live-mode').addEventListener('click', function() {
+      state.mode = 'live';
+      render();
+    });
+
+    document.getElementById('memo-mode').addEventListener('click', function() {
+      state.mode = 'memo';
+      render();
+    });
+
+    document.getElementById('use-memo').addEventListener('click', function() {
+      const text = document.getElementById('quick-memo').value.trim();
+      if (text) {
+        state.entries.push({ id: 'entry-' + Date.now(), text: text });
+        state.mode = 'live';
+        render();
+      }
+    });
+
+    document.getElementById('generate-record').addEventListener('click', function() {
+      state.record = buildRecord();
+      render();
+    });
+
+    document.getElementById('generate-tasks').addEventListener('click', function() {
+      state.tasks = buildTasks();
+      render();
+    });
+
+    document.getElementById('copy-record').addEventListener('click', async function() {
+      const text = state.record || buildRecord();
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+    });
+
+    document.getElementById('clear-draft').addEventListener('click', function() {
+      localStorage.removeItem(storageKey);
+      state.mode = 'live';
+      state.entries = [{ id: 'entry-1', text: '' }];
+      state.cards = {};
+      state.record = '';
+      state.tasks = [];
+      render();
+    });
+
     render();
   </script>
 </body>

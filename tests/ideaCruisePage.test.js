@@ -2,22 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderIdeaCruisePage } from '../src/domain/ideaCruisePage.js';
 
-test('renderIdeaCruisePage exposes the local criteria alignment workspace', () => {
+test('renderIdeaCruisePage exposes the IDEA CRUISE meeting desk workspace', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /IDEA CRUISE/);
-  assert.match(html, /회의 기준 정렬/);
-  assert.match(html, /빠른 검증용/);
-  assert.match(html, /내부 사용 가능한 초안/);
-  assert.match(html, /완성도 있는 최종 산출물/);
-  assert.match(html, /기준 정렬 패킷 복사/);
+  assert.match(html, /IDEA CRUISE Meeting Desk/);
+  assert.match(html, /라이브 회의/);
+  assert.match(html, /간단 메모 붙여넣기/);
+  assert.match(html, /Brainstorming Input/);
+  assert.match(html, /Live Intervention Cards/);
+  assert.match(html, /Meeting Record/);
+  assert.match(html, /Task Candidates From IDEA CRUISE/);
+  assert.match(html, /#project-log/);
 });
 
-test('renderIdeaCruisePage stores drafts locally and avoids score language', () => {
+test('renderIdeaCruisePage documents model split and local draft behavior', () => {
   const html = renderIdeaCruisePage();
 
   assert.match(html, /localStorage/);
-  assert.match(html, /ideaCruiseAlignmentDraft/);
+  assert.match(html, /ideaCruiseMeetingDeskDraft/);
   assert.match(html, /navigator\.clipboard/);
-  assert.doesNotMatch(html, /점수|채점|상\/중\/하/);
+  assert.match(html, /Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /gpt-5\.4/);
+  assert.doesNotMatch(html, /기준 정렬 패킷|빠른 검증용|상\/중\/하/);
 });

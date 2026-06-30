@@ -48,7 +48,7 @@ test('buildBootHealthStatus reports OpenAI when meeting task extraction uses Ope
   assert.match(status.openai.message, /task extraction/);
 });
 
-test('registerIdeaCruiseRoute serves the local criteria alignment workspace', () => {
+test('registerIdeaCruiseRoute serves the IDEA CRUISE meeting desk workspace', () => {
   const routes = [];
   const receiver = {
     router: {
@@ -86,7 +86,8 @@ test('registerIdeaCruiseRoute serves the local criteria alignment workspace', ()
   assert.equal(response.statusCode, 200);
   assert.equal(response.contentType, 'html');
   assert.match(response.body, /IDEA CRUISE/);
-  assert.match(response.body, /기준 정렬 패킷 복사/);
+  assert.match(response.body, /Meeting Record/);
+  assert.match(response.body, /Task Candidates From IDEA CRUISE/);
 });
 
 test('handleDirectDmMessage updates #in-process for 출근 commands', async () => {
