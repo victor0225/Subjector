@@ -125,8 +125,9 @@ test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee
     inProcessService: {}
   });
 
+  const route = routes.find((item) => item.path === '/idea-cruise/tasks');
   const response = createJsonResponse();
-  await routes[0].handler({
+  await route.handler({
     body: {
       title: '센서 후보 비교',
       assignee: '미배정'
@@ -155,8 +156,9 @@ test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply with an unknown ass
     inProcessService: {}
   });
 
+  const route = routes.find((item) => item.path === '/idea-cruise/tasks');
   const response = createJsonResponse();
-  await routes[0].handler({
+  await route.handler({
     body: {
       title: '센서 후보 비교',
       assignee: '홍길동'
@@ -196,8 +198,9 @@ test('registerIdeaCruiseRoute creates an IDEA CRUISE task and refreshes the assi
     }
   });
 
+  const route = routes.find((item) => item.path === '/idea-cruise/tasks');
   const response = createJsonResponse();
-  await routes[0].handler({
+  await route.handler({
     body: {
       title: 'ESP32와 라즈베리 파이 비교',
       neededInfo: '가격, 전력, 구현 난이도',
@@ -218,6 +221,80 @@ test('registerIdeaCruiseRoute creates an IDEA CRUISE task and refreshes the assi
   assert.equal(storeCalls[0].context.doneCriteria, '비교표와 추천안이 정리됨');
   assert.equal(refreshCalls[0].user.key, 'joeun');
   assert.equal(response.body.board.taskCount, 3);
+});
+
+test('registerIdeaCruiseRoute creates live intervention cards through the analyzer', async () => {
+  const routes = [];
+  const analyzerCalls = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig,
+    cardAnalyzer: {
+      async analyze(input) {
+        analyzerCalls.push(input);
+        return [
+          {
+            type: '데이터 후보',
+            tag: 'info',
+            title: '폭음 정의부터 고정',
+            body: '총성, 폭발음, 공사장 충격음을 구분해야 합니다.',
+            suggestion: '전장 폭음 차단 목적이면 총성/폭발음 데이터 범주를 먼저 정합니다.'
+          }
+        ];
+      }
+    }
+  });
+
+  const route = routes.find((item) => item.path === '/idea-cruise/cards');
+  const response = createJsonResponse();
+  await route.handler({
+    body: {
+      entryText: '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?',
+      completedEntries: ['헤드셋 목적은 전장 소음 대응']
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(response.body.cards[0].title, '폭음 정의부터 고정');
+  assert.match(analyzerCalls[0].entryText, /폭음/);
+  assert.equal(analyzerCalls[0].githubOrganization, 'https://github.com/SAFIRA-ondevice');
+});
+
+test('registerIdeaCruiseRoute rejects live intervention card analysis when analyzer is missing', async () => {
+  const routes = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig
+  });
+
+  const route = routes.find((item) => item.path === '/idea-cruise/cards');
+  const response = createJsonResponse();
+  await route.handler({
+    body: {
+      entryText: '테스트 질문'
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.body.ok, false);
+  assert.match(response.body.error, /AI Analysis/);
 });
 
 test('handleDirectDmMessage updates #in-process for 출근 commands', async () => {

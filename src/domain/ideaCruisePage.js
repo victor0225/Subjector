@@ -558,17 +558,7 @@ export function renderIdeaCruisePage() {
       taskApplyStatus: '',
       tasks: []
     };
-    state.completedEntries = Array.isArray(state.completedEntries) ? state.completedEntries.map(function(entry) {
-      const lines = String(entry.text || '').split('\\n').map(function(line) { return line.trim(); }).filter(Boolean);
-      const title = entry.title || lines[0] || '제목 없음';
-      const bullets = Array.isArray(entry.bullets) ? entry.bullets : lines.slice(1).filter(function(line) { return line.startsWith('- '); });
-      return {
-        id: entry.id || 'completed-' + Date.now(),
-        title: title,
-        bullets: bullets,
-        text: [title].concat(bullets).join('\\n')
-      };
-    }) : [];
+    state.completedEntries = normalizeCompletedEntries(state.completedEntries);
     state.recordDrawerOpen = Boolean(state.recordDrawerOpen);
     state.taskApplyStatus = state.taskApplyStatus || '';
     state.tasks = Array.isArray(state.tasks) ? state.tasks.map(function(task) {
@@ -581,6 +571,34 @@ export function renderIdeaCruisePage() {
         source: task.source || ''
       };
     }) : [];
+
+    function normalizeCompletedEntries(entries) {
+      const normalized = Array.isArray(entries) ? entries.map(function(entry) {
+      const lines = String(entry.text || '').split('\\n').map(function(line) { return line.trim(); }).filter(Boolean);
+      const title = entry.title || lines[0] || '제목 없음';
+      const bullets = Array.isArray(entry.bullets) ? entry.bullets : lines.slice(1).filter(function(line) { return line.startsWith('- '); });
+      return {
+        id: entry.id || 'completed-' + Date.now(),
+        title: title,
+        bullets: bullets,
+        text: [title].concat(bullets).join('\\n')
+      };
+      }) : [];
+      return normalized.reduce(function(acc, entry) {
+        const existing = acc.find(function(item) { return item.title === entry.title; });
+        if (!existing) {
+          acc.push(entry);
+          return acc;
+        }
+        entry.bullets.forEach(function(bullet) {
+          if (!existing.bullets.includes(bullet)) {
+            existing.bullets.push(bullet);
+          }
+        });
+        existing.text = [existing.title].concat(existing.bullets).join('\\n');
+        return acc;
+      }, []);
+    }
 
     function loadState() {
       try {
@@ -599,41 +617,20 @@ export function renderIdeaCruisePage() {
       return entry.text.trim() || '아직 내용 없음';
     }
 
-    function createCardsForEntry(entry) {
-      const text = entrySummary(entry);
-      const subject = text.length > 42 ? text.slice(0, 42) + '...' : text;
-      const unsure = /모르|차이|비교|애매|갈등|충돌|대안|급/.test(text);
-      const cards = [
-        {
-          type: '판단 기준',
-          tag: 'info',
-          title: '선택 기준을 먼저 고정',
-          body: subject + '에 대해 판단 기준을 먼저 정리합니다.',
-          suggestion: text + '\\n- 선택 기준: 비용, 시간, 만족도, 실행 가능성, 팀원이 바로 판단할 수 있는 근거'
-        },
-        {
-          type: '충돌 예상',
-          tag: 'warn',
-          title: '현재 진행 중인 task와 충돌 가능',
-          body: subject + '이 이미 진행 중인 task의 일정, 담당, 기준과 충돌하는지 먼저 확인합니다.',
-          suggestion: text + '\\n- 충돌 방지: 이미 진행 중인 task와 겹치는 결정/담당/일정을 먼저 확인'
-        },
-        {
-          type: '대안',
-          tag: '',
-          title: unsure ? '모르는 부분을 비교 task로 전환' : '결정 전 검증 task로 전환',
-          body: '지금 바로 결론을 내기보다 작게 검증할 수 있는 task로 쪼개면 회의가 막히지 않습니다.',
-          suggestion: text + '\\n- 대안: 결정을 미루지 말고 30분 안에 확인 가능한 비교/검증 task로 전환'
-        },
-        {
-          type: '범위',
-          tag: 'info',
-          title: '오늘 결정할 범위를 제한',
-          body: subject + '에서 오늘 정할 것과 나중에 넘길 것을 분리하면 흐름이 안정됩니다.',
-          suggestion: text + '\\n- 범위 제한: 오늘 정할 기준 1개와 다음에 검증할 기준 1개로 분리'
-        }
-      ];
-      return cards;
+    async function requestCardsForEntry(entry) {
+      const response = await fetch('/idea-cruise/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryText: entrySummary(entry),
+          completedEntries: state.completedEntries.map(function(item) { return item.text; })
+        })
+      });
+      const result = await response.json().catch(function() { return {}; });
+      if (!response.ok) {
+        throw new Error(result.error || 'AI Analysis 연결에 실패했습니다.');
+      }
+      return result.cards || [];
     }
 
     function renderEntries() {
@@ -667,11 +664,37 @@ export function renderIdeaCruisePage() {
       });
 
       document.querySelectorAll('[data-analyze-entry-id]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
+        button.addEventListener('click', async function(event) {
           const entry = state.entries.find(function(item) { return item.id === event.target.dataset.analyzeEntryId; });
           if (entry) {
-            state.cards[entry.id] = createCardsForEntry(entry);
-            render();
+            button.disabled = true;
+            state.cards[entry.id] = [
+              {
+                type: '분석 중',
+                tag: 'info',
+                title: 'AI Analysis 실행 중',
+                body: 'gpt-5.4로 entry 맥락을 분석하고 있습니다.',
+                suggestion: entry.text
+              }
+            ];
+            renderCards();
+            try {
+              state.cards[entry.id] = await requestCardsForEntry(entry);
+              saveState();
+              render();
+            } catch (error) {
+              state.cards[entry.id] = [
+                {
+                  type: 'AI 연결 오류',
+                  tag: 'warn',
+                  title: 'AI Analysis를 실행하지 못했습니다',
+                  body: error.message,
+                  suggestion: entry.text
+                }
+              ];
+              saveState();
+              render();
+            }
           }
         });
       });

@@ -19,6 +19,7 @@ import { createFinalsNarrator } from '../services/finalsNarratorFactory.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createMeetingTaskExtractor } from '../services/meetingTaskExtractorFactory.js';
 import { createMeetingService } from '../services/meetingService.js';
+import { createOpenAiIdeaCruiseCardAnalyzer } from '../services/openaiIdeaCruiseCardAnalyzer.js';
 import { createSlackFileDownloader } from '../services/slackFileDownloader.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
 import { createTaskEvaluator } from '../services/taskEvaluatorFactory.js';
@@ -103,9 +104,45 @@ async function readIdeaCruiseTaskBody(req) {
   return JSON.parse(raw);
 }
 
-export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, inProcessService = null } = {}) {
+export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, inProcessService = null, cardAnalyzer = null } = {}) {
   receiver.router.get('/idea-cruise', (req, res) => {
     res.status(200).type('html').send(renderIdeaCruisePage());
+  });
+
+  receiver.router.post('/idea-cruise/cards', async (req, res) => {
+    try {
+      if (!cardAnalyzer?.analyze) {
+        return res.status(503).json({
+          ok: false,
+          error: 'AI Analysis 연결이 아직 준비되지 않았습니다.'
+        });
+      }
+
+      const body = await readIdeaCruiseTaskBody(req);
+      const entryText = String(body.entryText ?? '').trim();
+      if (!entryText) {
+        return res.status(400).json({
+          ok: false,
+          error: '분석할 entry 내용이 비어 있습니다.'
+        });
+      }
+
+      const cards = await cardAnalyzer.analyze({
+        entryText,
+        completedEntries: Array.isArray(body.completedEntries) ? body.completedEntries : [],
+        githubOrganization: 'https://github.com/SAFIRA-ondevice'
+      });
+
+      return res.status(200).json({
+        ok: true,
+        cards
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: error.message
+      });
+    }
   });
 
   receiver.router.post('/idea-cruise/tasks', async (req, res) => {
@@ -1261,10 +1298,18 @@ export function createSlackApp({
     finalsNarrator: createFinalsNarrator({ config })
   });
 
+  const ideaCruiseCardAnalyzer = config.openai?.apiKey
+    ? createOpenAiIdeaCruiseCardAnalyzer({
+      apiKey: config.openai.apiKey,
+      model: config.openai.taskExtractionModel
+    })
+    : null;
+
   registerIdeaCruiseRoute(receiver, {
     config,
     store,
-    inProcessService: service
+    inProcessService: service,
+    cardAnalyzer: ideaCruiseCardAnalyzer
   });
 
   const meetings = meetingService ?? createMeetingService({

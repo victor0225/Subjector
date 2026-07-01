@@ -568,7 +568,7 @@ export function createSupabaseStore(supabase) {
         title,
         status: '미시작',
         importance,
-        coordination: null,
+        coordination: '🟡 중',
         source_type: 'idea_cruise',
         source_id: null,
         context

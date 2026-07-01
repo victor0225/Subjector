@@ -93,12 +93,14 @@ test('renderIdeaCruisePage invalidates stale intervention cards when an entry ch
   assert.match(html, /renderCards\(\)/);
 });
 
-test('renderIdeaCruisePage builds intervention cards from the current entry text', () => {
+test('renderIdeaCruisePage requests intervention cards from the Subjector API', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /const subject = text/);
-  assert.match(html, /subject \+ '에 대해 판단 기준을 먼저 정리합니다\.'/);
-  assert.doesNotMatch(html, /라즈베리 파이 vs ESP32 비교표/);
+  assert.match(html, /async function requestCardsForEntry\(entry\)/);
+  assert.match(html, /fetch\('\/idea-cruise\/cards'/);
+  assert.match(html, /entryText: entrySummary\(entry\)/);
+  assert.match(html, /state\.cards\[entry\.id\] = await requestCardsForEntry\(entry\)/);
+  assert.doesNotMatch(html, /function createCardsForEntry\(entry\)/);
 });
 
 test('renderIdeaCruisePage caps visible task candidates and renders task overflow', () => {
@@ -125,6 +127,7 @@ test('renderIdeaCruisePage merges completed entries by title and appends new bul
 
   assert.match(html, /function splitCompletedText\(text\)/);
   assert.match(html, /function mergeCompletedEntry\(text\)/);
+  assert.match(html, /function normalizeCompletedEntries\(entries\)/);
   assert.match(html, /existing\.bullets\.includes\(bullet\)/);
   assert.match(html, /existing\.text = formatCompletedText\(existing\)/);
 });

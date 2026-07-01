@@ -523,6 +523,7 @@ test('createIdeaCruiseTask inserts a task from the meeting desk', async () => {
   assert.equal(insert[2].title, 'ESP32와 라즈베리 파이 비교');
   assert.equal(insert[2].status, '미시작');
   assert.equal(insert[2].importance, '높음');
+  assert.equal(insert[2].coordination, '🟡 중');
   assert.equal(insert[2].source_type, 'idea_cruise');
   assert.equal(insert[2].source_id, null);
   assert.equal(insert[2].context.neededInfo, '가격, 전력, 구현 난이도');
