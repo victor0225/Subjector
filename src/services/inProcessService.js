@@ -348,6 +348,10 @@ export function createInProcessService({
     };
   }
 
+  async function refreshBoardForUser({ user }) {
+    return renderBoard({ user, now: clock() });
+  }
+
   async function handleArchiveTestTasks({ user }) {
     const now = clock();
     await store.archiveTestTasks({ keyword: '테스트' });
@@ -771,6 +775,7 @@ export function createInProcessService({
   return {
     handleStartWork,
     handleRefreshInProcess,
+    refreshBoardForUser,
     handleArchiveTestTasks,
     handleEndWork,
     handleFinalsPreview,

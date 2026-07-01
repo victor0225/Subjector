@@ -36,6 +36,21 @@ const teamConfig = {
   ]
 };
 
+function createJsonResponse() {
+  return {
+    statusCode: null,
+    body: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body) {
+      this.body = body;
+      return this;
+    }
+  };
+}
+
 test('buildBootHealthStatus reports OpenAI when meeting task extraction uses OpenAI', () => {
   const status = buildBootHealthStatus({
     supabase: { url: 'https://example.supabase.co', serviceRoleKey: 'service-key' },
@@ -53,15 +68,18 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE meeting desk workspace', ()
   const receiver = {
     router: {
       get(path, handler) {
-        routes.push({ path, handler });
+        routes.push({ method: 'get', path, handler });
+      },
+      post(path, handler) {
+        routes.push({ method: 'post', path, handler });
       }
     }
   };
 
   registerIdeaCruiseRoute(receiver);
 
-  assert.equal(routes.length, 1);
-  assert.equal(routes[0].path, '/idea-cruise');
+  const route = routes.find((item) => item.method === 'get' && item.path === '/idea-cruise');
+  assert.ok(route);
 
   const response = {
     statusCode: null,
@@ -81,13 +99,125 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE meeting desk workspace', ()
     }
   };
 
-  routes[0].handler({}, response);
+  route.handler({}, response);
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.contentType, 'html');
   assert.match(response.body, /IDEA CRUISE/);
   assert.match(response.body, /Meeting Record/);
   assert.match(response.body, /Task Candidates From IDEA CRUISE/);
+});
+
+test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee', async () => {
+  const routes = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig,
+    store: {},
+    inProcessService: {}
+  });
+
+  const response = createJsonResponse();
+  await routes[0].handler({
+    body: {
+      title: '센서 후보 비교',
+      assignee: '미배정'
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.ok, false);
+  assert.match(response.body.error, /담당자/);
+});
+
+test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply with an unknown assignee', async () => {
+  const routes = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig,
+    store: {},
+    inProcessService: {}
+  });
+
+  const response = createJsonResponse();
+  await routes[0].handler({
+    body: {
+      title: '센서 후보 비교',
+      assignee: '홍길동'
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.ok, false);
+  assert.match(response.body.error, /등록되지 않은 담당자/);
+});
+
+test('registerIdeaCruiseRoute creates an IDEA CRUISE task and refreshes the assignee board', async () => {
+  const routes = [];
+  const storeCalls = [];
+  const refreshCalls = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig,
+    store: {
+      async createIdeaCruiseTask(input) {
+        storeCalls.push(input);
+      }
+    },
+    inProcessService: {
+      async refreshBoardForUser(input) {
+        refreshCalls.push(input);
+        return { action: 'updated', taskCount: 3 };
+      }
+    }
+  });
+
+  const response = createJsonResponse();
+  await routes[0].handler({
+    body: {
+      title: 'ESP32와 라즈베리 파이 비교',
+      neededInfo: '가격, 전력, 구현 난이도',
+      doneCriteria: '비교표와 추천안이 정리됨',
+      assignee: '김조은',
+      importance: '높음',
+      meetingRecord: '오늘은 후보 기준을 정했다.'
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(storeCalls[0].assigneeUserKey, 'joeun');
+  assert.equal(storeCalls[0].title, 'ESP32와 라즈베리 파이 비교');
+  assert.equal(storeCalls[0].importance, '높음');
+  assert.equal(storeCalls[0].context.source, 'IDEA CRUISE');
+  assert.equal(storeCalls[0].context.neededInfo, '가격, 전력, 구현 난이도');
+  assert.equal(storeCalls[0].context.doneCriteria, '비교표와 추천안이 정리됨');
+  assert.equal(refreshCalls[0].user.key, 'joeun');
+  assert.equal(response.body.board.taskCount, 3);
 });
 
 test('handleDirectDmMessage updates #in-process for 출근 commands', async () => {

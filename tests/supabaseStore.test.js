@@ -503,6 +503,32 @@ test('approveMeetingTasks inserts stored candidates into tasks and marks the mee
   assert.equal(result.taskCandidates[0].title, '회의 처리 흐름 점검');
 });
 
+test('createIdeaCruiseTask inserts a task from the meeting desk', async () => {
+  const supabase = createFakeSupabase();
+  const store = createSupabaseStore(supabase);
+
+  await store.createIdeaCruiseTask({
+    assigneeUserKey: 'joeun',
+    title: 'ESP32와 라즈베리 파이 비교',
+    importance: '높음',
+    context: {
+      neededInfo: '가격, 전력, 구현 난이도',
+      doneCriteria: '비교표와 추천안이 정리됨',
+      meetingRecord: '오늘은 후보 기준을 정했다.'
+    }
+  });
+
+  const insert = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'insert');
+  assert.equal(insert[2].assignee_user_key, 'joeun');
+  assert.equal(insert[2].title, 'ESP32와 라즈베리 파이 비교');
+  assert.equal(insert[2].status, '미시작');
+  assert.equal(insert[2].importance, '높음');
+  assert.equal(insert[2].source_type, 'idea_cruise');
+  assert.equal(insert[2].source_id, null);
+  assert.equal(insert[2].context.neededInfo, '가격, 전력, 구현 난이도');
+  assert.equal(insert[2].context.doneCriteria, '비교표와 추천안이 정리됨');
+});
+
 test('endWorkSession upserts by user and work date with ended time', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);

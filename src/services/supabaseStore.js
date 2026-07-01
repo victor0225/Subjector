@@ -560,6 +560,23 @@ export function createSupabaseStore(supabase) {
     };
   }
 
+  async function createIdeaCruiseTask({ assigneeUserKey, title, importance, context = {} }) {
+    const result = await supabase
+      .from('tasks')
+      .insert({
+        assignee_user_key: assigneeUserKey,
+        title,
+        status: '미시작',
+        importance,
+        coordination: null,
+        source_type: 'idea_cruise',
+        source_id: null,
+        context
+      });
+
+    throwIfError(result, 'Failed to create IDEA CRUISE task');
+  }
+
   async function listEndedWorkSessionsForDate({ workDate }) {
     const result = await supabase
       .from('daily_work_sessions')
@@ -891,6 +908,7 @@ export function createSupabaseStore(supabase) {
     getMeetingTaskCandidate,
     reviewMeetingTaskCandidate,
     approveMeetingTasks,
+    createIdeaCruiseTask,
     listEndedWorkSessionsForDate,
     listOpenTasksForUser,
     markAcceptedTasksUnresolvedForUser,

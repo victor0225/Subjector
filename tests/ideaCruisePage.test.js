@@ -149,10 +149,13 @@ test('renderIdeaCruisePage task candidates use explicit task fields and manual a
   assert.doesNotMatch(html, /assignee: '수현'|assignee: '조은'|assignee: '민석'/);
 });
 
-test('renderIdeaCruisePage removes a task candidate after applying it locally', () => {
+test('renderIdeaCruisePage applies a task candidate through the Subjector API', () => {
   const html = renderIdeaCruisePage();
 
   assert.match(html, /data-action="apply-task"/);
+  assert.match(html, /fetch\('\/idea-cruise\/tasks'/);
+  assert.match(html, /if \(task\.assignee === '미배정'\)/);
+  assert.match(html, /if \(!response\.ok\)/);
   assert.match(html, /state\.tasks\.splice\(taskIndex, 1\)/);
-  assert.match(html, /Subjector in-process 연동 전까지는 로컬 후보에서 제거합니다/);
+  assert.doesNotMatch(html, /Subjector in-process 연동 전까지는 로컬 후보에서 제거합니다/);
 });

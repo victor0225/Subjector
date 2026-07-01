@@ -82,9 +82,89 @@ function registerHealthRoute(receiver, config) {
   });
 }
 
-export function registerIdeaCruiseRoute(receiver) {
+function findIdeaCruiseAssignee(users = [], assignee) {
+  return users.find((user) => [user.key, user.fullName, user.displayName].includes(assignee)) ?? null;
+}
+
+async function readIdeaCruiseTaskBody(req) {
+  if (req.body && Object.keys(req.body).length > 0) {
+    return req.body;
+  }
+
+  let raw = '';
+  for await (const chunk of req) {
+    raw += chunk;
+  }
+
+  if (!raw.trim()) {
+    return {};
+  }
+
+  return JSON.parse(raw);
+}
+
+export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, inProcessService = null } = {}) {
   receiver.router.get('/idea-cruise', (req, res) => {
     res.status(200).type('html').send(renderIdeaCruisePage());
+  });
+
+  receiver.router.post('/idea-cruise/tasks', async (req, res) => {
+    try {
+      const body = await readIdeaCruiseTaskBody(req);
+      const assignee = String(body.assignee ?? '').trim();
+      if (!assignee || assignee === '미배정') {
+        return res.status(400).json({
+          ok: false,
+          error: '담당자를 먼저 선택해 주세요.'
+        });
+      }
+
+      const user = findIdeaCruiseAssignee(config.users, assignee);
+      if (!user) {
+        return res.status(400).json({
+          ok: false,
+          error: '등록되지 않은 담당자입니다.'
+        });
+      }
+
+      const title = String(body.title ?? '').trim();
+      if (!title) {
+        return res.status(400).json({
+          ok: false,
+          error: 'task 제목이 비어 있습니다.'
+        });
+      }
+
+      if (!store?.createIdeaCruiseTask || !inProcessService?.refreshBoardForUser) {
+        return res.status(503).json({
+          ok: false,
+          error: 'IDEA CRUISE task 반영 경로가 아직 준비되지 않았습니다.'
+        });
+      }
+
+      await store.createIdeaCruiseTask({
+        assigneeUserKey: user.key,
+        title,
+        importance: String(body.importance ?? '보통').trim() || '보통',
+        context: {
+          source: 'IDEA CRUISE',
+          neededInfo: String(body.neededInfo ?? '').trim(),
+          doneCriteria: String(body.doneCriteria ?? '').trim(),
+          meetingRecord: String(body.meetingRecord ?? '').trim()
+        }
+      });
+
+      const board = await inProcessService.refreshBoardForUser({ user });
+      return res.status(200).json({
+        ok: true,
+        board
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: error.message
+      });
+    }
   });
 }
 
@@ -1161,7 +1241,6 @@ export function createSlackApp({
   });
 
   registerHealthRoute(receiver, config);
-  registerIdeaCruiseRoute(receiver);
 
   const app = new App({
     token: config.slack.botToken,
@@ -1180,6 +1259,12 @@ export function createSlackApp({
     logger,
     taskEvaluator: createTaskEvaluator({ config }),
     finalsNarrator: createFinalsNarrator({ config })
+  });
+
+  registerIdeaCruiseRoute(receiver, {
+    config,
+    store,
+    inProcessService: service
   });
 
   const meetings = meetingService ?? createMeetingService({

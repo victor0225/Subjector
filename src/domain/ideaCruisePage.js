@@ -518,6 +518,7 @@ export function renderIdeaCruisePage() {
           <button id="generate-tasks">Task 후보 생성</button>
           <button class="secondary" id="clear-draft">초안 비우기</button>
         </div>
+        <div class="status" id="task-apply-status"></div>
         <div class="task-list" id="task-list"></div>
       </div>
     </section>
@@ -554,6 +555,7 @@ export function renderIdeaCruisePage() {
       completedEntries: [],
       record: '',
       recordDrawerOpen: false,
+      taskApplyStatus: '',
       tasks: []
     };
     state.completedEntries = Array.isArray(state.completedEntries) ? state.completedEntries.map(function(entry) {
@@ -568,6 +570,7 @@ export function renderIdeaCruisePage() {
       };
     }) : [];
     state.recordDrawerOpen = Boolean(state.recordDrawerOpen);
+    state.taskApplyStatus = state.taskApplyStatus || '';
     state.tasks = Array.isArray(state.tasks) ? state.tasks.map(function(task) {
       return {
         title: task.title || '',
@@ -894,6 +897,7 @@ export function renderIdeaCruisePage() {
 
     function renderTasks() {
       const list = document.getElementById('task-list');
+      document.getElementById('task-apply-status').textContent = state.taskApplyStatus;
       if (state.tasks.length === 0) {
         list.innerHTML = '<div class="hint">Task 후보 생성 버튼을 누르면 task 카드가 생성됩니다.</div>';
         return;
@@ -938,14 +942,48 @@ export function renderIdeaCruisePage() {
       });
 
       list.querySelectorAll('button[data-action="apply-task"]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
+        button.addEventListener('click', async function(event) {
           const card = event.target.closest('.task-card');
           const taskIndex = Number(card.dataset.taskIndex);
           if (Number.isNaN(taskIndex)) return;
-          // Subjector in-process 연동 전까지는 로컬 후보에서 제거합니다.
-          state.tasks.splice(taskIndex, 1);
-          saveState();
-          render();
+          const task = state.tasks[taskIndex];
+          if (task.assignee === '미배정') {
+            state.taskApplyStatus = '담당자를 먼저 선택해 주세요.';
+            render();
+            return;
+          }
+
+          button.disabled = true;
+          state.taskApplyStatus = 'Subjector in-process에 반영 중입니다.';
+          document.getElementById('task-apply-status').textContent = state.taskApplyStatus;
+
+          try {
+            const response = await fetch('/idea-cruise/tasks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: task.title,
+                neededInfo: task.neededInfo,
+                doneCriteria: task.doneCriteria,
+                assignee: task.assignee,
+                importance: task.importance,
+                meetingRecord: state.record
+              })
+            });
+            const result = await response.json().catch(function() { return {}; });
+            if (!response.ok) {
+              throw new Error(result.error || 'Subjector 반영에 실패했습니다.');
+            }
+
+            state.tasks.splice(taskIndex, 1);
+            state.taskApplyStatus = 'Subjector in-process에 반영했습니다.';
+            saveState();
+            render();
+          } catch (error) {
+            button.disabled = false;
+            state.taskApplyStatus = error.message;
+            render();
+          }
         });
       });
 

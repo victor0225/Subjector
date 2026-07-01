@@ -329,6 +329,39 @@ test('handleRefreshInProcess updates #in-process without starting a work session
   assert.match(slackClient.calls[0][1].text, /회의 기반 신규 task/);
 });
 
+test('refreshBoardForUser updates #in-process without starting a work session', async () => {
+  const store = createFakeStore({
+    existingMessage: {
+      channelId: 'C_IN_PROCESS',
+      messageTs: '1700000000.000001'
+    },
+    tasks: [
+      {
+        title: 'IDEA CRUISE task 반영',
+        status: '미시작',
+        importance: '높음',
+        coordination: null,
+        context: { source: 'IDEA CRUISE' }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    clock: () => new Date('2026-06-28T01:30:00.000Z')
+  });
+
+  const result = await service.refreshBoardForUser({ user });
+
+  assert.equal(result.action, 'updated');
+  assert.equal(result.taskCount, 1);
+  assert.equal(store.calls.some(([name]) => name === 'startWorkSession'), false);
+  assert.equal(slackClient.calls[0][0], 'update');
+  assert.match(slackClient.calls[0][1].text, /IDEA CRUISE task 반영/);
+});
+
 test('handleRefreshInProcess deletes stale task detail thread messages', async () => {
   const store = createFakeStore({
     existingMessage: {
