@@ -175,10 +175,10 @@ export function renderIdeaCruisePage() {
     }
 
     .card-row {
-      display: grid;
-      grid-template-columns: 1.4fr repeat(4, minmax(74px, 0.5fr));
+      display: flex;
       gap: 8px;
       align-items: stretch;
+      min-width: 0;
     }
 
     .intervention {
@@ -186,11 +186,27 @@ export function renderIdeaCruisePage() {
       gap: 8px;
       padding: 10px;
       min-height: 132px;
+      min-width: 0;
+      overflow: hidden;
+      transition: flex-basis 160ms ease, flex-grow 160ms ease;
+    }
+
+    .intervention.expanded {
+      flex: 1 1 58%;
     }
 
     .intervention.collapsed {
+      flex: 0 1 96px;
       align-content: start;
       cursor: pointer;
+    }
+
+    .intervention.collapsed h3 {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      line-height: 1.35;
     }
 
     .intervention.collapsed p,
@@ -259,7 +275,9 @@ export function renderIdeaCruisePage() {
     @media (max-width: 1120px) {
       main, .task-list { grid-template-columns: 1fr; }
       .task-area { grid-column: auto; }
-      .card-row { grid-template-columns: 1fr; }
+      .card-row { flex-direction: column; }
+      .intervention.expanded,
+      .intervention.collapsed { flex: 1 1 auto; }
     }
   </style>
 </head>
@@ -430,8 +448,8 @@ export function renderIdeaCruisePage() {
           return '<div class="hint">Entry에 대해 AI Analysis를 누르면 이 위치에 카드가 생깁니다.</div>';
         }
         return '<div class="card-row">' + cards.map(function(card, index) {
-          const collapsed = index === 0 ? '' : ' collapsed';
-          return '<article class="intervention' + collapsed + '" data-entry-id="' + entry.id + '" data-card-index="' + index + '">' +
+          const stateClass = index === 0 ? ' expanded' : ' collapsed';
+          return '<article class="intervention' + stateClass + '" data-entry-id="' + entry.id + '" data-card-index="' + index + '">' +
             '<span class="tag ' + card.tag + '">' + escapeHtml(card.type) + '</span>' +
             '<h3>' + escapeHtml(card.title) + '</h3>' +
             '<p>' + escapeHtml(card.body) + '</p>' +
@@ -447,8 +465,12 @@ export function renderIdeaCruisePage() {
         const card = event.target.closest('.intervention');
         if (!card || !rows.contains(card)) return;
         const row = card.parentElement;
-        row.querySelectorAll('.intervention').forEach(function(item) { item.classList.add('collapsed'); });
+        row.querySelectorAll('.intervention').forEach(function(item) {
+          item.classList.remove('expanded');
+          item.classList.add('collapsed');
+        });
         card.classList.remove('collapsed');
+        card.classList.add('expanded');
       });
 
       rows.querySelectorAll('button[data-action]').forEach(function(button) {

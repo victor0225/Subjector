@@ -32,3 +32,13 @@ test('renderIdeaCruisePage delegates intervention card expansion clicks', () => 
   assert.match(html, /rows\.addEventListener\('click'/);
   assert.doesNotMatch(html, /querySelectorAll\('\.intervention\.collapsed'\)\.forEach/);
 });
+
+test('renderIdeaCruisePage expands the selected intervention card in its row', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /\.card-row\s*{\s*display: flex;/);
+  assert.match(html, /\.intervention\.expanded\s*{[^}]*flex: 1 1 58%/);
+  assert.match(html, /\.intervention\.collapsed\s*{[^}]*flex: 0 1 96px/);
+  assert.match(html, /classList\.add\('expanded'\)/);
+  assert.match(html, /classList\.remove\('collapsed'\)/);
+});
