@@ -42,3 +42,13 @@ test('renderIdeaCruisePage expands the selected intervention card in its row', (
   assert.match(html, /classList\.add\('expanded'\)/);
   assert.match(html, /classList\.remove\('collapsed'\)/);
 });
+
+test('renderIdeaCruisePage caps visible intervention cards and renders overflow candidates', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /const visibleCards = cards\.slice\(0, 3\)/);
+  assert.match(html, /const hiddenCards = cards\.slice\(3\)/);
+  assert.match(html, /class="overflow-card"/);
+  assert.match(html, /<span>more<\/span>/);
+  assert.match(html, /data-overflow-entry-id/);
+});

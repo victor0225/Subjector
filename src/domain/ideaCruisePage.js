@@ -152,7 +152,7 @@ export function renderIdeaCruisePage() {
       gap: 10px;
     }
 
-    .entry, .intervention, .task-card, .record-preview, .memo-pane {
+    .entry, .intervention, .overflow-card, .task-card, .record-preview, .memo-pane {
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
@@ -198,6 +198,8 @@ export function renderIdeaCruisePage() {
     .intervention.collapsed {
       flex: 0 1 96px;
       align-content: start;
+      justify-items: center;
+      text-align: center;
       cursor: pointer;
     }
 
@@ -213,6 +215,47 @@ export function renderIdeaCruisePage() {
     .intervention.collapsed textarea,
     .intervention.collapsed .actions {
       display: none;
+    }
+
+    .overflow-card {
+      display: grid;
+      flex: 0 0 72px;
+      place-items: center;
+      gap: 2px;
+      padding: 10px 8px;
+      color: var(--accent-strong);
+      background: #f4fbf9;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .overflow-card span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .overflow-drawer {
+      display: none;
+      grid-column: 1 / -1;
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .overflow-drawer.open {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .overflow-choice {
+      border-color: var(--line);
+      color: var(--text);
+      background: #fff;
     }
 
     .tag {
@@ -277,7 +320,8 @@ export function renderIdeaCruisePage() {
       .task-area { grid-column: auto; }
       .card-row { flex-direction: column; }
       .intervention.expanded,
-      .intervention.collapsed { flex: 1 1 auto; }
+      .intervention.collapsed,
+      .overflow-card { flex: 1 1 auto; }
     }
   </style>
 </head>
@@ -415,6 +459,13 @@ export function renderIdeaCruisePage() {
           title: unsure ? '모르는 부분을 비교표 task로 전환' : '결정 전 검증 task로 전환',
           body: '지금 바로 결론을 내기보다 30분 조사 task로 쪼개면 회의가 막히지 않습니다.',
           suggestion: text + '\\n- 대안: 라즈베리 파이 vs ESP32 비교표를 만들어 다음 회의 첫 안건으로 확정'
+        },
+        {
+          type: '범위',
+          tag: 'info',
+          title: '오늘 결정할 범위를 제한',
+          body: '회의 중 모든 결론을 내리려 하면 카드가 늘어납니다. 오늘 결정할 것과 내일 넘길 것을 분리하면 흐름이 안정됩니다.',
+          suggestion: text + '\\n- 범위 제한: 오늘은 후보 2개와 비교 기준만 확정하고, 실제 구매/구현 결정은 다음 검증 뒤 진행'
         }
       ];
       return cards;
@@ -447,7 +498,9 @@ export function renderIdeaCruisePage() {
         if (cards.length === 0) {
           return '<div class="hint">Entry에 대해 AI Analysis를 누르면 이 위치에 카드가 생깁니다.</div>';
         }
-        return '<div class="card-row">' + cards.map(function(card, index) {
+        const visibleCards = cards.slice(0, 3);
+        const hiddenCards = cards.slice(3);
+        const visibleHtml = visibleCards.map(function(card, index) {
           const stateClass = index === 0 ? ' expanded' : ' collapsed';
           return '<article class="intervention' + stateClass + '" data-entry-id="' + entry.id + '" data-card-index="' + index + '">' +
             '<span class="tag ' + card.tag + '">' + escapeHtml(card.type) + '</span>' +
@@ -456,7 +509,19 @@ export function renderIdeaCruisePage() {
             '<textarea>' + escapeHtml(card.suggestion) + '</textarea>' +
             '<div class="actions"><button data-action="apply">적용</button><button class="secondary" data-action="remove">보류</button></div>' +
           '</article>';
-        }).join('') + '</div>';
+        }).join('');
+        const overflowHtml = hiddenCards.length
+          ? '<button class="overflow-card" data-overflow-entry-id="' + entry.id + '" type="button">+' + hiddenCards.length + '<span>more</span></button>'
+          : '';
+        const drawerHtml = hiddenCards.length
+          ? '<div class="overflow-drawer" data-overflow-drawer="' + entry.id + '">' + hiddenCards.map(function(card, offset) {
+              const cardIndex = offset + 3;
+              return '<button class="overflow-choice" data-overflow-card-index="' + cardIndex + '" data-entry-id="' + entry.id + '" type="button">' +
+                escapeHtml(card.type) + ' · ' + escapeHtml(card.title) +
+              '</button>';
+            }).join('') + '</div>'
+          : '';
+        return '<div class="card-row">' + visibleHtml + overflowHtml + '</div>' + drawerHtml;
       }).join('');
       rows.innerHTML = html;
 
@@ -471,6 +536,28 @@ export function renderIdeaCruisePage() {
         });
         card.classList.remove('collapsed');
         card.classList.add('expanded');
+      });
+
+      rows.querySelectorAll('[data-overflow-entry-id]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          event.stopPropagation();
+          const drawer = rows.querySelector('[data-overflow-drawer="' + button.dataset.overflowEntryId + '"]');
+          if (drawer) drawer.classList.toggle('open');
+        });
+      });
+
+      rows.querySelectorAll('[data-overflow-card-index]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          event.stopPropagation();
+          const entryId = button.dataset.entryId;
+          const cards = state.cards[entryId] || [];
+          const selectedIndex = Number(button.dataset.overflowCardIndex);
+          if (Number.isNaN(selectedIndex) || !cards[selectedIndex]) return;
+          const selected = cards.splice(selectedIndex, 1)[0];
+          cards.splice(1, 0, selected);
+          saveState();
+          render();
+        });
       });
 
       rows.querySelectorAll('button[data-action]').forEach(function(button) {
