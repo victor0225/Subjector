@@ -2,163 +2,106 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderIdeaCruisePage } from '../src/domain/ideaCruisePage.js';
 
-test('renderIdeaCruisePage exposes the IDEA CRUISE meeting desk workspace', () => {
+test('renderIdeaCruisePage exposes the approved topic-page meeting desk', () => {
   const html = renderIdeaCruisePage();
 
   assert.match(html, /IDEA CRUISE Meeting Desk/);
-  assert.match(html, /라이브 회의/);
-  assert.match(html, /간단 메모 붙여넣기/);
-  assert.match(html, /Brainstorming Input/);
-  assert.match(html, /Live Intervention Cards/);
-  assert.match(html, /Meeting Record/);
-  assert.match(html, /Task Candidates From IDEA CRUISE/);
-  assert.match(html, /#project-log/);
+  assert.match(html, /1\. Topic Page/);
+  assert.match(html, /2\. Topic-Specific AI Cards/);
+  assert.match(html, /3\. Task Candidates/);
+  assert.match(html, /다음 주제 추가/);
+  assert.match(html, /회의록 열기/);
+  assert.doesNotMatch(html, /간단 메모 붙여넣기/);
+  assert.doesNotMatch(html, /라이브 회의/);
+  assert.doesNotMatch(html, /Completed Brainstorming Inputs/);
+  assert.doesNotMatch(html, /Source: 전체 Completed Topic Pages/);
 });
 
-test('renderIdeaCruisePage documents model split and local draft behavior', () => {
+test('renderIdeaCruisePage documents the model split at each AI step', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /localStorage/);
-  assert.match(html, /ideaCruiseMeetingDeskDraft/);
-  assert.match(html, /navigator\.clipboard/);
-  assert.match(html, /Gemini 2\.5 Flash-Lite/);
-  assert.match(html, /gpt-5\.4/);
-  assert.match(html, /카드 모델: gpt-5\.4/);
-  assert.match(html, /회의록\/task 생성 모델: Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /카드 생성: GPT-5\.4/);
+  assert.match(html, /회의록 생성: Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /Task 후보 생성: Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /적용\/완료\/Subjector 반영: AI 없음/);
   assert.match(html, /https:\/\/github\.com\/SAFIRA-ondevice/);
-  assert.doesNotMatch(html, /기준 정렬 패킷|빠른 검증용|상\/중\/하/);
 });
 
-test('renderIdeaCruisePage delegates intervention card expansion clicks', () => {
+test('renderIdeaCruisePage uses one active topic page with page-specific cards', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /rows\.addEventListener\('click'/);
-  assert.doesNotMatch(html, /querySelectorAll\('\.intervention\.collapsed'\)\.forEach/);
+  assert.match(html, /pages: \[/);
+  assert.match(html, /activePageId: 'page-1'/);
+  assert.match(html, /function activePage\(\)/);
+  assert.match(html, /function addTopicPage\(\)/);
+  assert.match(html, /function setActivePage\(pageId\)/);
+  assert.match(html, /page\.cards/);
+  assert.match(html, /이 페이지의 가운데 카드는/);
 });
 
-test('renderIdeaCruisePage expands the selected intervention card in its row', () => {
+test('renderIdeaCruisePage appends applied card content to the active page and removes the card', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /\.card-row\s*{\s*display: flex;/);
-  assert.match(html, /\.intervention\.expanded\s*{[^}]*flex: 1 1 58%/);
-  assert.match(html, /\.intervention\.collapsed\s*{[^}]*flex: 0 1 96px/);
-  assert.match(html, /classList\.add\('expanded'\)/);
-  assert.match(html, /classList\.remove\('collapsed'\)/);
+  assert.match(html, /function appendToActivePage\(content\)/);
+  assert.match(html, /page\.text = page\.text\.trim\(\) \+ '\\n\\n' \+ content\.trim\(\)/);
+  assert.match(html, /page\.cards\.splice\(cardIndex, 1\)/);
+  assert.doesNotMatch(html, /entry\.text = cardEl\.querySelector\('textarea'\)\.value/);
 });
 
-test('renderIdeaCruisePage caps visible intervention cards and renders overflow candidates', () => {
+test('renderIdeaCruisePage keeps failed card applications visible with a short log', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /const visibleCards = cards\.slice\(0, 3\)/);
-  assert.match(html, /const hiddenCards = cards\.slice\(3\)/);
-  assert.match(html, /class="overflow-card"/);
-  assert.match(html, /<span>more<\/span>/);
-  assert.match(html, /data-overflow-entry-id/);
+  assert.match(html, /card\.error = error\.message/);
+  assert.match(html, /class="error-log"/);
+  assert.match(html, /적용 실패/);
 });
 
-test('renderIdeaCruisePage gives each brainstorming entry its own controls', () => {
+test('renderIdeaCruisePage completes pages and feeds task generation from completed pages', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /class="entry-actions"/);
-  assert.match(html, /data-analyze-entry-id/);
-  assert.match(html, /data-complete-entry-id/);
-  assert.match(html, /data-delete-entry-id/);
-  assert.match(html, /document\.querySelectorAll\('\[data-analyze-entry-id\]'\)/);
-  assert.match(html, /document\.querySelectorAll\('\[data-complete-entry-id\]'\)/);
-  assert.match(html, /document\.querySelectorAll\('\[data-delete-entry-id\]'\)/);
-  assert.doesNotMatch(html, /id="analyze"/);
+  assert.match(html, /function completeActivePage\(\)/);
+  assert.match(html, /page\.completed = true/);
+  assert.match(html, /function completedPages\(\)/);
+  assert.match(html, /buildTasksFromCompletedPages\(\)/);
 });
 
-test('renderIdeaCruisePage places add entry in the brainstorming header', () => {
+test('renderIdeaCruisePage shows task filters as the first element in the right column', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /<div class="section-title-row">[\s\S]*<h2>Brainstorming Input<\/h2>[\s\S]*<button id="add-entry">Add Entry<\/button>[\s\S]*<\/div>/);
+  assert.match(html, /<div class="page-nav task-filter-nav" id="task-filter-nav"><\/div>/);
+  assert.match(html, /function setTaskFilter\(filter\)/);
+  assert.match(html, /function visibleTasks\(\)/);
+  assert.match(html, /state\.taskFilter === 'all'/);
 });
 
-test('renderIdeaCruisePage constrains panel heights and scrolls overflowing content', () => {
+test('renderIdeaCruisePage task candidates use the approved five editable fields', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /main\s*{[^}]*align-items: start;/);
-  assert.match(html, /section\s*{[^}]*display: flex;[^}]*flex-direction: column;/);
-  assert.match(html, /\.scroll-pane\s*{[^}]*height: 520px;[^}]*max-height: 520px;[^}]*overflow-y: auto;/);
-  assert.match(html, /class="entry-list scroll-pane"/);
-  assert.match(html, /class="card-rows scroll-pane"/);
-  assert.match(html, /class="completed-list scroll-pane"/);
-});
-
-test('renderIdeaCruisePage invalidates stale intervention cards when an entry changes', () => {
-  const html = renderIdeaCruisePage();
-
-  assert.match(html, /delete state\.cards\[entry\.id\]/);
-  assert.match(html, /renderCards\(\)/);
-});
-
-test('renderIdeaCruisePage requests intervention cards from the Subjector API', () => {
-  const html = renderIdeaCruisePage();
-
-  assert.match(html, /async function requestCardsForEntry\(entry\)/);
-  assert.match(html, /fetch\('\/idea-cruise\/cards'/);
-  assert.match(html, /entryText: entrySummary\(entry\)/);
-  assert.match(html, /state\.cards\[entry\.id\] = await requestCardsForEntry\(entry\)/);
-  assert.doesNotMatch(html, /function createCardsForEntry\(entry\)/);
-});
-
-test('renderIdeaCruisePage caps visible task candidates and renders task overflow', () => {
-  const html = renderIdeaCruisePage();
-
-  assert.match(html, /const visibleTasks = state\.tasks\.slice\(0, 3\)/);
-  assert.match(html, /const hiddenTasks = state\.tasks\.slice\(3\)/);
-  assert.match(html, /class="task-overflow-card"/);
-  assert.match(html, /data-task-overflow/);
-});
-
-test('renderIdeaCruisePage shows completed brainstorming inputs in the right column', () => {
-  const html = renderIdeaCruisePage();
-
-  assert.match(html, /Completed Brainstorming Inputs/);
-  assert.match(html, /completed-list/);
-  assert.match(html, /state\.completedEntries/);
-  assert.match(html, /mergeCompletedEntry\(entry\.text\)/);
-  assert.doesNotMatch(html, /event\.target\.dataset\.action === 'apply'[\s\S]{0,260}state\.completedEntries\.push/);
-});
-
-test('renderIdeaCruisePage merges completed entries by title and appends new bullets', () => {
-  const html = renderIdeaCruisePage();
-
-  assert.match(html, /function splitCompletedText\(text\)/);
-  assert.match(html, /function mergeCompletedEntry\(text\)/);
-  assert.match(html, /function normalizeCompletedEntries\(entries\)/);
-  assert.match(html, /existing\.bullets\.includes\(bullet\)/);
-  assert.match(html, /existing\.text = formatCompletedText\(existing\)/);
-});
-
-test('renderIdeaCruisePage moves meeting record into a slide-out drawer', () => {
-  const html = renderIdeaCruisePage();
-
-  assert.match(html, /class="record-drawer/);
-  assert.match(html, /id="record-drawer"/);
-  assert.match(html, /classList\.toggle\('open', state\.recordDrawerOpen\)/);
-  assert.match(html, /id="close-record"/);
-});
-
-test('renderIdeaCruisePage task candidates use explicit task fields and manual assignee selection', () => {
-  const html = renderIdeaCruisePage();
-
+  assert.match(html, /data-field="title"/);
   assert.match(html, /data-field="neededInfo"/);
   assert.match(html, /data-field="doneCriteria"/);
+  assert.match(html, /data-field="assignee"/);
+  assert.match(html, /data-field="importance"/);
   assert.match(html, /<option>미배정<\/option><option>조수현<\/option><option>김조은<\/option><option>배민성<\/option>/);
-  assert.match(html, /assignee: '미배정'/);
   assert.doesNotMatch(html, /Task 보완 기준/);
-  assert.doesNotMatch(html, /assignee: '수현'|assignee: '조은'|assignee: '민석'/);
 });
 
-test('renderIdeaCruisePage applies a task candidate through the Subjector API', () => {
+test('renderIdeaCruisePage removes successfully applied tasks and preserves failures', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /data-action="apply-task"/);
   assert.match(html, /fetch\('\/idea-cruise\/tasks'/);
-  assert.match(html, /if \(task\.assignee === '미배정'\)/);
-  assert.match(html, /if \(!response\.ok\)/);
-  assert.match(html, /state\.tasks\.splice\(taskIndex, 1\)/);
-  assert.doesNotMatch(html, /Subjector in-process 연동 전까지는 로컬 후보에서 제거합니다/);
+  assert.match(html, /state\.tasks = state\.tasks\.filter\(function\(item\) \{ return item\.id !== task\.id; \}\)/);
+  assert.match(html, /task\.error = error\.message/);
+  assert.match(html, /반영 실패/);
 });
+
+test('renderIdeaCruisePage keeps meeting record as decision narrative, not task list', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /function buildMeetingRecord\(\)/);
+  assert.match(html, /오늘 판단한 것/);
+  assert.match(html, /제외한 선택지/);
+  assert.match(html, /다음 회의로 넘길 맥락/);
+  assert.doesNotMatch(html, /task를 줄줄이 나열/);
+});
+

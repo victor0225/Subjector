@@ -105,7 +105,7 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE meeting desk workspace', ()
   assert.equal(response.contentType, 'html');
   assert.match(response.body, /IDEA CRUISE/);
   assert.match(response.body, /Meeting Record/);
-  assert.match(response.body, /Task Candidates From IDEA CRUISE/);
+  assert.match(response.body, /3\. Task Candidates/);
 });
 
 test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee', async () => {

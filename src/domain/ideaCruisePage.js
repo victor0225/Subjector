@@ -8,16 +8,23 @@ export function renderIdeaCruisePage() {
   <style>
     :root {
       color-scheme: light;
-      --bg: #f4f6f8;
+      --bg: #f5f7f8;
       --surface: #ffffff;
-      --surface-alt: #eef3f1;
+      --panel: #eef3f1;
+      --line: #d7e0e5;
       --text: #17202a;
-      --muted: #64707d;
-      --line: #d8e0e6;
-      --accent: #0f766e;
-      --accent-strong: #115e59;
-      --amber: #a35d00;
+      --muted: #65717d;
+      --teal: #0f766e;
+      --teal-dark: #115e59;
       --blue: #245f9f;
+      --amber: #a46100;
+      --red: #a64242;
+      --gray: #4b5563;
+      --blue-soft: #eaf2fb;
+      --teal-soft: #e7f5f1;
+      --amber-soft: #fff1db;
+      --red-soft: #fae9e9;
+      --gray-soft: #eef1f4;
       --shadow: 0 10px 24px rgba(23, 32, 42, 0.08);
     }
 
@@ -33,158 +40,153 @@ export function renderIdeaCruisePage() {
 
     header {
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
       gap: 16px;
-      padding: 16px 22px;
+      padding: 14px 22px;
       border-bottom: 1px solid var(--line);
       background: var(--surface);
     }
 
     h1, h2, h3, p { margin-top: 0; }
-    h1 { margin-bottom: 4px; font-size: 22px; line-height: 1.2; }
+    h1 { margin-bottom: 3px; font-size: 22px; line-height: 1.2; }
     h2 { margin-bottom: 4px; font-size: 15px; }
-    h3 { margin-bottom: 6px; font-size: 14px; }
+    h3 { margin-bottom: 5px; font-size: 14px; line-height: 1.35; }
 
-    .subtitle, .hint, .status, .meta {
+    .subtitle, .hint, .meta, .small, .status {
       color: var(--muted);
       font-size: 12px;
       line-height: 1.45;
     }
 
-    .mode-tabs {
-      display: inline-flex;
-      gap: 6px;
-      padding: 4px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #f8fafb;
-    }
-
-    button, select, textarea, input {
-      font: inherit;
-    }
-
     button {
-      border: 1px solid var(--accent);
+      border: 1px solid var(--teal);
       border-radius: 6px;
-      padding: 9px 12px;
+      padding: 8px 11px;
+      background: var(--teal);
       color: #fff;
-      background: var(--accent);
-      font-size: 13px;
+      font: inherit;
+      font-size: 12px;
       cursor: pointer;
+      white-space: nowrap;
     }
 
     button.secondary {
-      color: var(--accent);
       background: #fff;
+      color: var(--teal);
     }
 
     button.ghost {
-      border-color: transparent;
-      color: var(--muted);
-      background: transparent;
+      border-color: var(--line);
+      background: #fff;
+      color: var(--gray);
     }
 
-    button.active {
-      color: #fff;
-      background: var(--accent-strong);
+    button:disabled {
+      cursor: default;
+      opacity: 0.62;
     }
 
     main {
       display: grid;
-      grid-template-columns: minmax(300px, 0.92fr) minmax(360px, 1.18fr) minmax(330px, 1fr);
-      align-items: start;
+      grid-template-columns: minmax(330px, 0.95fr) minmax(440px, 1.18fr) minmax(390px, 1.05fr);
       gap: 14px;
       padding: 14px;
+      align-items: start;
     }
 
     section {
       display: flex;
       flex-direction: column;
       min-width: 0;
-      background: var(--surface);
+      height: calc(100vh - 106px);
       border: 1px solid var(--line);
       border-radius: 8px;
+      background: var(--surface);
       box-shadow: var(--shadow);
       overflow: hidden;
     }
 
     .section-head {
+      min-height: 94px;
       padding: 13px 15px;
       border-bottom: 1px solid var(--line);
-      background: var(--surface-alt);
+      background: var(--panel);
     }
 
-    .section-body {
-      display: grid;
-      flex: 1;
-      gap: 12px;
-      min-height: 0;
-      padding: 14px 15px 16px;
-    }
-
-    textarea, input, select {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 10px;
-      color: var(--text);
-      background: #fff;
-      font-size: 14px;
-      line-height: 1.45;
-    }
-
-    textarea { min-height: 92px; resize: vertical; }
-
-    label {
-      display: grid;
-      gap: 6px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .actions, .inline-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .entry-list, .card-rows, .task-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .scroll-pane {
-      height: 520px;
-      max-height: 520px;
-      overflow-y: auto;
-      padding-right: 2px;
-    }
-
-    .section-title-row {
+    .head-row {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 10px;
     }
 
-    .entry-list {
+    .section-body {
+      display: grid;
       align-content: start;
+      gap: 12px;
+      min-height: 0;
+      padding: 14px;
+      overflow-y: auto;
     }
 
-    .entry, .intervention, .overflow-card, .task-card, .completed-item, .record-preview, .memo-pane {
+    textarea, input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      color: var(--text);
+      background: #fff;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    textarea { min-height: 92px; resize: vertical; }
+
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .top-actions, .actions, .page-nav, .choice-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .topic-card, .entry-card, .ai-card, .decision-card, .task-card, .not-task {
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
     }
 
-    .entry textarea {
-      min-height: 118px;
+    .topic-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .topic-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+    }
+
+    .entry-card {
+      overflow: hidden;
+    }
+
+    .entry-card textarea {
       border: 0;
-      border-radius: 8px 8px 0 0;
+      border-radius: 0;
+      min-height: 260px;
+      font-size: 14px;
     }
 
     .entry-foot {
@@ -194,143 +196,180 @@ export function renderIdeaCruisePage() {
       gap: 8px;
       padding: 8px 10px;
       border-top: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 12px;
     }
 
-    .entry-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: flex-end;
-    }
-
-    .entry-actions button {
-      padding: 6px 8px;
-      font-size: 11px;
-    }
-
-    .card-rows {
-      align-content: start;
-    }
-
-    .card-row {
-      display: flex;
-      gap: 8px;
-      align-items: stretch;
-      min-width: 0;
-    }
-
-    .intervention {
-      display: grid;
-      gap: 8px;
+    .page-nav {
+      justify-content: center;
       padding: 10px;
-      min-height: 132px;
-      min-width: 0;
-      overflow: hidden;
-      transition: flex-basis 160ms ease, flex-grow 160ms ease;
-    }
-
-    .intervention.expanded {
-      flex: 1 1 58%;
-    }
-
-    .intervention.collapsed {
-      flex: 0 1 96px;
-      align-content: start;
-      justify-items: center;
-      text-align: center;
-      cursor: pointer;
-    }
-
-    .intervention.collapsed h3 {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
-      line-height: 1.35;
-    }
-
-    .intervention.collapsed p,
-    .intervention.collapsed textarea,
-    .intervention.collapsed .actions {
-      display: none;
-    }
-
-    .overflow-card {
-      display: grid;
-      flex: 0 0 72px;
-      place-items: center;
-      gap: 2px;
-      padding: 10px 8px;
-      color: var(--accent-strong);
-      background: #f4fbf9;
-      font-size: 18px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    .overflow-card span {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .overflow-drawer {
-      display: none;
-      grid-column: 1 / -1;
-      margin-top: 8px;
-      padding: 8px;
       border: 1px dashed var(--line);
       border-radius: 8px;
       background: #fbfcfd;
     }
 
-    .overflow-drawer.open {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+    .task-filter-nav {
+      justify-content: flex-start;
     }
 
-    .overflow-choice {
-      border-color: var(--line);
-      color: var(--text);
-      background: #fff;
-    }
-
-    .tag {
-      display: inline-flex;
-      width: fit-content;
+    .dot {
+      min-width: 28px;
+      height: 28px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid var(--line);
       border-radius: 999px;
-      padding: 3px 8px;
-      background: #e6f3f1;
-      color: var(--accent-strong);
+      color: var(--muted);
+      background: #fff;
       font-size: 11px;
       font-weight: 700;
     }
 
-    .tag.warn { background: #fff0da; color: var(--amber); }
-    .tag.info { background: #eaf2fb; color: var(--blue); }
-
-    .record-preview {
-      min-height: 320px;
-      padding: 12px;
-      white-space: pre-wrap;
-      line-height: 1.52;
-      font-size: 13px;
+    .dot.active {
+      color: #fff;
+      background: var(--teal-dark);
+      border-color: var(--teal-dark);
     }
 
-    .completed-list {
+    .pill {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .pill.answer { color: var(--blue); background: var(--blue-soft); }
+    .pill.research { color: var(--amber); background: var(--amber-soft); }
+    .pill.experiment { color: var(--red); background: var(--red-soft); }
+    .pill.decision { color: var(--teal-dark); background: var(--teal-soft); }
+    .pill.filter { color: var(--gray); background: var(--gray-soft); }
+
+    .ai-card {
       display: grid;
-      align-content: start;
-      gap: 10px;
+      gap: 9px;
+      padding: 12px;
     }
 
-    .completed-item {
+    .ai-card.answer { border-left: 5px solid var(--blue); }
+    .ai-card.research { border-left: 5px solid var(--amber); }
+    .ai-card.experiment { border-left: 5px solid var(--red); }
+    .ai-card.filter { border-left: 5px solid var(--gray); }
+
+    .decision-card {
+      display: grid;
+      gap: 11px;
       padding: 12px;
-      white-space: pre-wrap;
-      line-height: 1.5;
+      border-left: 5px solid var(--teal);
+    }
+
+    .ai-card p, .ai-card ul, .decision-card p, .decision-card ul {
+      margin-bottom: 0;
       font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .ai-card ul, .decision-card ul {
+      padding-left: 18px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .info-box {
+      display: grid;
+      gap: 5px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .info-box strong { font-size: 12px; }
+    .info-box span {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .apply-preview {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #f8fafb;
+    }
+
+    .apply-preview textarea {
+      min-height: 76px;
+      background: #fff;
+    }
+
+    .choice-card {
+      flex: 1 1 180px;
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .choice-card.selected {
+      border-color: var(--teal);
+      background: var(--teal-soft);
+    }
+
+    .choice-card strong { font-size: 13px; }
+    .choice-card p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .not-task {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-color: #c7dcf3;
+      background: var(--blue-soft);
+    }
+
+    .not-task h3 { color: var(--blue); }
+    .not-task ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .task-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .task-card header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    .task-card h3 { margin-bottom: 0; }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
 
     .record-drawer {
@@ -338,7 +377,7 @@ export function renderIdeaCruisePage() {
       top: 0;
       right: 0;
       z-index: 20;
-      width: min(520px, 100vw);
+      width: min(560px, 100vw);
       height: 100vh;
       display: grid;
       grid-template-rows: auto 1fr;
@@ -349,9 +388,7 @@ export function renderIdeaCruisePage() {
       transition: transform 180ms ease;
     }
 
-    .record-drawer.open {
-      transform: translateX(0);
-    }
+    .record-drawer.open { transform: translateX(0); }
 
     .drawer-head {
       display: flex;
@@ -360,7 +397,7 @@ export function renderIdeaCruisePage() {
       gap: 12px;
       padding: 16px;
       border-bottom: 1px solid var(--line);
-      background: var(--surface-alt);
+      background: var(--panel);
     }
 
     .drawer-body {
@@ -371,86 +408,31 @@ export function renderIdeaCruisePage() {
       overflow-y: auto;
     }
 
-    .task-area {
-      grid-column: 1 / -1;
-    }
-
-    .task-list {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: stretch;
-    }
-
-    .task-card {
-      display: grid;
-      flex: 1 1 260px;
-      gap: 10px;
-      min-width: 0;
+    .record-preview {
+      min-height: 360px;
       padding: 12px;
-    }
-
-    .task-overflow-card {
-      display: grid;
-      flex: 0 0 92px;
-      place-items: center;
-      gap: 2px;
-      min-height: 180px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: #f4fbf9;
-      color: var(--accent-strong);
-      font-size: 20px;
-      font-weight: 800;
-      cursor: pointer;
+      background: #fff;
+      white-space: pre-wrap;
+      line-height: 1.52;
+      font-size: 13px;
     }
 
-    .task-overflow-card span {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
+    .error-log {
+      padding: 8px 10px;
+      border: 1px solid #efcaca;
+      border-radius: 7px;
+      background: #fff7f7;
+      color: var(--red);
+      font-size: 12px;
+      line-height: 1.45;
     }
 
-    .task-overflow-drawer {
-      display: none;
-      flex: 1 0 100%;
-      gap: 8px;
-      padding: 8px;
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      background: #fbfcfd;
-    }
-
-    .task-overflow-drawer.open {
-      display: flex;
-      flex-wrap: wrap;
-    }
-
-    .task-card textarea { min-height: 76px; }
-
-    .task-fields {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .memo-pane {
-      display: none;
-      padding: 12px;
-      background: #fbfcfd;
-    }
-
-    .memo-pane.open {
-      display: grid;
-      gap: 10px;
-    }
-
-    @media (max-width: 1120px) {
-      main, .task-list { grid-template-columns: 1fr; }
-      .task-area { grid-column: auto; }
-      .card-row { flex-direction: column; }
-      .intervention.expanded,
-      .intervention.collapsed,
-      .overflow-card { flex: 1 1 auto; }
+    @media (max-width: 1160px) {
+      main { grid-template-columns: 1fr; }
+      section { height: auto; min-height: 520px; }
+      .info-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -458,68 +440,74 @@ export function renderIdeaCruisePage() {
   <header>
     <div>
       <h1>IDEA CRUISE Meeting Desk</h1>
-      <div class="subtitle">회의 중 생각을 강화하고, 회의 후 task 후보를 Subjector로 넘기는 앞단 도구</div>
+      <div class="subtitle">한 페이지에서 한 주제를 강화하고, 그 주제 전용 카드만 보면서 불필요한 task를 줄입니다.</div>
     </div>
-    <div class="mode-tabs" aria-label="mode selector">
-      <button class="active" id="live-mode">라이브 회의</button>
-      <button class="secondary" id="memo-mode">간단 메모 붙여넣기</button>
+    <div class="top-actions">
+      <button class="ghost" id="open-record" type="button">회의록 열기</button>
     </div>
   </header>
 
   <main>
     <section>
       <div class="section-head">
-        <div class="section-title-row">
-          <h2>Brainstorming Input</h2>
-          <button id="add-entry">Add Entry</button>
+        <div class="head-row">
+          <div>
+            <h2>1. Topic Page</h2>
+            <p class="hint">왼쪽 한 페이지는 하나의 주제를 담당합니다<br>다음 페이지로 가면 가운데 카드도 새 주제 전용으로 바뀝니다.</p>
+          </div>
+          <button id="add-topic" type="button">다음 주제 추가</button>
         </div>
-        <p class="hint">Add Entry로 회의 흐름을 쌓고, AI Analysis로 바로 충돌/대안/질문 카드를 띄웁니다.</p>
       </div>
       <div class="section-body">
-        <div class="memo-pane" id="memo-pane">
-          <label>
-            간단 회의 메모
-            <textarea id="quick-memo" placeholder="회의 후 정리된 메모를 붙여넣으면 Meeting Record와 task 후보 생성에 사용합니다."></textarea>
-          </label>
-          <button class="secondary" id="use-memo">메모를 entry로 넣기</button>
-        </div>
-        <div class="entry-list scroll-pane" id="entry-list"></div>
+        <article class="topic-card">
+          <div class="topic-title-row">
+            <div>
+              <h3 id="topic-title"></h3>
+              <div class="meta" id="topic-meta">이 페이지의 가운데 카드는 현재 주제에만 연결됩니다.</div>
+            </div>
+            <span class="pill answer" id="topic-state">active</span>
+          </div>
+        </article>
+
+        <article class="entry-card">
+          <textarea id="topic-text"></textarea>
+          <div class="entry-foot">
+            <span class="meta">원문과 보강이 한 카드에 누적됨</span>
+            <div class="actions">
+              <button class="secondary" id="analyze-topic" type="button">AI Analysis</button>
+              <button id="complete-topic" type="button">완료</button>
+            </div>
+          </div>
+        </article>
+
+        <div class="page-nav" id="page-nav"></div>
+        <div class="meta">새 궁금증이 생기면 다음 주제 추가를 눌러 전용 페이지에서 분석합니다.</div>
       </div>
     </section>
 
     <section>
       <div class="section-head">
-        <h2>Live Intervention Cards</h2>
-        <p class="hint">카드 모델: gpt-5.4. GitHub organization https://github.com/SAFIRA-ondevice 와 지난 task 흐름까지 보며 충돌/대안을 더 날카롭게 잡습니다.</p>
+        <h2>2. Topic-Specific AI Cards</h2>
+        <p class="hint">카드 생성: GPT-5.4. GitHub organization https://github.com/SAFIRA-ondevice 와 완료된 page 맥락을 함께 참고합니다.</p>
       </div>
-      <div class="section-body">
-        <div class="card-rows scroll-pane" id="card-rows"></div>
-      </div>
+      <div class="section-body" id="card-list"></div>
     </section>
 
     <section>
       <div class="section-head">
-        <h2>Completed Brainstorming Inputs</h2>
-        <p class="hint">live card를 적용해 강화가 끝난 input이 차례대로 쌓입니다. 회의록과 task 생성의 실제 재료입니다.</p>
+        <h2>3. Task Candidates</h2>
+        <p class="hint">Task 후보 생성: Gemini 2.5 Flash-Lite. 적용/완료/Subjector 반영: AI 없음.</p>
       </div>
       <div class="section-body">
-        <div class="completed-list scroll-pane" id="completed-list"></div>
-      </div>
-    </section>
-
-    <section class="task-area">
-      <div class="section-head">
-        <h2>Task Candidates From IDEA CRUISE</h2>
-        <p class="hint">회의록/task 생성 모델: Gemini 2.5 Flash-Lite. 제목, 필요 정보, 완료기준, 중요도는 초안이고 담당자는 직접 배정합니다.</p>
-      </div>
-      <div class="section-body">
+        <div class="page-nav task-filter-nav" id="task-filter-nav"></div>
         <div class="actions">
-          <button id="generate-record">회의록 생성</button>
-          <button id="generate-tasks">Task 후보 생성</button>
-          <button class="secondary" id="clear-draft">초안 비우기</button>
+          <button class="secondary" id="generate-record" type="button">회의록 생성</button>
+          <button id="generate-tasks" type="button">Task 후보 생성</button>
+          <button class="secondary" id="clear-draft" type="button">초안 비우기</button>
         </div>
-        <div class="status" id="task-apply-status"></div>
-        <div class="task-list" id="task-list"></div>
+        <div class="status">회의록 생성: Gemini 2.5 Flash-Lite</div>
+        <article class="not-task" id="not-task"></article>
+        <div id="task-list"></div>
       </div>
     </section>
   </main>
@@ -528,76 +516,107 @@ export function renderIdeaCruisePage() {
     <div class="drawer-head">
       <div>
         <h2>Meeting Record</h2>
-        <p class="hint">#project-log에 올릴 회의 결과문 초안입니다.</p>
+        <p class="hint">#project-log에 올릴 판단 기록 초안입니다.</p>
       </div>
       <div class="actions">
-        <button id="copy-record">결과록 복사</button>
-        <button class="secondary" id="close-record">닫기</button>
+        <button id="copy-record" type="button">결과록 복사</button>
+        <button class="secondary" id="close-record" type="button">닫기</button>
       </div>
     </div>
     <div class="drawer-body">
       <div class="record-preview" id="meeting-record"></div>
-      <div class="meta">회의록/task 생성 모델: Gemini 2.5 Flash-Lite. 회의록은 감사 기록이고, 아래 task 후보가 Subjector in-process로 이어지는 적용 단위입니다.</div>
+      <div class="meta">회의록은 task 목록이 아니라, 어떤 판단을 했는지 남기는 글입니다.</div>
     </div>
   </aside>
 
   <script>
-    const storageKey = 'ideaCruiseMeetingDeskDraft';
+    const storageKey = 'ideaCruiseTopicPagesDraft';
+    const defaultTopicText = '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?\\n\\n[알게 된 것]\\n- 아직 정리 전\\n\\n[조사할 것]\\n- \\n\\n[해볼 것]\\n- \\n\\n[정한 것]\\n- ';
     const state = loadState() || {
-      mode: 'live',
-      entries: [
+      pages: [
         {
-          id: 'entry-1',
-          text: '라즈베리 파이와 ESP32 중 어떤 기준으로 선택해야 할지 모르겠다. 비용과 구현 난이도도 비교해야 한다.'
+          id: 'page-1',
+          number: 1,
+          title: '폭음 데이터',
+          text: defaultTopicText,
+          cards: seedCards(),
+          completed: false
         }
       ],
-      cards: {},
-      completedEntries: [],
+      activePageId: 'page-1',
+      taskFilter: 'all',
+      tasks: [],
       record: '',
-      recordDrawerOpen: false,
-      taskApplyStatus: '',
-      tasks: []
+      recordDrawerOpen: false
     };
-    state.completedEntries = normalizeCompletedEntries(state.completedEntries);
-    state.recordDrawerOpen = Boolean(state.recordDrawerOpen);
-    state.taskApplyStatus = state.taskApplyStatus || '';
-    state.tasks = Array.isArray(state.tasks) ? state.tasks.map(function(task) {
-      return {
-        title: task.title || '',
-        neededInfo: task.neededInfo || task.criteria || '',
-        doneCriteria: task.doneCriteria || '',
-        assignee: task.assignee || '미배정',
-        importance: task.importance || '보통',
-        source: task.source || ''
-      };
-    }) : [];
 
-    function normalizeCompletedEntries(entries) {
-      const normalized = Array.isArray(entries) ? entries.map(function(entry) {
-      const lines = String(entry.text || '').split('\\n').map(function(line) { return line.trim(); }).filter(Boolean);
-      const title = entry.title || lines[0] || '제목 없음';
-      const bullets = Array.isArray(entry.bullets) ? entry.bullets : lines.slice(1).filter(function(line) { return line.startsWith('- '); });
-      return {
-        id: entry.id || 'completed-' + Date.now(),
-        title: title,
-        bullets: bullets,
-        text: [title].concat(bullets).join('\\n')
-      };
-      }) : [];
-      return normalized.reduce(function(acc, entry) {
-        const existing = acc.find(function(item) { return item.title === entry.title; });
-        if (!existing) {
-          acc.push(entry);
-          return acc;
+    normalizeState();
+
+    function normalizeState() {
+      if (!Array.isArray(state.pages) || state.pages.length === 0) {
+        state.pages = [{ id: 'page-1', number: 1, title: '새 주제', text: defaultTopicText, cards: seedCards(), completed: false }];
+      }
+      state.pages.forEach(function(page, index) {
+        page.id = page.id || 'page-' + (index + 1);
+        page.number = page.number || index + 1;
+        page.title = page.title || titleFromText(page.text) || '새 주제';
+        page.text = page.text || '';
+        page.cards = Array.isArray(page.cards) ? page.cards : [];
+        page.completed = Boolean(page.completed);
+      });
+      if (!state.pages.some(function(page) { return page.id === state.activePageId; })) {
+        state.activePageId = state.pages[0].id;
+      }
+      state.taskFilter = state.taskFilter || 'all';
+      state.tasks = Array.isArray(state.tasks) ? state.tasks : [];
+      state.record = state.record || '';
+      state.recordDrawerOpen = Boolean(state.recordDrawerOpen);
+    }
+
+    function seedCards() {
+      return [
+        {
+          id: 'card-answer-1',
+          kind: 'answer',
+          type: '즉시 답변 · 펼쳐보기',
+          title: '데이터셋 후보가 왜 언급되는지 먼저 설명',
+          body: '자료조사 task를 만들기 전에 AI가 알고 있는 기본 설명을 펼쳐서 보여줍니다. 이 설명은 task가 아니라 이해 보조입니다.',
+          details: [
+            { title: 'AudioSet', body: '구글이 만든 대규모 오디오 이벤트 데이터셋입니다. 범위가 넓어서 후보 탐색 출발점으로 좋지만 라벨이 거칠 수 있습니다.' },
+            { title: 'ESC-50', body: '환경음 50종 분류 데이터셋입니다. 작고 구조가 단순해 빠른 실험에 좋지만 전장 폭음 특화는 아닙니다.' },
+            { title: 'UrbanSound8K', body: '도시 소음 중심 데이터셋입니다. 사이렌, 드릴 같은 생활/공사장 소음 검토에는 유용하지만 총성/폭발음은 별도 확인이 필요합니다.' }
+          ],
+          suggestion: '[알게 된 것]\\n- AudioSet은 넓은 오디오 이벤트 후보 탐색용, ESC-50은 빠른 환경음 실험용, UrbanSound8K는 도시/공사장 소음 검토용으로 볼 수 있습니다.'
+        },
+        {
+          id: 'card-research-1',
+          kind: 'research',
+          type: '확인 필요 · task 후보 가능',
+          title: '라이선스와 라벨 구조는 직접 확인해야 합니다',
+          body: '후보의 이름을 아는 것과 프로젝트에 쓸 수 있는 것은 다릅니다. 그래서 이 항목은 자료조사 task 후보가 됩니다.',
+          suggestion: '[조사할 것]\\n- AudioSet, ESC-50, UrbanSound8K의 라이선스, 라벨 구조, 폭음/위험음 관련성, MVP 실험 적합성을 비교합니다.'
+        },
+        {
+          id: 'card-decision-1',
+          kind: 'decision',
+          type: '결정 필요 · 지금 회의에서 선택',
+          title: '전장용 vs 공사현장용 중 하나로 좁히기',
+          body: '이건 task로 넘기기보다 지금 회의에서 선택해야 하는 기준입니다. 선택하면 왼쪽에 정한 것으로 기록됩니다.',
+          choices: [
+            { label: '전장용', body: '발표 임팩트는 크지만 데이터 수집과 안전성 설명이 어려울 수 있습니다. 총성/폭발음 계열 데이터가 더 중요합니다.', suggestion: '[정한 것]\\n- MVP 방향을 전장용 폭음 감지로 좁힙니다.' },
+            { label: '공사현장용', body: '시연과 설득이 쉽고 도시/공사장 소음 데이터와 연결하기 좋습니다. 졸업작품 MVP 범위로 더 안정적입니다.', suggestion: '[정한 것]\\n- MVP 방향을 공사현장용 청력 보호/위험음 감지 흐름으로 좁힙니다.' }
+          ],
+          suggestion: '[정한 것]\\n- 이번 회의에서 전장용과 공사현장용 중 하나로 MVP 범위를 좁힙니다.'
+        },
+        {
+          id: 'card-experiment-1',
+          kind: 'experiment',
+          type: '실험 필요 · task 후보 가능',
+          title: '실시간 감지는 직접 돌려봐야 압니다',
+          body: '모델이 라즈베리 파이에서 돌아가는지, latency가 시연 가능한 수준인지는 설명만으로 끝나지 않습니다.',
+          suggestion: '[해볼 것]\\n- 라즈베리 파이에서 샘플 sound event model의 평균 latency를 측정합니다.\\n- 마이크 입력 조건과 추론 시간을 함께 기록합니다.'
         }
-        entry.bullets.forEach(function(bullet) {
-          if (!existing.bullets.includes(bullet)) {
-            existing.bullets.push(bullet);
-          }
-        });
-        existing.text = [existing.title].concat(existing.bullets).join('\\n');
-        return acc;
-      }, []);
+      ];
     }
 
     function loadState() {
@@ -613,434 +632,314 @@ export function renderIdeaCruisePage() {
       localStorage.setItem(storageKey, JSON.stringify(state));
     }
 
-    function entrySummary(entry) {
-      return entry.text.trim() || '아직 내용 없음';
+    function activePage() {
+      return state.pages.find(function(page) { return page.id === state.activePageId; }) || state.pages[0];
     }
 
-    async function requestCardsForEntry(entry) {
+    function completedPages() {
+      return state.pages.filter(function(page) { return page.completed; });
+    }
+
+    function titleFromText(text) {
+      const firstLine = String(text || '').split('\\n').map(function(line) { return line.trim(); }).find(Boolean);
+      return firstLine ? firstLine.slice(0, 28) : '';
+    }
+
+    function addTopicPage() {
+      const number = state.pages.length + 1;
+      const page = {
+        id: 'page-' + Date.now(),
+        number: number,
+        title: '새 주제 ' + number,
+        text: '',
+        cards: [],
+        completed: false
+      };
+      state.pages.push(page);
+      state.activePageId = page.id;
+      render();
+    }
+
+    function setActivePage(pageId) {
+      state.activePageId = pageId;
+      render();
+    }
+
+    function setTaskFilter(filter) {
+      state.taskFilter = filter;
+      render();
+    }
+
+    function appendToActivePage(content) {
+      const page = activePage();
+      if (!content || !content.trim()) {
+        throw new Error('적용할 내용이 비어 있습니다.');
+      }
+      if (!page.text.trim()) {
+        page.text = content.trim();
+      } else {
+        page.text = page.text.trim() + '\\n\\n' + content.trim();
+      }
+      page.title = titleFromText(page.text) || page.title;
+    }
+
+    function completeActivePage() {
+      const page = activePage();
+      page.completed = true;
+      page.title = titleFromText(page.text) || page.title;
+      buildTasksFromCompletedPages();
+      render();
+    }
+
+    function mapApiCard(card, index) {
+      const kindMap = {
+        info: 'answer',
+        warn: 'research'
+      };
+      return {
+        id: 'api-card-' + Date.now() + '-' + index,
+        kind: kindMap[card.tag] || 'research',
+        type: card.type || 'AI 고려',
+        title: card.title || 'AI 고려 사항',
+        body: card.body || '',
+        suggestion: card.suggestion || ''
+      };
+    }
+
+    async function requestCardsForActivePage() {
+      const page = activePage();
       const response = await fetch('/idea-cruise/cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entryText: entrySummary(entry),
-          completedEntries: state.completedEntries.map(function(item) { return item.text; })
+          entryText: page.text,
+          completedEntries: completedPages().map(function(item) { return item.text; })
         })
       });
       const result = await response.json().catch(function() { return {}; });
       if (!response.ok) {
         throw new Error(result.error || 'AI Analysis 연결에 실패했습니다.');
       }
-      return result.cards || [];
+      page.cards = (result.cards || []).map(mapApiCard);
     }
 
-    function renderEntries() {
-      const list = document.getElementById('entry-list');
-      list.innerHTML = state.entries.map(function(entry, index) {
-        return '<article class="entry">' +
-          '<textarea data-entry-id="' + entry.id + '">' + escapeHtml(entry.text) + '</textarea>' +
-          '<div class="entry-foot">' +
-            '<span>Entry ' + (index + 1) + '</span>' +
-            '<div class="entry-actions">' +
-              '<button class="secondary" data-analyze-entry-id="' + entry.id + '" type="button">AI Analysis</button>' +
-              '<button class="secondary" data-delete-entry-id="' + entry.id + '" type="button">삭제</button>' +
-              '<button class="secondary" data-complete-entry-id="' + entry.id + '" type="button">완료</button>' +
-            '</div>' +
-          '</div>' +
-          '</article>';
+    function renderTopicPage() {
+      const page = activePage();
+      document.getElementById('topic-title').textContent = 'Page ' + page.number + ' · ' + (page.title || '새 주제');
+      document.getElementById('topic-state').textContent = page.completed ? 'completed' : 'active';
+      document.getElementById('topic-text').value = page.text;
+      document.getElementById('page-nav').innerHTML = state.pages.map(function(item) {
+        return '<button class="dot ' + (item.id === state.activePageId ? 'active' : '') + '" data-page-id="' + item.id + '" type="button">' + item.number + '</button>';
       }).join('');
-
-      list.querySelectorAll('textarea').forEach(function(textarea) {
-        textarea.addEventListener('input', function(event) {
-          const entry = state.entries.find(function(item) { return item.id === event.target.dataset.entryId; });
-          if (entry) {
-            entry.text = event.target.value;
-            if (state.cards[entry.id]) {
-              delete state.cards[entry.id];
-              renderCards();
-            }
-            saveState();
-          }
-        });
-      });
-
-      document.querySelectorAll('[data-analyze-entry-id]').forEach(function(button) {
-        button.addEventListener('click', async function(event) {
-          const entry = state.entries.find(function(item) { return item.id === event.target.dataset.analyzeEntryId; });
-          if (entry) {
-            button.disabled = true;
-            state.cards[entry.id] = [
-              {
-                type: '분석 중',
-                tag: 'info',
-                title: 'AI Analysis 실행 중',
-                body: 'gpt-5.4로 entry 맥락을 분석하고 있습니다.',
-                suggestion: entry.text
-              }
-            ];
-            renderCards();
-            try {
-              state.cards[entry.id] = await requestCardsForEntry(entry);
-              saveState();
-              render();
-            } catch (error) {
-              state.cards[entry.id] = [
-                {
-                  type: 'AI 연결 오류',
-                  tag: 'warn',
-                  title: 'AI Analysis를 실행하지 못했습니다',
-                  body: error.message,
-                  suggestion: entry.text
-                }
-              ];
-              saveState();
-              render();
-            }
-          }
-        });
-      });
-
-      document.querySelectorAll('[data-complete-entry-id]').forEach(function(button) {
+      document.querySelectorAll('[data-page-id]').forEach(function(button) {
         button.addEventListener('click', function(event) {
-          const entryId = event.target.dataset.completeEntryId;
-          const entry = state.entries.find(function(item) { return item.id === entryId; });
-          if (!entry || !entry.text.trim()) return;
-          mergeCompletedEntry(entry.text);
-          state.entries = state.entries.filter(function(item) { return item.id !== entryId; });
-          delete state.cards[entryId];
-          if (state.entries.length === 0) {
-            state.entries.push({ id: 'entry-' + Date.now(), text: '' });
-          }
-          render();
-        });
-      });
-
-      document.querySelectorAll('[data-delete-entry-id]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-          const entryId = event.target.dataset.deleteEntryId;
-          state.entries = state.entries.filter(function(item) { return item.id !== entryId; });
-          delete state.cards[entryId];
-          if (state.entries.length === 0) {
-            state.entries.push({ id: 'entry-' + Date.now(), text: '' });
-          }
-          render();
+          setActivePage(event.target.dataset.pageId);
         });
       });
     }
 
     function renderCards() {
-      const rows = document.getElementById('card-rows');
-      const html = state.entries.map(function(entry) {
-        const cards = state.cards[entry.id] || [];
-        if (cards.length === 0) {
-          return '<div class="hint">Entry에 대해 AI Analysis를 누르면 이 위치에 카드가 생깁니다.</div>';
+      const page = activePage();
+      const list = document.getElementById('card-list');
+      if (!page.cards.length) {
+        list.innerHTML = '<div class="hint">AI Analysis를 누르면 현재 page 전용 카드가 여기에 표시됩니다.</div>';
+        return;
+      }
+      list.innerHTML = page.cards.map(function(card, index) {
+        const kind = normalizeKind(card.kind);
+        if (kind === 'decision') {
+          return renderDecisionCard(card, index);
         }
-        const visibleCards = cards.slice(0, 3);
-        const hiddenCards = cards.slice(3);
-        const visibleHtml = visibleCards.map(function(card, index) {
-          const stateClass = index === 0 ? ' expanded' : ' collapsed';
-          return '<article class="intervention' + stateClass + '" data-entry-id="' + entry.id + '" data-card-index="' + index + '">' +
-            '<span class="tag ' + card.tag + '">' + escapeHtml(card.type) + '</span>' +
-            '<h3>' + escapeHtml(card.title) + '</h3>' +
-            '<p>' + escapeHtml(card.body) + '</p>' +
-            '<textarea>' + escapeHtml(card.suggestion) + '</textarea>' +
-            '<div class="actions"><button data-action="apply">적용</button><button class="secondary" data-action="remove">보류</button></div>' +
-          '</article>';
-        }).join('');
-        const overflowHtml = hiddenCards.length
-          ? '<button class="overflow-card" data-overflow-entry-id="' + entry.id + '" type="button">+' + hiddenCards.length + '<span>more</span></button>'
-          : '';
-        const drawerHtml = hiddenCards.length
-          ? '<div class="overflow-drawer" data-overflow-drawer="' + entry.id + '">' + hiddenCards.map(function(card, offset) {
-              const cardIndex = offset + 3;
-              return '<button class="overflow-choice" data-overflow-card-index="' + cardIndex + '" data-entry-id="' + entry.id + '" type="button">' +
-                escapeHtml(card.type) + ' · ' + escapeHtml(card.title) +
-              '</button>';
+        const details = Array.isArray(card.details) && card.details.length
+          ? '<div class="info-grid">' + card.details.map(function(item) {
+              return '<div class="info-box"><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(item.body) + '</span></div>';
             }).join('') + '</div>'
           : '';
-        return '<div class="card-row">' + visibleHtml + overflowHtml + '</div>' + drawerHtml;
+        return '<article class="ai-card ' + kind + '" data-card-index="' + index + '">' +
+          '<span class="pill ' + kind + '">' + escapeHtml(card.type) + '</span>' +
+          '<h3>' + escapeHtml(card.title) + '</h3>' +
+          '<p>' + escapeHtml(card.body) + '</p>' +
+          details +
+          '<div class="apply-preview">' +
+            '<label>왼쪽에 추가될 내용</label>' +
+            '<textarea data-suggestion>' + escapeHtml(card.suggestion) + '</textarea>' +
+            '<div class="actions"><button data-apply-card="' + index + '" type="button">왼쪽에 적용</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
+          '</div>' +
+          (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
+        '</article>';
       }).join('');
-      rows.innerHTML = html;
-
-      rows.addEventListener('click', function(event) {
-        if (event.target.closest('button')) return;
-        const card = event.target.closest('.intervention');
-        if (!card || !rows.contains(card)) return;
-        const row = card.parentElement;
-        row.querySelectorAll('.intervention').forEach(function(item) {
-          item.classList.remove('expanded');
-          item.classList.add('collapsed');
-        });
-        card.classList.remove('collapsed');
-        card.classList.add('expanded');
-      });
-
-      rows.querySelectorAll('[data-overflow-entry-id]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-          event.stopPropagation();
-          const drawer = rows.querySelector('[data-overflow-drawer="' + button.dataset.overflowEntryId + '"]');
-          if (drawer) drawer.classList.toggle('open');
-        });
-      });
-
-      rows.querySelectorAll('[data-overflow-card-index]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-          event.stopPropagation();
-          const entryId = button.dataset.entryId;
-          const cards = state.cards[entryId] || [];
-          const selectedIndex = Number(button.dataset.overflowCardIndex);
-          if (Number.isNaN(selectedIndex) || !cards[selectedIndex]) return;
-          const selected = cards.splice(selectedIndex, 1)[0];
-          cards.splice(1, 0, selected);
-          saveState();
-          render();
-        });
-      });
-
-      rows.querySelectorAll('button[data-action]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-          event.stopPropagation();
-          const cardEl = event.target.closest('.intervention');
-          const entry = state.entries.find(function(item) { return item.id === cardEl.dataset.entryId; });
-          const cards = state.cards[cardEl.dataset.entryId] || [];
-          const index = Number(cardEl.dataset.cardIndex);
-          if (event.target.dataset.action === 'apply' && entry && cards[index]) {
-            entry.text = cardEl.querySelector('textarea').value;
-          }
-          cards.splice(index, 1);
-          saveState();
-          render();
-        });
-      });
     }
 
-    function buildRecord() {
-      const sourceEntries = state.completedEntries.length > 0 ? state.completedEntries : state.entries;
-      const entries = sourceEntries.map(function(entry, index) {
-        return (index + 1) + '. ' + entrySummary(entry);
+    function renderDecisionCard(card, index) {
+      const choices = Array.isArray(card.choices) && card.choices.length ? card.choices : [
+        { label: '선택 A', body: card.body, suggestion: card.suggestion }
+      ];
+      return '<article class="decision-card" data-card-index="' + index + '">' +
+        '<span class="pill decision">' + escapeHtml(card.type) + '</span>' +
+        '<h3>' + escapeHtml(card.title) + '</h3>' +
+        '<p>' + escapeHtml(card.body) + '</p>' +
+        '<div class="choice-row">' + choices.map(function(choice, choiceIndex) {
+          return '<div class="choice-card">' +
+            '<strong>' + escapeHtml(choice.label) + '</strong>' +
+            '<p>' + escapeHtml(choice.body) + '</p>' +
+            '<button class="secondary" data-choice-card="' + index + '" data-choice-index="' + choiceIndex + '" type="button">' + escapeHtml(choice.label) + ' 선택</button>' +
+          '</div>';
+        }).join('') + '</div>' +
+        '<div class="apply-preview">' +
+          '<label>왼쪽에 추가될 내용</label>' +
+          '<textarea data-suggestion>' + escapeHtml(card.suggestion) + '</textarea>' +
+          '<div class="actions"><button data-apply-card="' + index + '" type="button">왼쪽에 적용</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
+        '</div>' +
+        (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
+      '</article>';
+    }
+
+    function normalizeKind(kind) {
+      return ['answer', 'research', 'experiment', 'decision', 'filter'].includes(kind) ? kind : 'research';
+    }
+
+    function buildMeetingRecord() {
+      const sources = completedPages().length ? completedPages() : state.pages;
+      const summaries = sources.map(function(page) {
+        return '- Page ' + page.number + ' ' + page.title + ': ' + compactText(page.text);
       }).join('\\n');
       return [
-        '# 회의 결과문',
+        '# 회의 기록',
         '',
-        '## 오늘 정리된 생각',
-        entries || '- 아직 entry 없음',
+        '## 오늘 판단한 것',
+        summaries || '- 아직 정리된 주제가 없습니다.',
         '',
-        '## 결정/보류',
-        '- 결정: IDEA CRUISE에서 task 후보를 만들고 Subjector는 실행 상태를 운영한다.',
-        '- 보류: 실시간 협업은 서버 저장/룸 동기화 설계 후 추가한다.',
+        '## 알게 된 것',
+        '- 회의 중 바로 답할 수 있는 내용은 task로 넘기지 않고 topic page 안에 정리했습니다.',
         '',
-        '## #project-log 기록',
-        '- 회의 결과문 1개와 하루 요약 + 현재 프로젝트 상태 1개를 같은 채널에 올린다.'
+        '## 제외한 선택지',
+        '- 설명만으로 해결된 개념 정리와 지금 회의에서 바로 결정한 선택은 task 후보에서 제외했습니다.',
+        '',
+        '## 다음 회의로 넘길 맥락',
+        '- 실제 자료 확인, 라이선스 확인, latency 측정처럼 시간을 써야만 해결되는 일만 Subjector task 후보로 넘깁니다.'
       ].join('\\n');
     }
 
-    function renderRecord() {
-      document.getElementById('meeting-record').textContent = state.record || '회의록 생성 버튼을 누르면 Meeting Record 초안이 여기에 표시됩니다.';
-    }
-
-    function splitCompletedText(text) {
-      const lines = String(text || '').split('\\n').map(function(line) { return line.trim(); }).filter(Boolean);
-      const title = lines[0] || '제목 없음';
-      const bullets = lines.slice(1).filter(function(line) { return line.startsWith('- '); });
-      return { title: title, bullets: bullets };
-    }
-
-    function formatCompletedText(entry) {
-      return [entry.title].concat(entry.bullets).join('\\n');
-    }
-
-    function mergeCompletedEntry(text) {
-      const next = splitCompletedText(text);
-      const existing = state.completedEntries.find(function(entry) { return entry.title === next.title; });
-      if (!existing) {
-        state.completedEntries.push({
-          id: 'completed-' + Date.now(),
-          title: next.title,
-          bullets: next.bullets,
-          text: formatCompletedText(next)
-        });
-        return;
-      }
-      next.bullets.forEach(function(bullet) {
-        if (!existing.bullets.includes(bullet)) {
-          existing.bullets.push(bullet);
-        }
+    function buildTasksFromCompletedPages() {
+      const sources = completedPages();
+      const usableSources = sources.length ? sources : [activePage()];
+      state.tasks = usableSources.flatMap(function(page) {
+        return [
+          {
+            id: 'task-' + page.id + '-research',
+            pageId: page.id,
+            pageNumber: page.number,
+            title: '공개 sound event dataset 후보 조사',
+            neededInfo: 'AudioSet, ESC-50, UrbanSound8K와 추가 후보의 라이선스, 라벨 구조, 위험음 관련성, MVP 실험 적합성',
+            doneCriteria: '후보 5개를 표로 정리하고, 바로 쓸 수 있는 후보와 제외할 후보를 구분한다.',
+            assignee: '미배정',
+            importance: '높음',
+            kind: 'research',
+            error: ''
+          },
+          {
+            id: 'task-' + page.id + '-experiment',
+            pageId: page.id,
+            pageNumber: page.number,
+            title: '라즈베리 파이 위험음 감지 latency 실험',
+            neededInfo: '샘플 sound event model, 입력 마이크 조건, 라즈베리 파이 사양, latency 측정 방식',
+            doneCriteria: '평균 latency와 시연 가능 여부를 정리하고, ESP32까지 볼 필요가 있는지 판단한다.',
+            assignee: '미배정',
+            importance: '높음',
+            kind: 'experiment',
+            error: ''
+          }
+        ];
       });
-      existing.text = formatCompletedText(existing);
     }
 
-    function renderCompletedEntries() {
-      const list = document.getElementById('completed-list');
-      if (state.completedEntries.length === 0) {
-        list.innerHTML = '<div class="hint">live card를 적용한 brainstorming input이 여기에 쌓입니다.</div>';
-        return;
+    function visibleTasks() {
+      if (state.taskFilter === 'all') {
+        return state.tasks;
       }
-      list.innerHTML = state.completedEntries.map(function(entry, index) {
-        return '<article class="completed-item"><strong>Completed ' + (index + 1) + '</strong>\\n' + escapeHtml(entry.text) + '</article>';
-      }).join('');
+      return state.tasks.filter(function(task) { return task.pageId === state.taskFilter; });
     }
 
-    function buildTasks() {
-      const sourceEntries = state.completedEntries.length > 0 ? state.completedEntries : state.entries;
-      const source = sourceEntries.map(function(entry) { return entrySummary(entry); }).join(' ');
-      return [
-        {
-          title: '하드웨어 후보 비교 기준 확정',
-          neededInfo: '가격, 전력, 네트워크 방식, 구현 난이도, 팀원이 실제로 테스트 가능한 환경',
-          doneCriteria: '후보별 장단점과 추천안을 한 화면에서 비교 가능',
-          assignee: '미배정',
-          importance: '높음',
-          source: source
-        },
-        {
-          title: '회의 결과문을 #project-log 형식으로 정리',
-          neededInfo: '회의에서 결정된 것, 보류된 것, task로 전환된 것',
-          doneCriteria: '다음 날 팀원이 이 글만 보고 회의를 이어갈 수 있음',
-          assignee: '미배정',
-          importance: '보통',
-          source: source
-        },
-        {
-          title: 'Subjector in-process 반영 흐름 확인',
-          neededInfo: '담당자, 중요도, 필요 정보, 완료기준',
-          doneCriteria: 'IDEA CRUISE task 후보가 승인 후 Subjector in-process에 표시되는 경로가 설명됨',
-          assignee: '미배정',
-          importance: '높음',
-          source: source
-        },
-        {
-          title: '라이브 개입 카드 기준 조정',
-          neededInfo: '회의 중 자주 막히는 표현, 자동 개입이 과한 순간, 수동 분석이 필요한 순간',
-          doneCriteria: '팀원이 부담 없이 쓸 수 있는 호출 간격과 카드 기준이 정리됨',
-          assignee: '미배정',
-          importance: '보통',
-          source: source
-        }
-      ];
+    function renderTaskFilters() {
+      const pagesWithTasks = state.pages.filter(function(page) {
+        return state.tasks.some(function(task) { return task.pageId === page.id; });
+      });
+      document.getElementById('task-filter-nav').innerHTML =
+        '<button class="dot ' + (state.taskFilter === 'all' ? 'active' : '') + '" data-task-filter="all" type="button">전체</button>' +
+        pagesWithTasks.map(function(page) {
+          return '<button class="dot ' + (state.taskFilter === page.id ? 'active' : '') + '" data-task-filter="' + page.id + '" type="button">' + page.number + '</button>';
+        }).join('');
+      document.querySelectorAll('[data-task-filter]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          setTaskFilter(event.target.dataset.taskFilter);
+        });
+      });
+    }
+
+    function renderNotTask() {
+      document.getElementById('not-task').innerHTML = '<h3>task로 만들지 않은 것</h3>' +
+        '<ul>' +
+          '<li>AI가 즉시 설명할 수 있는 개념 설명</li>' +
+          '<li>회의 안에서 바로 선택 가능한 결정</li>' +
+          '<li>위험음 감지와 소리 차단처럼 왼쪽에 정리만 하면 되는 구분</li>' +
+        '</ul>';
     }
 
     function renderTasks() {
       const list = document.getElementById('task-list');
-      document.getElementById('task-apply-status').textContent = state.taskApplyStatus;
-      if (state.tasks.length === 0) {
-        list.innerHTML = '<div class="hint">Task 후보 생성 버튼을 누르면 task 카드가 생성됩니다.</div>';
+      const tasks = visibleTasks();
+      if (!tasks.length) {
+        list.innerHTML = '<div class="hint">완료된 topic page에서 시간이 필요한 항목만 task 후보로 생성됩니다.</div>';
         return;
       }
-      const visibleTasks = state.tasks.slice(0, 3);
-      const hiddenTasks = state.tasks.slice(3);
-      const visibleHtml = visibleTasks.map(function(task, index) {
-        return '<article class="task-card" data-task-index="' + index + '">' +
+      list.innerHTML = tasks.map(function(task) {
+        const kind = normalizeKind(task.kind);
+        return '<article class="task-card" data-task-id="' + task.id + '">' +
+          '<header><div><h3>' + escapeHtml(task.title) + '</h3><div class="meta">Page ' + task.pageNumber + ' · 실제 확인 필요</div></div><span class="pill ' + kind + '">task</span></header>' +
           '<label>Task 제목<input data-field="title" value="' + escapeHtml(task.title) + '"></label>' +
           '<label>필요 정보<textarea data-field="neededInfo">' + escapeHtml(task.neededInfo) + '</textarea></label>' +
           '<label>완료기준<textarea data-field="doneCriteria">' + escapeHtml(task.doneCriteria) + '</textarea></label>' +
-          '<div class="task-fields">' +
+          '<div class="task-grid">' +
             '<label>담당자<select data-field="assignee"><option>미배정</option><option>조수현</option><option>김조은</option><option>배민성</option></select></label>' +
             '<label>중요도<select data-field="importance"><option>높음</option><option>보통</option><option>낮음</option></select></label>' +
           '</div>' +
-          '<button class="secondary" data-action="apply-task">Subjector in-process에 적용</button>' +
+          '<button data-apply-task="' + task.id + '" type="button">Subjector in-process에 적용</button>' +
+          (task.error ? '<div class="error-log">반영 실패: ' + escapeHtml(task.error) + '</div>' : '') +
         '</article>';
       }).join('');
-      const overflowHtml = hiddenTasks.length
-        ? '<button class="task-overflow-card" data-task-overflow type="button">+' + hiddenTasks.length + '<span>more</span></button>'
-        : '';
-      const drawerHtml = hiddenTasks.length
-        ? '<div class="task-overflow-drawer" data-task-overflow-drawer>' + hiddenTasks.map(function(task, index) {
-            const taskIndex = index + 3;
-            return '<button class="overflow-choice" data-task-overflow-index="' + taskIndex + '" type="button">' +
-              escapeHtml(task.title) +
-            '</button>';
-          }).join('') + '</div>'
-        : '';
-      list.innerHTML = visibleHtml + overflowHtml + drawerHtml;
 
       list.querySelectorAll('.task-card').forEach(function(card) {
-        const task = state.tasks[Number(card.dataset.taskIndex)];
+        const task = state.tasks.find(function(item) { return item.id === card.dataset.taskId; });
+        if (!task) return;
         card.querySelector('[data-field="assignee"]').value = task.assignee;
         card.querySelector('[data-field="importance"]').value = task.importance;
         card.querySelectorAll('input, textarea, select').forEach(function(input) {
           input.addEventListener('input', function(event) {
             task[event.target.dataset.field] = event.target.value;
+            task.error = '';
             saveState();
           });
         });
       });
+    }
 
-      list.querySelectorAll('button[data-action="apply-task"]').forEach(function(button) {
-        button.addEventListener('click', async function(event) {
-          const card = event.target.closest('.task-card');
-          const taskIndex = Number(card.dataset.taskIndex);
-          if (Number.isNaN(taskIndex)) return;
-          const task = state.tasks[taskIndex];
-          if (task.assignee === '미배정') {
-            state.taskApplyStatus = '담당자를 먼저 선택해 주세요.';
-            render();
-            return;
-          }
-
-          button.disabled = true;
-          state.taskApplyStatus = 'Subjector in-process에 반영 중입니다.';
-          document.getElementById('task-apply-status').textContent = state.taskApplyStatus;
-
-          try {
-            const response = await fetch('/idea-cruise/tasks', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title: task.title,
-                neededInfo: task.neededInfo,
-                doneCriteria: task.doneCriteria,
-                assignee: task.assignee,
-                importance: task.importance,
-                meetingRecord: state.record
-              })
-            });
-            const result = await response.json().catch(function() { return {}; });
-            if (!response.ok) {
-              throw new Error(result.error || 'Subjector 반영에 실패했습니다.');
-            }
-
-            state.tasks.splice(taskIndex, 1);
-            state.taskApplyStatus = 'Subjector in-process에 반영했습니다.';
-            saveState();
-            render();
-          } catch (error) {
-            button.disabled = false;
-            state.taskApplyStatus = error.message;
-            render();
-          }
-        });
-      });
-
-      const overflowButton = list.querySelector('[data-task-overflow]');
-      if (overflowButton) {
-        overflowButton.addEventListener('click', function() {
-          const drawer = list.querySelector('[data-task-overflow-drawer]');
-          if (drawer) drawer.classList.toggle('open');
-        });
-      }
-
-      list.querySelectorAll('[data-task-overflow-index]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-          const selectedIndex = Number(event.target.dataset.taskOverflowIndex);
-          if (Number.isNaN(selectedIndex) || !state.tasks[selectedIndex]) return;
-          const selected = state.tasks.splice(selectedIndex, 1)[0];
-          state.tasks.splice(1, 0, selected);
-          saveState();
-          render();
-        });
-      });
+    function renderRecord() {
+      document.getElementById('meeting-record').textContent = state.record || '회의록 생성 버튼을 누르면 판단 기록 초안이 여기에 표시됩니다.';
+      document.getElementById('record-drawer').classList.toggle('open', state.recordDrawerOpen);
     }
 
     function render() {
-      renderEntries();
+      renderTopicPage();
       renderCards();
-      renderRecord();
-      renderCompletedEntries();
+      renderTaskFilters();
+      renderNotTask();
       renderTasks();
-      document.getElementById('record-drawer').classList.toggle('open', state.recordDrawerOpen);
-      document.getElementById('memo-pane').classList.toggle('open', state.mode === 'memo');
-      document.getElementById('live-mode').classList.toggle('active', state.mode === 'live');
-      document.getElementById('memo-mode').classList.toggle('active', state.mode === 'memo');
+      renderRecord();
       saveState();
+    }
+
+    function compactText(text) {
+      return String(text || '').replace(/\\s+/g, ' ').trim().slice(0, 160);
     }
 
     function escapeHtml(value) {
@@ -1051,46 +950,125 @@ export function renderIdeaCruisePage() {
         .replace(/"/g, '&quot;');
     }
 
-    document.getElementById('add-entry').addEventListener('click', function() {
-      state.entries.push({ id: 'entry-' + Date.now(), text: '' });
-      render();
+    document.getElementById('topic-text').addEventListener('input', function(event) {
+      const page = activePage();
+      page.text = event.target.value;
+      page.title = titleFromText(page.text) || page.title;
+      saveState();
+      renderTopicPage();
     });
 
-    document.getElementById('live-mode').addEventListener('click', function() {
-      state.mode = 'live';
-      render();
+    document.getElementById('add-topic').addEventListener('click', addTopicPage);
+    document.getElementById('complete-topic').addEventListener('click', completeActivePage);
+
+    document.getElementById('analyze-topic').addEventListener('click', async function(event) {
+      const button = event.target;
+      button.disabled = true;
+      try {
+        await requestCardsForActivePage();
+      } catch (error) {
+        activePage().cards = [{
+          id: 'analysis-error-' + Date.now(),
+          kind: 'filter',
+          type: 'AI 연결 오류',
+          title: 'AI Analysis를 실행하지 못했습니다',
+          body: error.message,
+          suggestion: '',
+          error: error.message
+        }];
+      } finally {
+        button.disabled = false;
+        render();
+      }
     });
 
-    document.getElementById('memo-mode').addEventListener('click', function() {
-      state.mode = 'memo';
-      render();
-    });
+    document.getElementById('card-list').addEventListener('click', function(event) {
+      const choiceButton = event.target.closest('[data-choice-card]');
+      if (choiceButton) {
+        const page = activePage();
+        const card = page.cards[Number(choiceButton.dataset.choiceCard)];
+        const choice = card?.choices?.[Number(choiceButton.dataset.choiceIndex)];
+        if (choice) {
+          card.suggestion = choice.suggestion;
+          card.body = '선택 결과: ' + choice.label + ' 방향으로 정리합니다.';
+          renderCards();
+        }
+        return;
+      }
 
-    document.getElementById('use-memo').addEventListener('click', function() {
-      const text = document.getElementById('quick-memo').value.trim();
-      if (text) {
-        state.entries.push({ id: 'entry-' + Date.now(), text: text });
-        state.mode = 'live';
+      const applyButton = event.target.closest('[data-apply-card]');
+      if (applyButton) {
+        const page = activePage();
+        const cardIndex = Number(applyButton.dataset.applyCard);
+        const card = page.cards[cardIndex];
+        try {
+          const container = applyButton.closest('[data-card-index]');
+          const content = container.querySelector('[data-suggestion]').value;
+          appendToActivePage(content);
+          page.cards.splice(cardIndex, 1);
+        } catch (error) {
+          card.error = error.message;
+        }
+        render();
+        return;
+      }
+
+      const dismissButton = event.target.closest('[data-dismiss-card]');
+      if (dismissButton) {
+        activePage().cards.splice(Number(dismissButton.dataset.dismissCard), 1);
         render();
       }
     });
 
     document.getElementById('generate-record').addEventListener('click', function() {
-      state.record = buildRecord();
+      state.record = buildMeetingRecord();
       state.recordDrawerOpen = true;
       render();
     });
 
     document.getElementById('generate-tasks').addEventListener('click', function() {
-      state.tasks = buildTasks();
+      buildTasksFromCompletedPages();
       render();
     });
 
-    document.getElementById('copy-record').addEventListener('click', async function() {
-      const text = state.record || buildRecord();
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
+    document.getElementById('task-list').addEventListener('click', async function(event) {
+      const button = event.target.closest('[data-apply-task]');
+      if (!button) return;
+      const task = state.tasks.find(function(item) { return item.id === button.dataset.applyTask; });
+      if (!task) return;
+      if (task.assignee === '미배정') {
+        task.error = '담당자를 먼저 선택해 주세요.';
+        render();
+        return;
       }
+      button.disabled = true;
+      try {
+        const response = await fetch('/idea-cruise/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: task.title,
+            neededInfo: task.neededInfo,
+            doneCriteria: task.doneCriteria,
+            assignee: task.assignee,
+            importance: task.importance,
+            meetingRecord: state.record
+          })
+        });
+        const result = await response.json().catch(function() { return {}; });
+        if (!response.ok) {
+          throw new Error(result.error || 'Subjector 반영에 실패했습니다.');
+        }
+        state.tasks = state.tasks.filter(function(item) { return item.id !== task.id; });
+      } catch (error) {
+        task.error = error.message;
+      }
+      render();
+    });
+
+    document.getElementById('open-record').addEventListener('click', function() {
+      state.recordDrawerOpen = true;
+      render();
     });
 
     document.getElementById('close-record').addEventListener('click', function() {
@@ -1098,15 +1076,21 @@ export function renderIdeaCruisePage() {
       render();
     });
 
+    document.getElementById('copy-record').addEventListener('click', async function() {
+      const text = state.record || buildMeetingRecord();
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+    });
+
     document.getElementById('clear-draft').addEventListener('click', function() {
       localStorage.removeItem(storageKey);
-      state.mode = 'live';
-      state.entries = [{ id: 'entry-1', text: '' }];
-      state.cards = {};
-      state.completedEntries = [];
+      state.pages = [{ id: 'page-1', number: 1, title: '폭음 데이터', text: defaultTopicText, cards: seedCards(), completed: false }];
+      state.activePageId = 'page-1';
+      state.taskFilter = 'all';
+      state.tasks = [];
       state.record = '';
       state.recordDrawerOpen = false;
-      state.tasks = [];
       render();
     });
 
