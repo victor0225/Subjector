@@ -269,6 +269,91 @@ test('registerIdeaCruiseRoute creates live intervention cards through the analyz
   assert.equal(analyzerCalls[0].githubOrganization, 'https://github.com/SAFIRA-ondevice');
 });
 
+test('registerIdeaCruiseRoute creates IDEA CRUISE task candidates through the generator', async () => {
+  const routes = [];
+  const generatorCalls = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig,
+    taskCandidateGenerator: {
+      async generate(input) {
+        generatorCalls.push(input);
+        return {
+          tasks: [
+            {
+              pageId: 'page-1',
+              pageNumber: 1,
+              title: '폭음 데이터셋 라이선스 확인',
+              neededInfo: 'AudioSet 라이선스와 라벨 구조',
+              doneCriteria: '사용 가능 여부 표 작성',
+              assignee: '미배정',
+              importance: '높음'
+            }
+          ],
+          notTasks: ['AudioSet 개념 설명']
+        };
+      }
+    }
+  });
+
+  const route = routes.find((item) => item.path === '/idea-cruise/task-candidates');
+  const response = createJsonResponse();
+  await route.handler({
+    body: {
+      completedPages: [
+        {
+          id: 'page-1',
+          number: 1,
+          title: '폭음 데이터',
+          text: '공사현장 위험음 감지로 좁힘'
+        }
+      ]
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(response.body.tasks[0].title, '폭음 데이터셋 라이선스 확인');
+  assert.deepEqual(response.body.notTasks, ['AudioSet 개념 설명']);
+  assert.match(generatorCalls[0].completedPages[0].text, /공사현장/);
+});
+
+test('registerIdeaCruiseRoute rejects task candidate generation when generator is missing', async () => {
+  const routes = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig
+  });
+
+  const route = routes.find((item) => item.path === '/idea-cruise/task-candidates');
+  const response = createJsonResponse();
+  await route.handler({
+    body: {
+      completedPages: [{ id: 'page-1', number: 1, title: '테스트', text: '내용' }]
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.body.ok, false);
+  assert.match(response.body.error, /Task 후보 생성/);
+});
+
 test('registerIdeaCruiseRoute rejects live intervention card analysis when analyzer is missing', async () => {
   const routes = [];
   const receiver = {

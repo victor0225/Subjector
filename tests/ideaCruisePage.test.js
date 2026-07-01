@@ -62,7 +62,7 @@ test('renderIdeaCruisePage completes pages and feeds task generation from comple
   assert.match(html, /function completeActivePage\(\)/);
   assert.match(html, /page\.completed = true/);
   assert.match(html, /function completedPages\(\)/);
-  assert.match(html, /buildTasksFromCompletedPages\(\)/);
+  assert.match(html, /requestTaskCandidates\(\)/);
 });
 
 test('renderIdeaCruisePage shows task filters as the first element in the right column', () => {
@@ -95,6 +95,27 @@ test('renderIdeaCruisePage removes successfully applied tasks and preserves fail
   assert.match(html, /반영 실패/);
 });
 
+test('renderIdeaCruisePage generates task candidates from completed topic pages through the API', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /async function requestTaskCandidates\(\)/);
+  assert.match(html, /fetch\('\/idea-cruise\/task-candidates'/);
+  assert.match(html, /completedPages\(\)\.map/);
+  assert.match(html, /state\.notTasks = result\.notTasks/);
+  assert.doesNotMatch(html, /function buildTasksFromCompletedPages\(\)/);
+  assert.doesNotMatch(html, /id="clear-draft"/);
+  assert.doesNotMatch(html, /초안 비우기/);
+});
+
+test('renderIdeaCruisePage renders flexible card details and optional suggestions', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /card\.details/);
+  assert.match(html, /card\.choices/);
+  assert.match(html, /if \(card\.suggestion\)/);
+  assert.match(html, /data-suggestion/);
+});
+
 test('renderIdeaCruisePage keeps meeting record as decision narrative, not task list', () => {
   const html = renderIdeaCruisePage();
 
@@ -104,4 +125,3 @@ test('renderIdeaCruisePage keeps meeting record as decision narrative, not task 
   assert.match(html, /다음 회의로 넘길 맥락/);
   assert.doesNotMatch(html, /task를 줄줄이 나열/);
 });
-

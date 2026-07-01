@@ -15,6 +15,7 @@ import {
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
 import { createGeminiMeetingTranscriber } from '../services/geminiMeetingTranscriber.js';
+import { createGeminiIdeaCruiseTaskGenerator } from '../services/geminiIdeaCruiseTaskGenerator.js';
 import { createFinalsNarrator } from '../services/finalsNarratorFactory.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createMeetingTaskExtractor } from '../services/meetingTaskExtractorFactory.js';
@@ -104,7 +105,7 @@ async function readIdeaCruiseTaskBody(req) {
   return JSON.parse(raw);
 }
 
-export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, inProcessService = null, cardAnalyzer = null } = {}) {
+export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, inProcessService = null, cardAnalyzer = null, taskCandidateGenerator = null } = {}) {
   receiver.router.get('/idea-cruise', (req, res) => {
     res.status(200).type('html').send(renderIdeaCruisePage());
   });
@@ -136,6 +137,41 @@ export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, i
       return res.status(200).json({
         ok: true,
         cards
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: error.message
+      });
+    }
+  });
+
+  receiver.router.post('/idea-cruise/task-candidates', async (req, res) => {
+    try {
+      if (!taskCandidateGenerator?.generate) {
+        return res.status(503).json({
+          ok: false,
+          error: 'Task 후보 생성 연결이 아직 준비되지 않았습니다.'
+        });
+      }
+
+      const body = await readIdeaCruiseTaskBody(req);
+      const completedPages = Array.isArray(body.completedPages) ? body.completedPages : [];
+      if (completedPages.length === 0) {
+        return res.status(400).json({
+          ok: false,
+          error: '완료된 topic page가 없습니다.'
+        });
+      }
+
+      const result = await taskCandidateGenerator.generate({
+        completedPages
+      });
+
+      return res.status(200).json({
+        ok: true,
+        tasks: result.tasks,
+        notTasks: result.notTasks
       });
     } catch (error) {
       return res.status(500).json({
@@ -1305,11 +1341,19 @@ export function createSlackApp({
     })
     : null;
 
+  const ideaCruiseTaskCandidateGenerator = config.gemini?.apiKey
+    ? createGeminiIdeaCruiseTaskGenerator({
+      apiKey: config.gemini.apiKey,
+      model: 'gemini-2.5-flash-lite'
+    })
+    : null;
+
   registerIdeaCruiseRoute(receiver, {
     config,
     store,
     inProcessService: service,
-    cardAnalyzer: ideaCruiseCardAnalyzer
+    cardAnalyzer: ideaCruiseCardAnalyzer,
+    taskCandidateGenerator: ideaCruiseTaskCandidateGenerator
   });
 
   const meetings = meetingService ?? createMeetingService({

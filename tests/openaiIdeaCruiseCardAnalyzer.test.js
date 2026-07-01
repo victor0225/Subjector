@@ -23,9 +23,16 @@ test('createOpenAiIdeaCruiseCardAnalyzer asks OpenAI for contextual live interve
                         {
                           type: '데이터 후보',
                           tag: 'info',
+                          kind: 'answer',
                           title: '폭음 정의부터 고정',
                           body: '총성, 폭발음, 공사장 충격음 중 어느 소리를 막을지 먼저 나눠야 합니다.',
-                          suggestion: '전장 폭음 차단 목적이라면 총성/폭발음/충격음을 별도 데이터 범주로 나누고 공개 sound event dataset 후보를 비교합니다.'
+                          suggestion: '전장 폭음 차단 목적이라면 총성/폭발음/충격음을 별도 데이터 범주로 나누고 공개 sound event dataset 후보를 비교합니다.',
+                          details: [
+                            { title: 'AudioSet', body: '넓은 오디오 이벤트 탐색용입니다.' },
+                            { title: 'ESC-50', body: '빠른 환경음 실험용입니다.' },
+                            { title: 'UrbanSound8K', body: '도시/공사장 소음 검토용입니다.' }
+                          ],
+                          choices: []
                         }
                       ]
                     })
@@ -57,6 +64,13 @@ test('createOpenAiIdeaCruiseCardAnalyzer asks OpenAI for contextual live interve
   assert.match(calls[0][1].body, /SAFIRA-ondevice/);
   assert.equal(result[0].title, '폭음 정의부터 고정');
   assert.equal(result[0].suggestion.includes('공개 sound event dataset'), true);
+  assert.equal(result[0].kind, 'answer');
+  assert.equal(result[0].details.length, 3);
+  assert.equal(result[0].details[0].title, 'AudioSet');
+  assert.deepEqual(result[0].choices, []);
+  assert.match(calls[0][1].body, /즉시 답변/);
+  assert.match(calls[0][1].body, /details/);
+  assert.match(calls[0][1].body, /choices/);
 });
 
 test('createOpenAiIdeaCruiseCardAnalyzer redacts API keys in errors', async () => {
