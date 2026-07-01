@@ -52,3 +52,37 @@ test('renderIdeaCruisePage caps visible intervention cards and renders overflow 
   assert.match(html, /<span>more<\/span>/);
   assert.match(html, /data-overflow-entry-id/);
 });
+
+test('renderIdeaCruisePage gives each brainstorming entry its own controls', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /class="entry-actions"/);
+  assert.match(html, /data-analyze-entry-id/);
+  assert.match(html, /data-delete-entry-id/);
+  assert.match(html, /document\.querySelectorAll\('\[data-analyze-entry-id\]'\)/);
+  assert.match(html, /document\.querySelectorAll\('\[data-delete-entry-id\]'\)/);
+  assert.doesNotMatch(html, /id="analyze"/);
+});
+
+test('renderIdeaCruisePage places add entry in the brainstorming header', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /<div class="section-title-row">[\s\S]*<h2>Brainstorming Input<\/h2>[\s\S]*<button id="add-entry">Add Entry<\/button>[\s\S]*<\/div>/);
+});
+
+test('renderIdeaCruisePage constrains panel heights and scrolls overflowing content', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /\.entry-list\s*{[^}]*max-height: 520px;[^}]*overflow-y: auto;/);
+  assert.match(html, /\.card-rows\s*{[^}]*max-height: 360px;[^}]*overflow-y: auto;/);
+  assert.match(html, /\.record-preview\s*{[^}]*max-height: 520px;[^}]*overflow-y: auto;/);
+});
+
+test('renderIdeaCruisePage caps visible task candidates and renders task overflow', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /const visibleTasks = state\.tasks\.slice\(0, 3\)/);
+  assert.match(html, /const hiddenTasks = state\.tasks\.slice\(3\)/);
+  assert.match(html, /class="task-overflow-card"/);
+  assert.match(html, /data-task-overflow/);
+});

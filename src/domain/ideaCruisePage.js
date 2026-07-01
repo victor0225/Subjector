@@ -152,6 +152,19 @@ export function renderIdeaCruisePage() {
       gap: 10px;
     }
 
+    .section-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .entry-list {
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
     .entry, .intervention, .overflow-card, .task-card, .record-preview, .memo-pane {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -167,11 +180,30 @@ export function renderIdeaCruisePage() {
     .entry-foot {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       gap: 8px;
       padding: 8px 10px;
       border-top: 1px solid var(--line);
       color: var(--muted);
       font-size: 12px;
+    }
+
+    .entry-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .entry-actions button {
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+
+    .card-rows {
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 2px;
     }
 
     .card-row {
@@ -275,6 +307,9 @@ export function renderIdeaCruisePage() {
     .record-preview {
       display: grid;
       gap: 10px;
+      height: 520px;
+      max-height: 520px;
+      overflow-y: auto;
       min-height: 410px;
       padding: 12px;
       white-space: pre-wrap;
@@ -287,13 +322,53 @@ export function renderIdeaCruisePage() {
     }
 
     .task-list {
-      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
     }
 
     .task-card {
       display: grid;
+      flex: 1 1 260px;
       gap: 10px;
+      min-width: 0;
       padding: 12px;
+    }
+
+    .task-overflow-card {
+      display: grid;
+      flex: 0 0 92px;
+      place-items: center;
+      gap: 2px;
+      min-height: 180px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f4fbf9;
+      color: var(--accent-strong);
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .task-overflow-card span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .task-overflow-drawer {
+      display: none;
+      flex: 1 0 100%;
+      gap: 8px;
+      padding: 8px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .task-overflow-drawer.open {
+      display: flex;
+      flex-wrap: wrap;
     }
 
     .task-card textarea { min-height: 76px; }
@@ -340,14 +415,13 @@ export function renderIdeaCruisePage() {
   <main>
     <section>
       <div class="section-head">
-        <h2>Brainstorming Input</h2>
+        <div class="section-title-row">
+          <h2>Brainstorming Input</h2>
+          <button id="add-entry">Add Entry</button>
+        </div>
         <p class="hint">Add Entry로 회의 흐름을 쌓고, AI Analysis로 바로 충돌/대안/질문 카드를 띄웁니다.</p>
       </div>
       <div class="section-body">
-        <div class="actions">
-          <button id="add-entry">Add Entry</button>
-          <button class="secondary" id="analyze">AI Analysis</button>
-        </div>
         <div class="memo-pane" id="memo-pane">
           <label>
             간단 회의 메모
@@ -476,7 +550,13 @@ export function renderIdeaCruisePage() {
       list.innerHTML = state.entries.map(function(entry, index) {
         return '<article class="entry">' +
           '<textarea data-entry-id="' + entry.id + '">' + escapeHtml(entry.text) + '</textarea>' +
-          '<div class="entry-foot"><span>Entry ' + (index + 1) + '</span><span>localStorage 자동 저장</span></div>' +
+          '<div class="entry-foot">' +
+            '<span>Entry ' + (index + 1) + '</span>' +
+            '<div class="entry-actions">' +
+              '<button class="secondary" data-analyze-entry-id="' + entry.id + '" type="button">AI Analysis</button>' +
+              '<button class="secondary" data-delete-entry-id="' + entry.id + '" type="button">삭제</button>' +
+            '</div>' +
+          '</div>' +
           '</article>';
       }).join('');
 
@@ -487,6 +567,28 @@ export function renderIdeaCruisePage() {
             entry.text = event.target.value;
             saveState();
           }
+        });
+      });
+
+      document.querySelectorAll('[data-analyze-entry-id]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          const entry = state.entries.find(function(item) { return item.id === event.target.dataset.analyzeEntryId; });
+          if (entry) {
+            state.cards[entry.id] = createCardsForEntry(entry);
+            render();
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-delete-entry-id]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          const entryId = event.target.dataset.deleteEntryId;
+          state.entries = state.entries.filter(function(item) { return item.id !== entryId; });
+          delete state.cards[entryId];
+          if (state.entries.length === 0) {
+            state.entries.push({ id: 'entry-' + Date.now(), text: '' });
+          }
+          render();
         });
       });
     }
@@ -623,6 +725,13 @@ export function renderIdeaCruisePage() {
           assignee: '민석',
           importance: '높음',
           source: source
+        },
+        {
+          title: '라이브 개입 카드 기준 조정',
+          criteria: '필요 정보: 회의 중 자주 막히는 표현, 자동 개입이 과한 순간, 수동 분석이 필요한 순간. 완료 기준: 팀원이 부담 없이 쓸 수 있는 호출 간격과 카드 기준이 정리됨.',
+          assignee: '수현',
+          importance: '보통',
+          source: source
         }
       ];
     }
@@ -633,7 +742,9 @@ export function renderIdeaCruisePage() {
         list.innerHTML = '<div class="hint">Task 후보 생성 버튼을 누르면 task 카드가 생성됩니다.</div>';
         return;
       }
-      list.innerHTML = state.tasks.map(function(task, index) {
+      const visibleTasks = state.tasks.slice(0, 3);
+      const hiddenTasks = state.tasks.slice(3);
+      const visibleHtml = visibleTasks.map(function(task, index) {
         return '<article class="task-card" data-task-index="' + index + '">' +
           '<label>Task 제목<input data-field="title" value="' + escapeHtml(task.title) + '"></label>' +
           '<label>Task 보완 기준<textarea data-field="criteria">' + escapeHtml(task.criteria) + '</textarea></label>' +
@@ -644,6 +755,18 @@ export function renderIdeaCruisePage() {
           '<button class="secondary" data-action="apply-task">Subjector in-process에 적용</button>' +
         '</article>';
       }).join('');
+      const overflowHtml = hiddenTasks.length
+        ? '<button class="task-overflow-card" data-task-overflow type="button">+' + hiddenTasks.length + '<span>more</span></button>'
+        : '';
+      const drawerHtml = hiddenTasks.length
+        ? '<div class="task-overflow-drawer" data-task-overflow-drawer>' + hiddenTasks.map(function(task, index) {
+            const taskIndex = index + 3;
+            return '<button class="overflow-choice" data-task-overflow-index="' + taskIndex + '" type="button">' +
+              escapeHtml(task.title) +
+            '</button>';
+          }).join('') + '</div>'
+        : '';
+      list.innerHTML = visibleHtml + overflowHtml + drawerHtml;
 
       list.querySelectorAll('.task-card').forEach(function(card) {
         const task = state.tasks[Number(card.dataset.taskIndex)];
@@ -654,6 +777,25 @@ export function renderIdeaCruisePage() {
             task[event.target.dataset.field] = event.target.value;
             saveState();
           });
+        });
+      });
+
+      const overflowButton = list.querySelector('[data-task-overflow]');
+      if (overflowButton) {
+        overflowButton.addEventListener('click', function() {
+          const drawer = list.querySelector('[data-task-overflow-drawer]');
+          if (drawer) drawer.classList.toggle('open');
+        });
+      }
+
+      list.querySelectorAll('[data-task-overflow-index]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          const selectedIndex = Number(event.target.dataset.taskOverflowIndex);
+          if (Number.isNaN(selectedIndex) || !state.tasks[selectedIndex]) return;
+          const selected = state.tasks.splice(selectedIndex, 1)[0];
+          state.tasks.splice(1, 0, selected);
+          saveState();
+          render();
         });
       });
     }
@@ -679,13 +821,6 @@ export function renderIdeaCruisePage() {
 
     document.getElementById('add-entry').addEventListener('click', function() {
       state.entries.push({ id: 'entry-' + Date.now(), text: '' });
-      render();
-    });
-
-    document.getElementById('analyze').addEventListener('click', function() {
-      state.entries.forEach(function(entry) {
-        state.cards[entry.id] = createCardsForEntry(entry);
-      });
       render();
     });
 
