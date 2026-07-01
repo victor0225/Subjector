@@ -95,10 +95,13 @@ export function renderIdeaCruisePage() {
       display: grid;
       grid-template-columns: minmax(300px, 0.92fr) minmax(360px, 1.18fr) minmax(330px, 1fr);
       gap: 14px;
+      min-height: calc(100vh - 73px);
       padding: 14px;
     }
 
     section {
+      display: flex;
+      flex-direction: column;
       min-width: 0;
       background: var(--surface);
       border: 1px solid var(--line);
@@ -108,14 +111,19 @@ export function renderIdeaCruisePage() {
     }
 
     .section-head {
+      height: 140px;
+      min-height: 90px;
       padding: 13px 15px;
       border-bottom: 1px solid var(--line);
       background: var(--surface-alt);
+      overflow: hidden;
     }
 
     .section-body {
       display: grid;
+      flex: 1;
       gap: 12px;
+      min-height: 0;
       padding: 14px 15px 16px;
     }
 
@@ -160,7 +168,8 @@ export function renderIdeaCruisePage() {
     }
 
     .entry-list {
-      max-height: 520px;
+      height: 100%;
+      min-height: 0;
       overflow-y: auto;
       padding-right: 2px;
     }
@@ -201,7 +210,8 @@ export function renderIdeaCruisePage() {
     }
 
     .card-rows {
-      max-height: 360px;
+      height: 100%;
+      min-height: 0;
       overflow-y: auto;
       padding-right: 2px;
     }
@@ -307,14 +317,19 @@ export function renderIdeaCruisePage() {
     .record-preview {
       display: grid;
       gap: 10px;
-      height: 520px;
-      max-height: 520px;
+      height: 100%;
+      min-height: 0;
       overflow-y: auto;
-      min-height: 410px;
       padding: 12px;
       white-space: pre-wrap;
       line-height: 1.52;
       font-size: 13px;
+    }
+
+    .entry-list, .card-rows, .record-preview {
+      height: 100%;
+      min-height: 0;
+      overflow-y: auto;
     }
 
     .task-area {
@@ -511,35 +526,36 @@ export function renderIdeaCruisePage() {
 
     function createCardsForEntry(entry) {
       const text = entrySummary(entry);
+      const subject = text.length > 42 ? text.slice(0, 42) + '...' : text;
       const unsure = /모르|차이|비교|애매|갈등|충돌|대안|급/.test(text);
       const cards = [
         {
           type: '판단 기준',
           tag: 'info',
           title: '선택 기준을 먼저 고정',
-          body: '성능, 전력, 네트워크, 가격, 개발 속도 중 이번 회의의 우선순위를 정하면 논의가 빨라집니다.',
-          suggestion: text + '\\n- 선택 기준: 가격, 구현 난이도, 실시간성, 팀원이 바로 검증 가능한 자료'
+          body: subject + '에 대해 판단 기준을 먼저 정리합니다.',
+          suggestion: text + '\\n- 선택 기준: 비용, 시간, 만족도, 실행 가능성, 팀원이 바로 판단할 수 있는 근거'
         },
         {
           type: '충돌 예상',
           tag: 'warn',
           title: '현재 진행 중인 task와 충돌 가능',
-          body: '하드웨어 선택이 늦어지면 데이터 수집 방식과 시연 범위 task가 동시에 흔들릴 수 있습니다.',
-          suggestion: text + '\\n- 충돌 방지: 오늘은 후보를 2개로 좁히고, 내일 실험 기준만 확정'
+          body: subject + '이 이미 진행 중인 task의 일정, 담당, 기준과 충돌하는지 먼저 확인합니다.',
+          suggestion: text + '\\n- 충돌 방지: 이미 진행 중인 task와 겹치는 결정/담당/일정을 먼저 확인'
         },
         {
           type: '대안',
           tag: '',
-          title: unsure ? '모르는 부분을 비교표 task로 전환' : '결정 전 검증 task로 전환',
-          body: '지금 바로 결론을 내기보다 30분 조사 task로 쪼개면 회의가 막히지 않습니다.',
-          suggestion: text + '\\n- 대안: 라즈베리 파이 vs ESP32 비교표를 만들어 다음 회의 첫 안건으로 확정'
+          title: unsure ? '모르는 부분을 비교 task로 전환' : '결정 전 검증 task로 전환',
+          body: '지금 바로 결론을 내기보다 작게 검증할 수 있는 task로 쪼개면 회의가 막히지 않습니다.',
+          suggestion: text + '\\n- 대안: 결정을 미루지 말고 30분 안에 확인 가능한 비교/검증 task로 전환'
         },
         {
           type: '범위',
           tag: 'info',
           title: '오늘 결정할 범위를 제한',
-          body: '회의 중 모든 결론을 내리려 하면 카드가 늘어납니다. 오늘 결정할 것과 내일 넘길 것을 분리하면 흐름이 안정됩니다.',
-          suggestion: text + '\\n- 범위 제한: 오늘은 후보 2개와 비교 기준만 확정하고, 실제 구매/구현 결정은 다음 검증 뒤 진행'
+          body: subject + '에서 오늘 정할 것과 나중에 넘길 것을 분리하면 흐름이 안정됩니다.',
+          suggestion: text + '\\n- 범위 제한: 오늘 정할 기준 1개와 다음에 검증할 기준 1개로 분리'
         }
       ];
       return cards;
@@ -565,6 +581,10 @@ export function renderIdeaCruisePage() {
           const entry = state.entries.find(function(item) { return item.id === event.target.dataset.entryId; });
           if (entry) {
             entry.text = event.target.value;
+            if (state.cards[entry.id]) {
+              delete state.cards[entry.id];
+              renderCards();
+            }
             saveState();
           }
         });

@@ -73,9 +73,27 @@ test('renderIdeaCruisePage places add entry in the brainstorming header', () => 
 test('renderIdeaCruisePage constrains panel heights and scrolls overflowing content', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /\.entry-list\s*{[^}]*max-height: 520px;[^}]*overflow-y: auto;/);
-  assert.match(html, /\.card-rows\s*{[^}]*max-height: 360px;[^}]*overflow-y: auto;/);
-  assert.match(html, /\.record-preview\s*{[^}]*max-height: 520px;[^}]*overflow-y: auto;/);
+  assert.match(html, /main\s*{[^}]*min-height: calc\(100vh - 73px\);/);
+  assert.match(html, /section\s*{[^}]*display: flex;[^}]*flex-direction: column;/);
+  assert.match(html, /\.section-head\s*{[^}]*height: 140px;/);
+  assert.match(html, /\.section-head\s*{[^}]*min-height: 90px;/);
+  assert.match(html, /\.section-body\s*{[^}]*flex: 1;[^}]*min-height: 0;/);
+  assert.match(html, /\.entry-list, \.card-rows, \.record-preview\s*{[^}]*height: 100%;[^}]*min-height: 0;[^}]*overflow-y: auto;/);
+});
+
+test('renderIdeaCruisePage invalidates stale intervention cards when an entry changes', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /delete state\.cards\[entry\.id\]/);
+  assert.match(html, /renderCards\(\)/);
+});
+
+test('renderIdeaCruisePage builds intervention cards from the current entry text', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /const subject = text/);
+  assert.match(html, /subject \+ '에 대해 판단 기준을 먼저 정리합니다\.'/);
+  assert.doesNotMatch(html, /라즈베리 파이 vs ESP32 비교표/);
 });
 
 test('renderIdeaCruisePage caps visible task candidates and renders task overflow', () => {
