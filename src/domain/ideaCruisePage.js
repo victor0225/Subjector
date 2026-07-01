@@ -94,8 +94,8 @@ export function renderIdeaCruisePage() {
     main {
       display: grid;
       grid-template-columns: minmax(300px, 0.92fr) minmax(360px, 1.18fr) minmax(330px, 1fr);
+      align-items: start;
       gap: 14px;
-      min-height: calc(100vh - 73px);
       padding: 14px;
     }
 
@@ -111,12 +111,9 @@ export function renderIdeaCruisePage() {
     }
 
     .section-head {
-      height: 140px;
-      min-height: 90px;
       padding: 13px 15px;
       border-bottom: 1px solid var(--line);
       background: var(--surface-alt);
-      overflow: hidden;
     }
 
     .section-body {
@@ -160,6 +157,13 @@ export function renderIdeaCruisePage() {
       gap: 10px;
     }
 
+    .scroll-pane {
+      height: 520px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
     .section-title-row {
       display: flex;
       justify-content: space-between;
@@ -168,13 +172,10 @@ export function renderIdeaCruisePage() {
     }
 
     .entry-list {
-      height: 100%;
-      min-height: 0;
-      overflow-y: auto;
-      padding-right: 2px;
+      align-content: start;
     }
 
-    .entry, .intervention, .overflow-card, .task-card, .record-preview, .memo-pane {
+    .entry, .intervention, .overflow-card, .task-card, .completed-item, .record-preview, .memo-pane {
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
@@ -210,10 +211,7 @@ export function renderIdeaCruisePage() {
     }
 
     .card-rows {
-      height: 100%;
-      min-height: 0;
-      overflow-y: auto;
-      padding-right: 2px;
+      align-content: start;
     }
 
     .card-row {
@@ -315,20 +313,61 @@ export function renderIdeaCruisePage() {
     .tag.info { background: #eaf2fb; color: var(--blue); }
 
     .record-preview {
-      display: grid;
-      gap: 10px;
-      height: 100%;
-      min-height: 0;
-      overflow-y: auto;
+      min-height: 320px;
       padding: 12px;
       white-space: pre-wrap;
       line-height: 1.52;
       font-size: 13px;
     }
 
-    .entry-list, .card-rows, .record-preview {
-      height: 100%;
+    .completed-list {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .completed-item {
+      padding: 12px;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .record-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 20;
+      width: min(520px, 100vw);
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      background: var(--surface);
+      border-left: 1px solid var(--line);
+      box-shadow: -18px 0 32px rgba(23, 32, 42, 0.18);
+      transform: translateX(105%);
+      transition: transform 180ms ease;
+    }
+
+    .record-drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-alt);
+    }
+
+    .drawer-body {
+      display: grid;
+      gap: 12px;
       min-height: 0;
+      padding: 16px;
       overflow-y: auto;
     }
 
@@ -390,7 +429,7 @@ export function renderIdeaCruisePage() {
 
     .task-fields {
       display: grid;
-      grid-template-columns: 1fr 120px;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
     }
 
@@ -444,53 +483,62 @@ export function renderIdeaCruisePage() {
           </label>
           <button class="secondary" id="use-memo">메모를 entry로 넣기</button>
         </div>
-        <div class="entry-list" id="entry-list"></div>
+        <div class="entry-list scroll-pane" id="entry-list"></div>
       </div>
     </section>
 
     <section>
       <div class="section-head">
         <h2>Live Intervention Cards</h2>
-        <p class="hint">카드 모델: Gemini 2.5 Flash-Lite. 적용하면 왼쪽 원문이 직접 강화되고 카드는 사라집니다.</p>
+        <p class="hint">카드 모델: gpt-5.4. GitHub organization과 지난 task 흐름까지 보며 충돌/대안을 더 날카롭게 잡습니다.</p>
       </div>
       <div class="section-body">
-        <div class="card-rows" id="card-rows"></div>
+        <div class="card-rows scroll-pane" id="card-rows"></div>
       </div>
     </section>
 
     <section>
       <div class="section-head">
-        <div class="inline-controls">
-          <div>
-            <h2>Meeting Record</h2>
-            <p class="hint">#project-log에 올릴 회의 결과문 초안입니다. task 생성의 원천은 IDEA CRUISE 입력입니다.</p>
-          </div>
-          <button id="copy-record">결과록 복사</button>
-        </div>
+        <h2>Completed Brainstorming Inputs</h2>
+        <p class="hint">live card를 적용해 강화가 끝난 input이 차례대로 쌓입니다. 회의록과 task 생성의 실제 재료입니다.</p>
       </div>
       <div class="section-body">
-        <div class="actions">
-          <button id="generate-record">회의록 생성</button>
-          <button class="secondary" id="clear-draft">초안 비우기</button>
-        </div>
-        <div class="record-preview" id="meeting-record"></div>
-        <div class="meta">Task 생성 모델: gpt-5.4. 회의록은 감사 기록이고, 아래 task 후보가 Subjector in-process로 이어지는 적용 단위입니다.</div>
+        <div class="completed-list scroll-pane" id="completed-list"></div>
       </div>
     </section>
 
     <section class="task-area">
       <div class="section-head">
         <h2>Task Candidates From IDEA CRUISE</h2>
-        <p class="hint">AI가 task별 보완 기준 초안을 함께 제안합니다. 담당자와 중요도를 정한 뒤 적용합니다.</p>
+        <p class="hint">회의록/task 생성 모델: Gemini 2.5 Flash-Lite. 제목, 필요 정보, 완료기준, 중요도는 초안이고 담당자는 직접 배정합니다.</p>
       </div>
       <div class="section-body">
         <div class="actions">
+          <button id="generate-record">회의록 생성</button>
           <button id="generate-tasks">Task 후보 생성</button>
+          <button class="secondary" id="clear-draft">초안 비우기</button>
         </div>
         <div class="task-list" id="task-list"></div>
       </div>
     </section>
   </main>
+
+  <aside class="record-drawer" id="record-drawer" aria-label="meeting record drawer">
+    <div class="drawer-head">
+      <div>
+        <h2>Meeting Record</h2>
+        <p class="hint">#project-log에 올릴 회의 결과문 초안입니다.</p>
+      </div>
+      <div class="actions">
+        <button id="copy-record">결과록 복사</button>
+        <button class="secondary" id="close-record">닫기</button>
+      </div>
+    </div>
+    <div class="drawer-body">
+      <div class="record-preview" id="meeting-record"></div>
+      <div class="meta">회의록/task 생성 모델: Gemini 2.5 Flash-Lite. 회의록은 감사 기록이고, 아래 task 후보가 Subjector in-process로 이어지는 적용 단위입니다.</div>
+    </div>
+  </aside>
 
   <script>
     const storageKey = 'ideaCruiseMeetingDeskDraft';
@@ -503,9 +551,23 @@ export function renderIdeaCruisePage() {
         }
       ],
       cards: {},
+      completedEntries: [],
       record: '',
+      recordDrawerOpen: false,
       tasks: []
     };
+    state.completedEntries = Array.isArray(state.completedEntries) ? state.completedEntries : [];
+    state.recordDrawerOpen = Boolean(state.recordDrawerOpen);
+    state.tasks = Array.isArray(state.tasks) ? state.tasks.map(function(task) {
+      return {
+        title: task.title || '',
+        neededInfo: task.neededInfo || task.criteria || '',
+        doneCriteria: task.doneCriteria || '',
+        assignee: task.assignee || '미배정',
+        importance: task.importance || '보통',
+        source: task.source || ''
+      };
+    }) : [];
 
     function loadState() {
       try {
@@ -691,6 +753,10 @@ export function renderIdeaCruisePage() {
           const index = Number(cardEl.dataset.cardIndex);
           if (event.target.dataset.action === 'apply' && entry && cards[index]) {
             entry.text = cardEl.querySelector('textarea').value;
+            state.completedEntries.push({
+              id: 'completed-' + Date.now(),
+              text: entry.text
+            });
           }
           cards.splice(index, 1);
           saveState();
@@ -700,7 +766,8 @@ export function renderIdeaCruisePage() {
     }
 
     function buildRecord() {
-      const entries = state.entries.map(function(entry, index) {
+      const sourceEntries = state.completedEntries.length > 0 ? state.completedEntries : state.entries;
+      const entries = sourceEntries.map(function(entry, index) {
         return (index + 1) + '. ' + entrySummary(entry);
       }).join('\\n');
       return [
@@ -722,34 +789,50 @@ export function renderIdeaCruisePage() {
       document.getElementById('meeting-record').textContent = state.record || '회의록 생성 버튼을 누르면 Meeting Record 초안이 여기에 표시됩니다.';
     }
 
+    function renderCompletedEntries() {
+      const list = document.getElementById('completed-list');
+      if (state.completedEntries.length === 0) {
+        list.innerHTML = '<div class="hint">live card를 적용한 brainstorming input이 여기에 쌓입니다.</div>';
+        return;
+      }
+      list.innerHTML = state.completedEntries.map(function(entry, index) {
+        return '<article class="completed-item"><strong>Completed ' + (index + 1) + '</strong>\\n' + escapeHtml(entry.text) + '</article>';
+      }).join('');
+    }
+
     function buildTasks() {
-      const source = state.entries.map(function(entry) { return entrySummary(entry); }).join(' ');
+      const sourceEntries = state.completedEntries.length > 0 ? state.completedEntries : state.entries;
+      const source = sourceEntries.map(function(entry) { return entrySummary(entry); }).join(' ');
       return [
         {
           title: '하드웨어 후보 비교 기준 확정',
-          criteria: '필요 정보: 가격, 전력, 네트워크 방식, 구현 난이도, 팀원이 실제로 테스트 가능한 환경. 완료 기준: 후보별 장단점과 추천안을 한 화면에서 비교 가능.',
-          assignee: '수현',
+          neededInfo: '가격, 전력, 네트워크 방식, 구현 난이도, 팀원이 실제로 테스트 가능한 환경',
+          doneCriteria: '후보별 장단점과 추천안을 한 화면에서 비교 가능',
+          assignee: '미배정',
           importance: '높음',
           source: source
         },
         {
           title: '회의 결과문을 #project-log 형식으로 정리',
-          criteria: '필요 정보: 회의에서 결정된 것, 보류된 것, task로 전환된 것. 완료 기준: 다음 날 팀원이 이 글만 보고 회의를 이어갈 수 있음.',
-          assignee: '조은',
+          neededInfo: '회의에서 결정된 것, 보류된 것, task로 전환된 것',
+          doneCriteria: '다음 날 팀원이 이 글만 보고 회의를 이어갈 수 있음',
+          assignee: '미배정',
           importance: '보통',
           source: source
         },
         {
           title: 'Subjector in-process 반영 흐름 확인',
-          criteria: '필요 정보: 담당자, 중요도, task 보완 기준. 완료 기준: IDEA CRUISE task 후보가 승인 후 Subjector in-process에 표시되는 경로가 설명됨.',
-          assignee: '민석',
+          neededInfo: '담당자, 중요도, 필요 정보, 완료기준',
+          doneCriteria: 'IDEA CRUISE task 후보가 승인 후 Subjector in-process에 표시되는 경로가 설명됨',
+          assignee: '미배정',
           importance: '높음',
           source: source
         },
         {
           title: '라이브 개입 카드 기준 조정',
-          criteria: '필요 정보: 회의 중 자주 막히는 표현, 자동 개입이 과한 순간, 수동 분석이 필요한 순간. 완료 기준: 팀원이 부담 없이 쓸 수 있는 호출 간격과 카드 기준이 정리됨.',
-          assignee: '수현',
+          neededInfo: '회의 중 자주 막히는 표현, 자동 개입이 과한 순간, 수동 분석이 필요한 순간',
+          doneCriteria: '팀원이 부담 없이 쓸 수 있는 호출 간격과 카드 기준이 정리됨',
+          assignee: '미배정',
           importance: '보통',
           source: source
         }
@@ -767,9 +850,10 @@ export function renderIdeaCruisePage() {
       const visibleHtml = visibleTasks.map(function(task, index) {
         return '<article class="task-card" data-task-index="' + index + '">' +
           '<label>Task 제목<input data-field="title" value="' + escapeHtml(task.title) + '"></label>' +
-          '<label>Task 보완 기준<textarea data-field="criteria">' + escapeHtml(task.criteria) + '</textarea></label>' +
+          '<label>필요 정보<textarea data-field="neededInfo">' + escapeHtml(task.neededInfo) + '</textarea></label>' +
+          '<label>완료기준<textarea data-field="doneCriteria">' + escapeHtml(task.doneCriteria) + '</textarea></label>' +
           '<div class="task-fields">' +
-            '<label>담당자<select data-field="assignee"><option>수현</option><option>조은</option><option>민석</option></select></label>' +
+            '<label>담당자<select data-field="assignee"><option>미배정</option><option>조수현</option><option>김조은</option><option>배민성</option></select></label>' +
             '<label>중요도<select data-field="importance"><option>높음</option><option>보통</option><option>낮음</option></select></label>' +
           '</div>' +
           '<button class="secondary" data-action="apply-task">Subjector in-process에 적용</button>' +
@@ -824,7 +908,9 @@ export function renderIdeaCruisePage() {
       renderEntries();
       renderCards();
       renderRecord();
+      renderCompletedEntries();
       renderTasks();
+      document.getElementById('record-drawer').classList.toggle('open', state.recordDrawerOpen);
       document.getElementById('memo-pane').classList.toggle('open', state.mode === 'memo');
       document.getElementById('live-mode').classList.toggle('active', state.mode === 'live');
       document.getElementById('memo-mode').classList.toggle('active', state.mode === 'memo');
@@ -865,6 +951,7 @@ export function renderIdeaCruisePage() {
 
     document.getElementById('generate-record').addEventListener('click', function() {
       state.record = buildRecord();
+      state.recordDrawerOpen = true;
       render();
     });
 
@@ -880,12 +967,19 @@ export function renderIdeaCruisePage() {
       }
     });
 
+    document.getElementById('close-record').addEventListener('click', function() {
+      state.recordDrawerOpen = false;
+      render();
+    });
+
     document.getElementById('clear-draft').addEventListener('click', function() {
       localStorage.removeItem(storageKey);
       state.mode = 'live';
       state.entries = [{ id: 'entry-1', text: '' }];
       state.cards = {};
+      state.completedEntries = [];
       state.record = '';
+      state.recordDrawerOpen = false;
       state.tasks = [];
       render();
     });

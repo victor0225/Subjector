@@ -23,6 +23,8 @@ test('renderIdeaCruisePage documents model split and local draft behavior', () =
   assert.match(html, /navigator\.clipboard/);
   assert.match(html, /Gemini 2\.5 Flash-Lite/);
   assert.match(html, /gpt-5\.4/);
+  assert.match(html, /카드 모델: gpt-5\.4/);
+  assert.match(html, /회의록\/task 생성 모델: Gemini 2\.5 Flash-Lite/);
   assert.doesNotMatch(html, /기준 정렬 패킷|빠른 검증용|상\/중\/하/);
 });
 
@@ -73,12 +75,12 @@ test('renderIdeaCruisePage places add entry in the brainstorming header', () => 
 test('renderIdeaCruisePage constrains panel heights and scrolls overflowing content', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /main\s*{[^}]*min-height: calc\(100vh - 73px\);/);
+  assert.match(html, /main\s*{[^}]*align-items: start;/);
   assert.match(html, /section\s*{[^}]*display: flex;[^}]*flex-direction: column;/);
-  assert.match(html, /\.section-head\s*{[^}]*height: 140px;/);
-  assert.match(html, /\.section-head\s*{[^}]*min-height: 90px;/);
-  assert.match(html, /\.section-body\s*{[^}]*flex: 1;[^}]*min-height: 0;/);
-  assert.match(html, /\.entry-list, \.card-rows, \.record-preview\s*{[^}]*height: 100%;[^}]*min-height: 0;[^}]*overflow-y: auto;/);
+  assert.match(html, /\.scroll-pane\s*{[^}]*height: 520px;[^}]*max-height: 520px;[^}]*overflow-y: auto;/);
+  assert.match(html, /class="entry-list scroll-pane"/);
+  assert.match(html, /class="card-rows scroll-pane"/);
+  assert.match(html, /class="completed-list scroll-pane"/);
 });
 
 test('renderIdeaCruisePage invalidates stale intervention cards when an entry changes', () => {
@@ -103,4 +105,33 @@ test('renderIdeaCruisePage caps visible task candidates and renders task overflo
   assert.match(html, /const hiddenTasks = state\.tasks\.slice\(3\)/);
   assert.match(html, /class="task-overflow-card"/);
   assert.match(html, /data-task-overflow/);
+});
+
+test('renderIdeaCruisePage shows completed brainstorming inputs in the right column', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /Completed Brainstorming Inputs/);
+  assert.match(html, /completed-list/);
+  assert.match(html, /state\.completedEntries/);
+  assert.match(html, /state\.completedEntries\.push/);
+});
+
+test('renderIdeaCruisePage moves meeting record into a slide-out drawer', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /class="record-drawer/);
+  assert.match(html, /id="record-drawer"/);
+  assert.match(html, /classList\.toggle\('open', state\.recordDrawerOpen\)/);
+  assert.match(html, /id="close-record"/);
+});
+
+test('renderIdeaCruisePage task candidates use explicit task fields and manual assignee selection', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /data-field="neededInfo"/);
+  assert.match(html, /data-field="doneCriteria"/);
+  assert.match(html, /<option>미배정<\/option><option>조수현<\/option><option>김조은<\/option><option>배민성<\/option>/);
+  assert.match(html, /assignee: '미배정'/);
+  assert.doesNotMatch(html, /Task 보완 기준/);
+  assert.doesNotMatch(html, /assignee: '수현'|assignee: '조은'|assignee: '민석'/);
 });
