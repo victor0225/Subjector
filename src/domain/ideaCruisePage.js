@@ -490,7 +490,7 @@ export function renderIdeaCruisePage() {
     <section>
       <div class="section-head">
         <h2>Live Intervention Cards</h2>
-        <p class="hint">카드 모델: gpt-5.4. GitHub organization과 지난 task 흐름까지 보며 충돌/대안을 더 날카롭게 잡습니다.</p>
+        <p class="hint">카드 모델: gpt-5.4. GitHub organization https://github.com/SAFIRA-ondevice 와 지난 task 흐름까지 보며 충돌/대안을 더 날카롭게 잡습니다.</p>
       </div>
       <div class="section-body">
         <div class="card-rows scroll-pane" id="card-rows"></div>
@@ -556,7 +556,17 @@ export function renderIdeaCruisePage() {
       recordDrawerOpen: false,
       tasks: []
     };
-    state.completedEntries = Array.isArray(state.completedEntries) ? state.completedEntries : [];
+    state.completedEntries = Array.isArray(state.completedEntries) ? state.completedEntries.map(function(entry) {
+      const lines = String(entry.text || '').split('\\n').map(function(line) { return line.trim(); }).filter(Boolean);
+      const title = entry.title || lines[0] || '제목 없음';
+      const bullets = Array.isArray(entry.bullets) ? entry.bullets : lines.slice(1).filter(function(line) { return line.startsWith('- '); });
+      return {
+        id: entry.id || 'completed-' + Date.now(),
+        title: title,
+        bullets: bullets,
+        text: [title].concat(bullets).join('\\n')
+      };
+    }) : [];
     state.recordDrawerOpen = Boolean(state.recordDrawerOpen);
     state.tasks = Array.isArray(state.tasks) ? state.tasks.map(function(task) {
       return {
@@ -633,6 +643,7 @@ export function renderIdeaCruisePage() {
             '<div class="entry-actions">' +
               '<button class="secondary" data-analyze-entry-id="' + entry.id + '" type="button">AI Analysis</button>' +
               '<button class="secondary" data-delete-entry-id="' + entry.id + '" type="button">삭제</button>' +
+              '<button class="secondary" data-complete-entry-id="' + entry.id + '" type="button">완료</button>' +
             '</div>' +
           '</div>' +
           '</article>';
@@ -659,6 +670,21 @@ export function renderIdeaCruisePage() {
             state.cards[entry.id] = createCardsForEntry(entry);
             render();
           }
+        });
+      });
+
+      document.querySelectorAll('[data-complete-entry-id]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          const entryId = event.target.dataset.completeEntryId;
+          const entry = state.entries.find(function(item) { return item.id === entryId; });
+          if (!entry || !entry.text.trim()) return;
+          mergeCompletedEntry(entry.text);
+          state.entries = state.entries.filter(function(item) { return item.id !== entryId; });
+          delete state.cards[entryId];
+          if (state.entries.length === 0) {
+            state.entries.push({ id: 'entry-' + Date.now(), text: '' });
+          }
+          render();
         });
       });
 
@@ -753,10 +779,6 @@ export function renderIdeaCruisePage() {
           const index = Number(cardEl.dataset.cardIndex);
           if (event.target.dataset.action === 'apply' && entry && cards[index]) {
             entry.text = cardEl.querySelector('textarea').value;
-            state.completedEntries.push({
-              id: 'completed-' + Date.now(),
-              text: entry.text
-            });
           }
           cards.splice(index, 1);
           saveState();
@@ -787,6 +809,37 @@ export function renderIdeaCruisePage() {
 
     function renderRecord() {
       document.getElementById('meeting-record').textContent = state.record || '회의록 생성 버튼을 누르면 Meeting Record 초안이 여기에 표시됩니다.';
+    }
+
+    function splitCompletedText(text) {
+      const lines = String(text || '').split('\\n').map(function(line) { return line.trim(); }).filter(Boolean);
+      const title = lines[0] || '제목 없음';
+      const bullets = lines.slice(1).filter(function(line) { return line.startsWith('- '); });
+      return { title: title, bullets: bullets };
+    }
+
+    function formatCompletedText(entry) {
+      return [entry.title].concat(entry.bullets).join('\\n');
+    }
+
+    function mergeCompletedEntry(text) {
+      const next = splitCompletedText(text);
+      const existing = state.completedEntries.find(function(entry) { return entry.title === next.title; });
+      if (!existing) {
+        state.completedEntries.push({
+          id: 'completed-' + Date.now(),
+          title: next.title,
+          bullets: next.bullets,
+          text: formatCompletedText(next)
+        });
+        return;
+      }
+      next.bullets.forEach(function(bullet) {
+        if (!existing.bullets.includes(bullet)) {
+          existing.bullets.push(bullet);
+        }
+      });
+      existing.text = formatCompletedText(existing);
     }
 
     function renderCompletedEntries() {
@@ -881,6 +934,18 @@ export function renderIdeaCruisePage() {
             task[event.target.dataset.field] = event.target.value;
             saveState();
           });
+        });
+      });
+
+      list.querySelectorAll('button[data-action="apply-task"]').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+          const card = event.target.closest('.task-card');
+          const taskIndex = Number(card.dataset.taskIndex);
+          if (Number.isNaN(taskIndex)) return;
+          // Subjector in-process 연동 전까지는 로컬 후보에서 제거합니다.
+          state.tasks.splice(taskIndex, 1);
+          saveState();
+          render();
         });
       });
 

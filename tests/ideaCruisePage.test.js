@@ -25,6 +25,7 @@ test('renderIdeaCruisePage documents model split and local draft behavior', () =
   assert.match(html, /gpt-5\.4/);
   assert.match(html, /카드 모델: gpt-5\.4/);
   assert.match(html, /회의록\/task 생성 모델: Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /https:\/\/github\.com\/SAFIRA-ondevice/);
   assert.doesNotMatch(html, /기준 정렬 패킷|빠른 검증용|상\/중\/하/);
 });
 
@@ -60,8 +61,10 @@ test('renderIdeaCruisePage gives each brainstorming entry its own controls', () 
 
   assert.match(html, /class="entry-actions"/);
   assert.match(html, /data-analyze-entry-id/);
+  assert.match(html, /data-complete-entry-id/);
   assert.match(html, /data-delete-entry-id/);
   assert.match(html, /document\.querySelectorAll\('\[data-analyze-entry-id\]'\)/);
+  assert.match(html, /document\.querySelectorAll\('\[data-complete-entry-id\]'\)/);
   assert.match(html, /document\.querySelectorAll\('\[data-delete-entry-id\]'\)/);
   assert.doesNotMatch(html, /id="analyze"/);
 });
@@ -113,7 +116,17 @@ test('renderIdeaCruisePage shows completed brainstorming inputs in the right col
   assert.match(html, /Completed Brainstorming Inputs/);
   assert.match(html, /completed-list/);
   assert.match(html, /state\.completedEntries/);
-  assert.match(html, /state\.completedEntries\.push/);
+  assert.match(html, /mergeCompletedEntry\(entry\.text\)/);
+  assert.doesNotMatch(html, /event\.target\.dataset\.action === 'apply'[\s\S]{0,260}state\.completedEntries\.push/);
+});
+
+test('renderIdeaCruisePage merges completed entries by title and appends new bullets', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /function splitCompletedText\(text\)/);
+  assert.match(html, /function mergeCompletedEntry\(text\)/);
+  assert.match(html, /existing\.bullets\.includes\(bullet\)/);
+  assert.match(html, /existing\.text = formatCompletedText\(existing\)/);
 });
 
 test('renderIdeaCruisePage moves meeting record into a slide-out drawer', () => {
@@ -134,4 +147,12 @@ test('renderIdeaCruisePage task candidates use explicit task fields and manual a
   assert.match(html, /assignee: '미배정'/);
   assert.doesNotMatch(html, /Task 보완 기준/);
   assert.doesNotMatch(html, /assignee: '수현'|assignee: '조은'|assignee: '민석'/);
+});
+
+test('renderIdeaCruisePage removes a task candidate after applying it locally', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /data-action="apply-task"/);
+  assert.match(html, /state\.tasks\.splice\(taskIndex, 1\)/);
+  assert.match(html, /Subjector in-process 연동 전까지는 로컬 후보에서 제거합니다/);
 });
