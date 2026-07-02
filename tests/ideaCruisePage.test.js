@@ -8,7 +8,7 @@ test('renderIdeaCruisePage exposes the approved topic-page meeting desk', () => 
   assert.match(html, /IDEA CRUISE Meeting Desk/);
   assert.match(html, /1\. Topic Page/);
   assert.match(html, /2\. Topic-Specific AI Cards/);
-  assert.match(html, /3\. Task Candidates/);
+  assert.match(html, /3\. Final Task Refinement/);
   assert.match(html, /다음 주제 추가/);
   assert.match(html, /회의록 열기/);
   assert.doesNotMatch(html, /간단 메모 붙여넣기/);
@@ -22,8 +22,8 @@ test('renderIdeaCruisePage documents the model split at each AI step', () => {
 
   assert.match(html, /카드 생성: GPT-5\.4/);
   assert.match(html, /회의록 생성: Gemini 2\.5 Flash-Lite/);
-  assert.match(html, /Task 후보는 왼쪽에서 완료를 누르면 Gemini 2\.5 Flash-Lite/);
-  assert.match(html, /적용\/완료\/Subjector 반영: AI 없음/);
+  assert.match(html, /Task 최종 정제: Gemini 2\.5 Flash/);
+  assert.match(html, /새 task, 기존 task 보강, task 아님/);
   assert.match(html, /https:\/\/github\.com\/SAFIRA-ondevice/);
 });
 
@@ -101,12 +101,25 @@ test('renderIdeaCruisePage generates task candidates from completed topic pages 
   assert.match(html, /async function requestTaskCandidates\(\)/);
   assert.match(html, /fetch\('\/idea-cruise\/task-candidates'/);
   assert.match(html, /completedPages\(\)\.map/);
-  assert.match(html, /state\.notTasks = result\.notTasks/);
+  assert.match(html, /state\.existingTaskUpdates = Array\.isArray\(result\.existingTaskUpdates\)/);
+  assert.match(html, /state\.notTasks = Array\.isArray\(result\.notTasks\)/);
   assert.doesNotMatch(html, /function buildTasksFromCompletedPages\(\)/);
   assert.doesNotMatch(html, /id="clear-draft"/);
   assert.doesNotMatch(html, /초안 비우기/);
   assert.doesNotMatch(html, /id="generate-tasks"/);
   assert.doesNotMatch(html, /Task 후보 생성/);
+});
+
+test('renderIdeaCruisePage separates final task refinement buckets', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /state\.existingTaskUpdates/);
+  assert.match(html, /기존 task 보강/);
+  assert.match(html, /확인할 것만 보강/);
+  assert.match(html, /완료 기준 변경 포함/);
+  assert.match(html, /data-remove-not-task/);
+  assert.match(html, /data-remove-task-update/);
+  assert.match(html, /fetch\('\/idea-cruise\/task-updates'/);
 });
 
 test('renderIdeaCruisePage renders flexible card details and optional suggestions', () => {

@@ -47,6 +47,21 @@ function mapSlackMessage(row) {
   return message;
 }
 
+function appendContextText(currentValue, addition) {
+  const current = String(currentValue ?? '').trim();
+  const next = String(addition ?? '').trim();
+  if (!next) {
+    return current;
+  }
+  if (!current) {
+    return next;
+  }
+  if (current.includes(next)) {
+    return current;
+  }
+  return `${current}\n- ${next}`;
+}
+
 function mapWorkSession(row) {
   return {
     userKey: row.user_key,
@@ -645,6 +660,57 @@ export function createSupabaseStore(supabase) {
     return result.data.map(mapTask);
   }
 
+  async function updateIdeaCruiseTaskContext({
+    taskId,
+    addNeededInfo = '',
+    doneCriteriaChange = '',
+    includeDoneCriteriaChange = false,
+    meetingRecord = ''
+  }) {
+    const existingResult = await supabase
+      .from('tasks')
+      .select('id,assignee_user_key,context')
+      .eq('id', taskId)
+      .maybeSingle();
+
+    throwIfError(existingResult, 'Failed to read IDEA CRUISE task for update');
+    if (!existingResult.data) {
+      throw new Error('Failed to read IDEA CRUISE task for update: task not found');
+    }
+
+    const context = existingResult.data.context ?? {};
+    const boost = {
+      addNeededInfo,
+      doneCriteriaChange: includeDoneCriteriaChange ? doneCriteriaChange : '',
+      includeDoneCriteriaChange: Boolean(includeDoneCriteriaChange),
+      meetingRecord,
+      createdAt: new Date().toISOString()
+    };
+    const nextContext = {
+      ...context,
+      source: context.source ?? 'IDEA CRUISE',
+      neededInfo: appendContextText(context.neededInfo, addNeededInfo),
+      doneCriteria: includeDoneCriteriaChange
+        ? appendContextText(context.doneCriteria, doneCriteriaChange)
+        : (context.doneCriteria ?? ''),
+      ideaCruiseBoosts: [
+        ...(Array.isArray(context.ideaCruiseBoosts) ? context.ideaCruiseBoosts : []),
+        boost
+      ]
+    };
+
+    const updateResult = await supabase
+      .from('tasks')
+      .update({ context: nextContext })
+      .eq('id', taskId);
+
+    throwIfError(updateResult, 'Failed to update IDEA CRUISE task context');
+
+    return {
+      assigneeUserKey: existingResult.data.assignee_user_key
+    };
+  }
+
   async function findSlackMessage({ purpose, channelId }) {
     const result = await supabase
       .from('slack_messages')
@@ -915,6 +981,7 @@ export function createSupabaseStore(supabase) {
     archiveTestTasks,
     listDailyTasksForUser,
     listAllTasks,
+    updateIdeaCruiseTaskContext,
     findSlackMessage,
     listTaskDetailMessagesForThread,
     getTaskById,

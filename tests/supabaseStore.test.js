@@ -530,6 +530,39 @@ test('createIdeaCruiseTask inserts a task from the meeting desk', async () => {
   assert.equal(insert[2].context.doneCriteria, '비교표와 추천안이 정리됨');
 });
 
+test('updateIdeaCruiseTaskContext boosts an existing task context', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      tasks: {
+        id: 'task-1',
+        assignee_user_key: 'suhyeon',
+        context: {
+          source: 'IDEA CRUISE',
+          neededInfo: '가격, 전력',
+          doneCriteria: '비교표 작성'
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.updateIdeaCruiseTaskContext({
+    taskId: 'task-1',
+    addNeededInfo: '1차 개발 보드와 최종 목표 보드 분리',
+    doneCriteriaChange: '최종 추천 후보 1개 포함',
+    includeDoneCriteriaChange: true,
+    meetingRecord: '하드웨어 방향 보강'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'update');
+  assert.equal(result.assigneeUserKey, 'suhyeon');
+  assert.match(update[2].context.neededInfo, /가격, 전력/);
+  assert.match(update[2].context.neededInfo, /1차 개발 보드와 최종 목표 보드 분리/);
+  assert.match(update[2].context.doneCriteria, /비교표 작성/);
+  assert.match(update[2].context.doneCriteria, /최종 추천 후보 1개 포함/);
+  assert.equal(update[2].context.ideaCruiseBoosts[0].meetingRecord, '하드웨어 방향 보강');
+});
+
 test('endWorkSession upserts by user and work date with ended time', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);

@@ -105,7 +105,7 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE meeting desk workspace', ()
   assert.equal(response.contentType, 'html');
   assert.match(response.body, /IDEA CRUISE/);
   assert.match(response.body, /Meeting Record/);
-  assert.match(response.body, /3\. Task Candidates/);
+  assert.match(response.body, /3\. Final Task Refinement/);
 });
 
 test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee', async () => {
@@ -221,6 +221,55 @@ test('registerIdeaCruiseRoute creates an IDEA CRUISE task and refreshes the assi
   assert.equal(storeCalls[0].context.doneCriteria, '비교표와 추천안이 정리됨');
   assert.equal(refreshCalls[0].user.key, 'joeun');
   assert.equal(response.body.board.taskCount, 3);
+});
+
+test('registerIdeaCruiseRoute boosts an existing IDEA CRUISE task and refreshes the assignee board', async () => {
+  const routes = [];
+  const storeCalls = [];
+  const refreshCalls = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig,
+    store: {
+      async updateIdeaCruiseTaskContext(input) {
+        storeCalls.push(input);
+        return { assigneeUserKey: 'suhyeon' };
+      }
+    },
+    inProcessService: {
+      async refreshBoardForUser(input) {
+        refreshCalls.push(input);
+        return { action: 'updated', taskCount: 2 };
+      }
+    }
+  });
+
+  const route = routes.find((item) => item.path === '/idea-cruise/task-updates');
+  const response = createJsonResponse();
+  await route.handler({
+    body: {
+      taskId: 'task-1',
+      addNeededInfo: '1차 개발 보드와 최종 목표 보드를 분리해서 비교',
+      doneCriteriaChange: '비교표에 최종 추천 후보 1개 포함',
+      includeDoneCriteriaChange: true,
+      meetingRecord: '하드웨어 방향 보강'
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(storeCalls[0].taskId, 'task-1');
+  assert.equal(storeCalls[0].includeDoneCriteriaChange, true);
+  assert.equal(refreshCalls[0].user.key, 'suhyeon');
+  assert.equal(response.body.board.taskCount, 2);
 });
 
 test('registerIdeaCruiseRoute creates live intervention cards through the analyzer', async () => {

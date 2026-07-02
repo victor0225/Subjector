@@ -164,13 +164,19 @@ export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, i
         });
       }
 
+      const currentTasks = store?.listAllTasks
+        ? (await store.listAllTasks({ limit: 50 })).filter((task) => ['미시작', '수락', '오늘은 여기까지', '보완 필요', '미정리', '변경 요청 중', '회의 필요'].includes(task.status))
+        : [];
+
       const result = await taskCandidateGenerator.generate({
-        completedPages
+        completedPages,
+        currentTasks
       });
 
       return res.status(200).json({
         ok: true,
         tasks: result.tasks,
+        existingTaskUpdates: result.existingTaskUpdates ?? [],
         notTasks: result.notTasks
       });
     } catch (error) {
@@ -226,6 +232,53 @@ export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, i
           meetingRecord: String(body.meetingRecord ?? '').trim()
         }
       });
+
+      const board = await inProcessService.refreshBoardForUser({ user });
+      return res.status(200).json({
+        ok: true,
+        board
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: error.message
+      });
+    }
+  });
+
+  receiver.router.post('/idea-cruise/task-updates', async (req, res) => {
+    try {
+      const body = await readIdeaCruiseTaskBody(req);
+      const taskId = String(body.taskId ?? '').trim();
+      if (!taskId) {
+        return res.status(400).json({
+          ok: false,
+          error: '보강할 기존 task가 비어 있습니다.'
+        });
+      }
+
+      if (!store?.updateIdeaCruiseTaskContext || !inProcessService?.refreshBoardForUser) {
+        return res.status(503).json({
+          ok: false,
+          error: '기존 task 보강 경로가 아직 준비되지 않았습니다.'
+        });
+      }
+
+      const updated = await store.updateIdeaCruiseTaskContext({
+        taskId,
+        addNeededInfo: String(body.addNeededInfo ?? '').trim(),
+        doneCriteriaChange: String(body.doneCriteriaChange ?? '').trim(),
+        includeDoneCriteriaChange: Boolean(body.includeDoneCriteriaChange),
+        meetingRecord: String(body.meetingRecord ?? '').trim()
+      });
+
+      const user = config.users?.find((item) => item.key === updated.assigneeUserKey);
+      if (!user) {
+        return res.status(400).json({
+          ok: false,
+          error: '보강된 task 담당자를 찾지 못했습니다.'
+        });
+      }
 
       const board = await inProcessService.refreshBoardForUser({ user });
       return res.status(200).json({
@@ -1344,7 +1397,7 @@ export function createSlackApp({
   const ideaCruiseTaskCandidateGenerator = config.gemini?.apiKey
     ? createGeminiIdeaCruiseTaskGenerator({
       apiKey: config.gemini.apiKey,
-      model: 'gemini-2.5-flash-lite'
+      model: 'gemini-2.5-flash'
     })
     : null;
 

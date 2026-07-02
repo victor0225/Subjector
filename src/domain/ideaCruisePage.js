@@ -348,6 +348,39 @@ export function renderIdeaCruisePage() {
       line-height: 1.5;
     }
 
+    .update-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--amber);
+      border-radius: 8px;
+      background: #fffdf8;
+    }
+
+    .split-update {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .update-part {
+      display: grid;
+      gap: 7px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .update-part strong { font-size: 12px; }
+    .update-part p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
     .task-card {
       display: grid;
       gap: 10px;
@@ -495,8 +528,8 @@ export function renderIdeaCruisePage() {
 
     <section>
       <div class="section-head">
-        <h2>3. Task Candidates</h2>
-        <p class="hint">Task 후보는 왼쪽에서 완료를 누르면 Gemini 2.5 Flash-Lite가 생성합니다. 적용/완료/Subjector 반영: AI 없음.</p>
+        <h2>3. Final Task Refinement</h2>
+        <p class="hint">Task 최종 정제: Gemini 2.5 Flash. 새 task, 기존 task 보강, task 아님을 나누고 Subjector는 승인된 실행 항목만 받습니다.</p>
       </div>
       <div class="section-body">
         <div class="page-nav task-filter-nav" id="task-filter-nav"></div>
@@ -505,6 +538,7 @@ export function renderIdeaCruisePage() {
         </div>
         <div class="status">회의록 생성: Gemini 2.5 Flash-Lite</div>
         <article class="not-task" id="not-task"></article>
+        <div id="task-update-list"></div>
         <div id="task-generation-error"></div>
         <div id="task-list"></div>
       </div>
@@ -545,6 +579,7 @@ export function renderIdeaCruisePage() {
       activePageId: 'page-1',
       taskFilter: 'all',
       tasks: [],
+      existingTaskUpdates: [],
       notTasks: [],
       taskGenerationError: '',
       record: '',
@@ -570,6 +605,7 @@ export function renderIdeaCruisePage() {
       }
       state.taskFilter = state.taskFilter || 'all';
       state.tasks = Array.isArray(state.tasks) ? state.tasks : [];
+      state.existingTaskUpdates = Array.isArray(state.existingTaskUpdates) ? state.existingTaskUpdates : [];
       state.notTasks = Array.isArray(state.notTasks) ? state.notTasks : [];
       state.taskGenerationError = state.taskGenerationError || '';
       state.record = state.record || '';
@@ -763,13 +799,34 @@ export function renderIdeaCruisePage() {
           title: task.title || '',
           neededInfo: task.neededInfo || '',
           doneCriteria: task.doneCriteria || '',
+          reason: task.reason || '',
           assignee: task.assignee || '미배정',
           importance: task.importance || '보통',
           kind: task.kind || 'research',
           error: ''
         };
       }) : [];
-      state.notTasks = result.notTasks || [];
+      state.existingTaskUpdates = Array.isArray(result.existingTaskUpdates) ? result.existingTaskUpdates.map(function(item, index) {
+        return {
+          id: item.id || 'task-update-' + Date.now() + '-' + index,
+          taskId: item.taskId || '',
+          existingTaskTitle: item.existingTaskTitle || '',
+          addNeededInfo: item.addNeededInfo || '',
+          doneCriteriaChange: item.doneCriteriaChange || '',
+          reason: item.reason || '',
+          error: ''
+        };
+      }) : [];
+      state.notTasks = Array.isArray(result.notTasks) ? result.notTasks.map(function(item, index) {
+        if (typeof item === 'string') {
+          return { id: 'not-task-' + Date.now() + '-' + index, content: item, reason: '' };
+        }
+        return {
+          id: item.id || 'not-task-' + Date.now() + '-' + index,
+          content: item.content || '',
+          reason: item.reason || ''
+        };
+      }) : [];
       state.taskGenerationError = '';
     }
 
@@ -898,12 +955,41 @@ export function renderIdeaCruisePage() {
     }
 
     function renderNotTask() {
-      const items = state.notTasks.length > 0 ? state.notTasks : ['아직 제외 판단이 생성되지 않았습니다.'];
+      const items = state.notTasks.length > 0 ? state.notTasks : [{ id: 'empty', content: '아직 제외 판단이 생성되지 않았습니다.', reason: '' }];
       document.getElementById('not-task').innerHTML = '<h3>task로 만들지 않은 것</h3>' +
-        '<ul>' + items.map(function(item) { return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ul>';
+        '<div>' + items.map(function(item) {
+          const removeButton = item.id === 'empty' ? '' : '<button class="ghost" data-remove-not-task="' + item.id + '" type="button">제거</button>';
+          return '<div class="head-row" data-not-task-id="' + escapeHtml(item.id) + '"><div><strong>' + escapeHtml(item.content) + '</strong>' +
+            (item.reason ? '<div class="meta">' + escapeHtml(item.reason) + '</div>' : '') +
+            '</div>' + removeButton + '</div>';
+        }).join('') + '</div>';
       document.getElementById('task-generation-error').innerHTML = state.taskGenerationError
         ? '<div class="error-log">' + escapeHtml(state.taskGenerationError) + '</div>'
         : '';
+    }
+
+    function renderTaskUpdates() {
+      const list = document.getElementById('task-update-list');
+      if (!state.existingTaskUpdates.length) {
+        list.innerHTML = '';
+        return;
+      }
+      list.innerHTML = state.existingTaskUpdates.map(function(update) {
+        return '<article class="update-card" data-task-update-id="' + update.id + '">' +
+          '<div class="head-row"><div><span class="pill research">기존 task 보강</span><h3>' + escapeHtml(update.existingTaskTitle || update.taskId) + '</h3></div>' +
+          '<button class="ghost" data-remove-task-update="' + update.id + '" type="button">제거</button></div>' +
+          '<p class="small">' + escapeHtml(update.reason || '새 task가 아니라 기존 task를 더 선명하게 만드는 내용입니다.') + '</p>' +
+          '<div class="split-update">' +
+            '<div class="update-part"><strong>확인할 것에 추가</strong><p>' + escapeHtml(update.addNeededInfo || '추가할 확인 항목 없음') + '</p></div>' +
+            '<div class="update-part"><strong>완료 기준 변경 제안</strong><p>' + escapeHtml(update.doneCriteriaChange || '완료 기준 변경 없음') + '</p></div>' +
+          '</div>' +
+          '<div class="actions">' +
+            '<button class="secondary" data-apply-task-update="' + update.id + '" data-include-done="false" type="button">확인할 것만 보강</button>' +
+            '<button data-apply-task-update="' + update.id + '" data-include-done="true" type="button">완료 기준 변경 포함</button>' +
+          '</div>' +
+          (update.error ? '<div class="error-log">보강 실패: ' + escapeHtml(update.error) + '</div>' : '') +
+        '</article>';
+      }).join('');
     }
 
     function renderTasks() {
@@ -920,6 +1006,7 @@ export function renderIdeaCruisePage() {
           '<label>Task 제목<input data-field="title" value="' + escapeHtml(task.title) + '"></label>' +
           '<label>필요 정보<textarea data-field="neededInfo">' + escapeHtml(task.neededInfo) + '</textarea></label>' +
           '<label>완료기준<textarea data-field="doneCriteria">' + escapeHtml(task.doneCriteria) + '</textarea></label>' +
+          (task.reason ? '<div class="meta">겹치지 않는 이유: ' + escapeHtml(task.reason) + '</div>' : '') +
           '<div class="task-grid">' +
             '<label>담당자<select data-field="assignee"><option>미배정</option><option>조수현</option><option>김조은</option><option>배민성</option></select></label>' +
             '<label>중요도<select data-field="importance"><option>높음</option><option>보통</option><option>낮음</option></select></label>' +
@@ -954,6 +1041,7 @@ export function renderIdeaCruisePage() {
       renderCards();
       renderTaskFilters();
       renderNotTask();
+      renderTaskUpdates();
       renderTasks();
       renderRecord();
       saveState();
@@ -1083,6 +1171,49 @@ export function renderIdeaCruisePage() {
         state.tasks = state.tasks.filter(function(item) { return item.id !== task.id; });
       } catch (error) {
         task.error = error.message;
+      }
+      render();
+    });
+
+    document.getElementById('not-task').addEventListener('click', function(event) {
+      const button = event.target.closest('[data-remove-not-task]');
+      if (!button) return;
+      state.notTasks = state.notTasks.filter(function(item) { return item.id !== button.dataset.removeNotTask; });
+      render();
+    });
+
+    document.getElementById('task-update-list').addEventListener('click', async function(event) {
+      const removeButton = event.target.closest('[data-remove-task-update]');
+      if (removeButton) {
+        state.existingTaskUpdates = state.existingTaskUpdates.filter(function(item) { return item.id !== removeButton.dataset.removeTaskUpdate; });
+        render();
+        return;
+      }
+
+      const applyButton = event.target.closest('[data-apply-task-update]');
+      if (!applyButton) return;
+      const update = state.existingTaskUpdates.find(function(item) { return item.id === applyButton.dataset.applyTaskUpdate; });
+      if (!update) return;
+      applyButton.disabled = true;
+      try {
+        const response = await fetch('/idea-cruise/task-updates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: update.taskId,
+            addNeededInfo: update.addNeededInfo,
+            doneCriteriaChange: update.doneCriteriaChange,
+            includeDoneCriteriaChange: applyButton.dataset.includeDone === 'true',
+            meetingRecord: state.record
+          })
+        });
+        const result = await response.json().catch(function() { return {}; });
+        if (!response.ok) {
+          throw new Error(result.error || '기존 task 보강에 실패했습니다.');
+        }
+        state.existingTaskUpdates = state.existingTaskUpdates.filter(function(item) { return item.id !== update.id; });
+      } catch (error) {
+        update.error = error.message;
       }
       render();
     });
