@@ -26,8 +26,8 @@ test('buildFinalsPreviewMessage summarizes cumulative tasks, outputs, and change
   assert.match(preview.narrative.projectOverview, /프로젝트는/);
   assert.match(preview.narrative.memberProgress.join('\n'), /수현님/);
   assert.match(message, /#finals 누적 정리 업데이트/);
-  assert.match(message, /프로젝트 진행 요약/);
-  assert.match(message, /사람별 진행 맥락/);
+  assert.match(message, /프로젝트 현재 상태/);
+  assert.doesNotMatch(message, /사람별 진행 맥락/);
   assert.match(message, /수현님은 센서 후보 정리를 완료했습니다/);
   assert.match(message, /ESP32 우선 추천/);
   assert.match(message, /다음 회의\/내일 볼 것/);

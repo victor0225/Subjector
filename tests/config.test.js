@@ -111,10 +111,15 @@ test('loadConfigFromEnv enables participant skip only with an explicit test flag
   };
 
   assert.equal(loadConfigFromEnv(baseEnv).features.enableTestParticipantSkip, false);
+  assert.equal(loadConfigFromEnv(baseEnv).features.enableMeetingTaskFlow, false);
   assert.equal(loadConfigFromEnv({
     ...baseEnv,
     ENABLE_TEST_PARTICIPANT_SKIP: 'true'
   }).features.enableTestParticipantSkip, true);
+  assert.equal(loadConfigFromEnv({
+    ...baseEnv,
+    ENABLE_MEETING_TASK_FLOW: 'true'
+  }).features.enableMeetingTaskFlow, true);
 });
 
 test('loadConfigFromEnv supports Gemini task evaluation provider', () => {

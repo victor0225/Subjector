@@ -128,9 +128,14 @@ export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, i
         });
       }
 
+      const meetingContexts = store?.listRecentMeetingContexts
+        ? await store.listRecentMeetingContexts({ limit: 5 })
+        : [];
+
       const cards = await cardAnalyzer.analyze({
         entryText,
         completedEntries: Array.isArray(body.completedEntries) ? body.completedEntries : [],
+        meetingContexts,
         githubOrganization: 'https://github.com/SAFIRA-ondevice'
       });
 
@@ -1109,7 +1114,7 @@ export async function handleTaskActionViewSubmission({ ack, body, view, client =
     return;
   }
 
-  const rawText = extractTaskActionSubmissionText(view);
+  const rawText = extractTaskActionSubmissionText(view, actionId);
   const attachments = extractTaskActionSubmissionAttachments(view);
   const attachmentNote = extractTaskActionSubmissionAttachmentNote(view);
   if (!rawText) {

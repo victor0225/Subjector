@@ -8,6 +8,12 @@ export const TASK_ACTION_ATTACHMENT_NOTE_ACTION_ID = 'attachment_note';
 export const TASK_ACTION_RESULT_TYPE_BLOCK_ID = 'task_action_result_type';
 export const TASK_ACTION_RESULT_TYPE_ACTION_ID = 'result_type';
 export const TASK_FILE_SUBMISSION_ACTION_ID = 'task_file_submission';
+export const TASK_CHANGE_WHY_BLOCK_ID = 'task_change_why';
+export const TASK_CHANGE_WHY_ACTION_ID = 'why';
+export const TASK_CHANGE_NEEDED_INFO_BLOCK_ID = 'task_change_needed_info';
+export const TASK_CHANGE_NEEDED_INFO_ACTION_ID = 'needed_info';
+export const TASK_CHANGE_DONE_CRITERIA_BLOCK_ID = 'task_change_done_criteria';
+export const TASK_CHANGE_DONE_CRITERIA_ACTION_ID = 'done_criteria';
 
 const TASK_ACTIONS = {
   task_complete: {
@@ -29,7 +35,7 @@ const TASK_ACTIONS = {
   task_change_request: {
     actionId: 'task_change_request',
     label: '변경',
-    status: '변경 요청 중',
+    status: '수락',
     resultType: '변경',
     inputLabel: '변경',
     placeholder: '완료 기준 안에서 조정할 변경 내용과 변경 이유를 적어 주세요.'
@@ -103,6 +109,48 @@ function resultTypeSelectBlock() {
   };
 }
 
+function changeInputBlocks() {
+  return [
+    {
+      type: 'section',
+      text: mrkdwn('완료 기준이 바뀌면 완료 판정 기준 자체가 바뀝니다. 제출 후 현재 task 기준이 이 내용으로 갱신됩니다.')
+    },
+    {
+      type: 'input',
+      block_id: TASK_CHANGE_WHY_BLOCK_ID,
+      label: plainText('해야 할 일 변경'),
+      element: {
+        type: 'plain_text_input',
+        action_id: TASK_CHANGE_WHY_ACTION_ID,
+        multiline: true,
+        placeholder: plainText('이 task에서 실제로 해야 할 일을 현실에 맞게 적어 주세요.')
+      }
+    },
+    {
+      type: 'input',
+      block_id: TASK_CHANGE_NEEDED_INFO_BLOCK_ID,
+      label: plainText('확인할 것 추가/수정'),
+      element: {
+        type: 'plain_text_input',
+        action_id: TASK_CHANGE_NEEDED_INFO_ACTION_ID,
+        multiline: true,
+        placeholder: plainText('조사, 테스트, 자료 확인처럼 착수 전에 확인해야 할 내용을 적어 주세요.')
+      }
+    },
+    {
+      type: 'input',
+      block_id: TASK_CHANGE_DONE_CRITERIA_BLOCK_ID,
+      label: plainText('완료 기준 변경 제안'),
+      element: {
+        type: 'plain_text_input',
+        action_id: TASK_CHANGE_DONE_CRITERIA_ACTION_ID,
+        multiline: true,
+        placeholder: plainText('이 기준을 만족하면 완료라고 볼 수 있는 조건을 적어 주세요.')
+      }
+    }
+  ];
+}
+
 function normalizeFile(file) {
   return {
     id: file.id,
@@ -142,7 +190,12 @@ export function buildTaskActionModalView({ actionId, taskId, assigneeUserKey, ta
     title: plainText(action.label),
     submit: plainText('제출'),
     close: plainText('취소'),
-    blocks: [
+    blocks: actionId === 'task_change_request' ? [
+      {
+        type: 'section',
+        text: mrkdwn(`*${taskTitle}*`)
+      }
+    ].concat(changeInputBlocks()) : [
       {
         type: 'section',
         text: mrkdwn(`*${taskTitle}*`)
@@ -163,7 +216,31 @@ export function buildTaskActionModalView({ actionId, taskId, assigneeUserKey, ta
   };
 }
 
-export function extractTaskActionSubmissionText(view) {
+function inputValue(view, blockId, actionId) {
+  return (view.state.values?.[blockId]?.[actionId]?.value ?? '').trim();
+}
+
+export function extractTaskActionSubmissionText(view, actionId = null) {
+  if (actionId === 'task_change_request') {
+    const why = inputValue(view, TASK_CHANGE_WHY_BLOCK_ID, TASK_CHANGE_WHY_ACTION_ID);
+    const neededInfo = inputValue(view, TASK_CHANGE_NEEDED_INFO_BLOCK_ID, TASK_CHANGE_NEEDED_INFO_ACTION_ID);
+    const doneCriteria = inputValue(view, TASK_CHANGE_DONE_CRITERIA_BLOCK_ID, TASK_CHANGE_DONE_CRITERIA_ACTION_ID);
+    if (!why && !neededInfo && !doneCriteria) {
+      return '';
+    }
+
+    return [
+      '[해야 할 일 변경]',
+      why,
+      '',
+      '[확인할 것 추가/수정]',
+      neededInfo,
+      '',
+      '[완료 기준 변경 제안]',
+      doneCriteria
+    ].join('\n').trim();
+  }
+
   return view.state.values[TASK_ACTION_INPUT_BLOCK_ID][TASK_ACTION_INPUT_ACTION_ID].value.trim();
 }
 

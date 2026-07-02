@@ -5,6 +5,7 @@ import {
   extractTaskActionSubmissionActionId,
   extractTaskActionSubmissionAttachments,
   extractTaskActionSubmissionAttachmentNote,
+  extractTaskActionSubmissionText,
   buildTaskActionModalView,
   parseTaskActionMetadata,
   taskActionFromActionId
@@ -13,7 +14,7 @@ import {
 test('taskActionFromActionId maps the simplified task actions', () => {
   assert.equal(taskActionFromActionId('task_complete').status, '완료');
   assert.equal(taskActionFromActionId('task_stop_today').status, '오늘은 여기까지');
-  assert.equal(taskActionFromActionId('task_change_request').status, '변경 요청 중');
+  assert.equal(taskActionFromActionId('task_change_request').status, '수락');
   assert.equal(taskActionFromActionId('task_file_submission').status, '추가 진행 예정');
   assert.equal(taskActionFromActionId('unknown'), null);
 });
@@ -53,7 +54,10 @@ test('buildTaskActionModalView customizes prompt labels for each action', () => 
   });
 
   assert.match(submitView.blocks[1].label.text, /제출 내용/);
-  assert.match(changeView.blocks[1].label.text, /^변경$/);
+  assert.match(changeView.blocks[1].text.text, /완료 기준이 바뀌면/);
+  assert.match(changeView.blocks[2].label.text, /해야 할 일 변경/);
+  assert.match(changeView.blocks[3].label.text, /확인할 것 추가\/수정/);
+  assert.match(changeView.blocks[4].label.text, /완료 기준 변경 제안/);
 });
 
 test('completion and stop-for-today modals stay text-only so empty attachments do not block submit', () => {
@@ -162,9 +166,56 @@ test('change modal asks for bounded task adjustment', () => {
     taskTitle: '센서 후보 정리'
   });
 
-  const placeholder = view.blocks[1].element.placeholder.text;
+  const labels = view.blocks.map((block) => block.label?.text).filter(Boolean).join('\n');
 
-  assert.match(placeholder, /완료 기준 안에서/);
-  assert.match(placeholder, /변경 내용/);
-  assert.match(placeholder, /변경 이유/);
+  assert.match(labels, /해야 할 일 변경/);
+  assert.match(labels, /확인할 것 추가\/수정/);
+  assert.match(labels, /완료 기준 변경 제안/);
+});
+
+test('extractTaskActionSubmissionText combines the three change fields', () => {
+  const view = {
+    state: {
+      values: {
+        task_change_why: {
+          why: { value: 'ESP32 기준 비교로 좁힘' }
+        },
+        task_change_needed_info: {
+          needed_info: { value: '가격과 전력 확인' }
+        },
+        task_change_done_criteria: {
+          done_criteria: { value: '추천 후보 1개 제시' }
+        }
+      }
+    }
+  };
+
+  const text = extractTaskActionSubmissionText(view, 'task_change_request');
+
+  assert.match(text, /\[해야 할 일 변경\]/);
+  assert.match(text, /ESP32 기준 비교로 좁힘/);
+  assert.match(text, /\[확인할 것 추가\/수정\]/);
+  assert.match(text, /가격과 전력 확인/);
+  assert.match(text, /\[완료 기준 변경 제안\]/);
+  assert.match(text, /추천 후보 1개 제시/);
+});
+
+test('extractTaskActionSubmissionText rejects an empty change modal', () => {
+  const view = {
+    state: {
+      values: {
+        task_change_why: {
+          why: { value: '' }
+        },
+        task_change_needed_info: {
+          needed_info: { value: '   ' }
+        },
+        task_change_done_criteria: {
+          done_criteria: { value: '' }
+        }
+      }
+    }
+  };
+
+  assert.equal(extractTaskActionSubmissionText(view, 'task_change_request'), '');
 });

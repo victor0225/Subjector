@@ -145,7 +145,8 @@ export function loadConfigFromEnv(env = process.env) {
       finals: env.FINALS_CHANNEL_ID.trim()
     },
     features: {
-      enableTestParticipantSkip: envFlag(env.ENABLE_TEST_PARTICIPANT_SKIP)
+      enableTestParticipantSkip: envFlag(env.ENABLE_TEST_PARTICIPANT_SKIP),
+      enableMeetingTaskFlow: envFlag(env.ENABLE_MEETING_TASK_FLOW)
     }
   };
 }

@@ -52,6 +52,7 @@ test('createOpenAiIdeaCruiseCardAnalyzer asks OpenAI for contextual live interve
   const result = await analyzer.analyze({
     entryText: '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?',
     completedEntries: ['헤드셋 목적은 전장 소음 대응'],
+    meetingContexts: ['최근 전사: 공사현장용과 전장용 헤드셋 방향이 충돌할 수 있음'],
     githubOrganization: 'https://github.com/SAFIRA-ondevice'
   });
 
@@ -62,6 +63,7 @@ test('createOpenAiIdeaCruiseCardAnalyzer asks OpenAI for contextual live interve
   assert.match(calls[0][1].headers.Authorization, /Bearer sk-openai-key/);
   assert.match(calls[0][1].body, /전장 상황에서 폭음을 막아주는 역할/);
   assert.match(calls[0][1].body, /SAFIRA-ondevice/);
+  assert.match(calls[0][1].body, /최근 전사/);
   assert.equal(result[0].title, '폭음 정의부터 고정');
   assert.equal(result[0].suggestion.includes('공개 sound event dataset'), true);
   assert.equal(result[0].kind, 'answer');

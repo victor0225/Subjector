@@ -38,7 +38,7 @@ test('normalizeMeetingTranscript keeps speaker candidates and transcript segment
   assert.equal(transcript.decisions[0], '회의 녹음은 #회의-결과록에 업로드한다.');
 });
 
-test('buildMeetingTranscriptionReadyText asks the lead to map Speaker A/B/C before task extraction', () => {
+test('buildMeetingTranscriptionReadyText stores transcript as IDEA CRUISE context', () => {
   const text = buildMeetingTranscriptionReadyText({
     transcript: normalizeMeetingTranscript({
       meetingTitle: '산기대학로 회의',
@@ -49,8 +49,8 @@ test('buildMeetingTranscriptionReadyText asks the lead to map Speaker A/B/C befo
   });
 
   assert.match(text, /전사가 완료되었습니다/);
-  assert.match(text, /Speaker A\/B\/C/);
-  assert.match(text, /task 추출 전/);
+  assert.match(text, /IDEA CRUISE 참고 맥락/);
+  assert.match(text, /자동 task 생성은 진행하지 않습니다/);
 });
 
 test('buildSpeakerMappingBlocks renders team member buttons for each speaker', () => {

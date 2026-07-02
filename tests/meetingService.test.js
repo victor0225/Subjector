@@ -16,6 +16,9 @@ const teamConfig = {
     meeting: 'C_MEETING'
   },
   leadUserKey: 'suhyeon',
+  features: {
+    enableMeetingTaskFlow: true
+  },
   users: [
     { key: 'suhyeon', slackId: 'U1', fullName: '조수현', displayName: '수현' },
     { key: 'joeun', slackId: 'U2', fullName: '김조은', displayName: '조은' }
@@ -58,7 +61,7 @@ test('handleMeetingFileMessage records a meeting upload and returns a thread rep
   assert.equal(result.channel, 'C_MEETING');
   assert.equal(result.threadTs, '1710000000.000100');
   assert.match(result.text, /회의 녹음 업로드를 확인했습니다/);
-  assert.match(result.text, /전사와 Speaker A\/B\/C 매핑/);
+  assert.match(result.text, /IDEA CRUISE 참고 맥락/);
 });
 
 test('handleMeetingFileMessage ignores non-meeting messages', async () => {
@@ -110,6 +113,35 @@ test('handleRawMeetingText records manual meeting text and asks participants for
   assert.match(result.text, /수동 회의 기록을 저장했습니다/);
   assert.equal(result.directMessages.length, 2);
   assert.equal(result.directMessages[0].blocks[1].elements[0].action_id, 'meeting_participant_task_input');
+});
+
+test('handleRawMeetingText stores context only when meeting task flow is disabled', async () => {
+  const calls = [];
+  const service = createMeetingService({
+    config: {
+      ...teamConfig,
+      features: {
+        enableMeetingTaskFlow: false
+      }
+    },
+    store: {
+      async createMeetingFromRawText(input) {
+        calls.push(input);
+      }
+    }
+  });
+
+  const result = await service.handleRawMeetingText({
+    sourceChannelId: 'D_LEAD',
+    sourceMessageTs: '1710000000.000200',
+    submittedByUserKey: 'suhyeon',
+    rawText: 'ESP32 기준으로 진행하기로 함'
+  });
+
+  assert.equal(calls[0].sourceChannelId, 'D_LEAD');
+  assert.deepEqual(calls[0].participantUserKeys, ['suhyeon', 'joeun']);
+  assert.match(result.text, /IDEA CRUISE 참고 맥락으로 저장했습니다/);
+  assert.equal(result.directMessages, undefined);
 });
 
 test('processMeetingAudioUpload downloads, transcribes, stores, and asks for speaker mapping', async () => {
@@ -169,7 +201,8 @@ test('processMeetingAudioUpload downloads, transcribes, stores, and asks for spe
   assert.equal(result.channel, 'C_MEETING');
   assert.equal(result.threadTs, '1710000000.000100');
   assert.match(result.text, /전사가 완료되었습니다/);
-  assert.ok(result.blocks.some((block) => block.type === 'actions'));
+  assert.match(result.text, /IDEA CRUISE가 참고할 회의 맥락/);
+  assert.equal(result.blocks.some((block) => block.type === 'actions'), false);
 });
 
 test('processMeetingAudioUpload marks the meeting failed when transcription fails', async () => {

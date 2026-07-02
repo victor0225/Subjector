@@ -125,9 +125,10 @@ export function buildFinalsPreviewMessage(preview) {
     `#finals 누적 정리 업데이트 (${preview.workDate})`,
     '#finals에 바로 반영된 내용입니다.',
     '',
-    paragraphSection('프로젝트 진행 요약', preview.narrative?.projectOverview),
-    '',
-    section('사람별 진행 맥락', preview.narrative?.memberProgress ?? []),
+    paragraphSection('프로젝트 현재 상태', [
+      preview.narrative?.projectOverview,
+      ...(preview.narrative?.memberProgress ?? [])
+    ].filter(Boolean).join('\n')),
     '',
     section('다음 회의/내일 볼 것', preview.narrative?.nextFocus ?? []),
     '',
@@ -139,9 +140,10 @@ export function buildFinalsChannelMessage(preview) {
   return [
     `#finals 누적 정리 (${preview.workDate})`,
     '',
-    paragraphSection('프로젝트 진행 요약', preview.narrative?.projectOverview),
-    '',
-    section('사람별 진행 맥락', preview.narrative?.memberProgress ?? []),
+    paragraphSection('프로젝트 현재 상태', [
+      preview.narrative?.projectOverview,
+      ...(preview.narrative?.memberProgress ?? [])
+    ].filter(Boolean).join('\n')),
     '',
     section('다음 회의/내일 볼 것', preview.narrative?.nextFocus ?? []),
     '',

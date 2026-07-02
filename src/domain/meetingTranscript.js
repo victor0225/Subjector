@@ -46,13 +46,13 @@ export function normalizeMeetingTranscript(value = {}) {
 
 export function buildMeetingTranscriptionReadyText({ transcript }) {
   const normalized = normalizeMeetingTranscript(transcript);
-  const summary = normalized.conciseSummary || '요약은 Speaker 매핑 이후 task 추출 단계에서 보강합니다.';
+  const summary = normalized.conciseSummary || '요약은 IDEA CRUISE 카드 생성 시 참고 맥락으로 사용됩니다.';
 
   return [
     '전사가 완료되었습니다.',
     `- 회의: ${normalized.meetingTitle}`,
     `- 요약: ${summary}`,
-    '- 상태: Speaker A/B/C 매핑 필요',
-    'task 추출 전, 아래 버튼으로 각 Speaker가 실제로 누구인지 지정해 주세요.'
+    '- 상태: IDEA CRUISE 참고 맥락 저장 완료',
+    'IDEA CRUISE가 참고할 회의 맥락으로 저장했습니다. 자동 task 생성은 진행하지 않습니다.'
   ].join('\n');
 }

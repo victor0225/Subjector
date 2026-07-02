@@ -67,6 +67,20 @@ function compactResultText(rawText) {
   return lines.slice(0, 3).join(' / ');
 }
 
+function parseSection(rawText, title) {
+  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = String(rawText ?? '').match(new RegExp(`\\[${escaped}\\]\\n([\\s\\S]*?)(?=\\n\\[[^\\]]+\\]|$)`));
+  return match?.[1]?.trim() ?? '';
+}
+
+function parseTaskChangeText(rawText) {
+  return {
+    why: parseSection(rawText, '해야 할 일 변경'),
+    neededInfo: parseSection(rawText, '확인할 것 추가/수정'),
+    doneCriteria: parseSection(rawText, '완료 기준 변경 제안')
+  };
+}
+
 function normalizeSubmissionAttachments(attachments = []) {
   return attachments
     .filter((file) => file?.id || file?.name)
@@ -724,6 +738,15 @@ export function createInProcessService({
         proposerUserKey: submittedByUserKey,
         rawText
       });
+      if (store.updateTaskContextFromChange) {
+        const change = parseTaskChangeText(rawText);
+        await store.updateTaskContextFromChange({
+          taskId,
+          proposerUserKey: submittedByUserKey,
+          rawText,
+          ...change
+        });
+      }
     } else {
       const resultInput = {
         taskId,

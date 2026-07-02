@@ -174,6 +174,39 @@ test('completeMeetingTranscription stores transcript summary and waits for speak
   assert.equal(update[2].error_message, null);
 });
 
+test('listRecentMeetingContexts reads transcript summaries for IDEA CRUISE cards', async () => {
+  const supabase = createFakeSupabase({
+    tableData: {
+      meetings: [
+        {
+          id: 'meeting-1',
+          status: 'needs_speaker_mapping',
+          audio_file_name: '회의.m4a',
+          summary: {
+            transcript: {
+              meetingTitle: '하드웨어 방향 회의',
+              conciseSummary: '공사현장용과 전장용 목적 충돌을 논의함',
+              decisions: ['개발 보드는 라즈베리파이로 시작'],
+              actionItems: ['ESP32 전환 가능성 확인']
+            }
+          },
+          created_at: '2026-07-02T08:00:00.000Z'
+        }
+      ]
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const contexts = await store.listRecentMeetingContexts({ limit: 5 });
+
+  assert.equal(contexts.length, 1);
+  assert.match(contexts[0], /하드웨어 방향 회의/);
+  assert.match(contexts[0], /공사현장용과 전장용/);
+  assert.match(contexts[0], /라즈베리파이/);
+  assert.ok(supabase.calls.some((call) => call[0] === 'meetings' && call[1] === 'order' && call[2] === 'created_at'));
+  assert.ok(supabase.calls.some((call) => call[0] === 'meetings' && call[1] === 'limit' && call[2] === 5));
+});
+
 test('failMeetingTranscription stores the error message', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);
@@ -561,6 +594,39 @@ test('updateIdeaCruiseTaskContext boosts an existing task context', async () => 
   assert.match(update[2].context.doneCriteria, /비교표 작성/);
   assert.match(update[2].context.doneCriteria, /최종 추천 후보 1개 포함/);
   assert.equal(update[2].context.ideaCruiseBoosts[0].meetingRecord, '하드웨어 방향 보강');
+});
+
+test('updateTaskContextFromChange replaces execution fields and records change history', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      tasks: {
+        id: 'task-1',
+        assignee_user_key: 'suhyeon',
+        context: {
+          why: '기존 해야 할 일',
+          neededInfo: '기존 확인할 것',
+          doneCriteria: '기존 완료 기준'
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.updateTaskContextFromChange({
+    taskId: 'task-1',
+    proposerUserKey: 'suhyeon',
+    why: 'ESP32 기준 비교로 좁힘',
+    neededInfo: '가격과 전력 확인',
+    doneCriteria: '추천 후보 1개 제시',
+    rawText: '[해야 할 일 변경]\nESP32 기준 비교로 좁힘'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'update');
+  assert.equal(result.assigneeUserKey, 'suhyeon');
+  assert.equal(update[2].context.why, 'ESP32 기준 비교로 좁힘');
+  assert.equal(update[2].context.neededInfo, '가격과 전력 확인');
+  assert.equal(update[2].context.doneCriteria, '추천 후보 1개 제시');
+  assert.equal(update[2].context.changeHistory[0].proposerUserKey, 'suhyeon');
 });
 
 test('endWorkSession upserts by user and work date with ended time', async () => {

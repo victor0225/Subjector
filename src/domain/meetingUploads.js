@@ -69,6 +69,6 @@ export function buildMeetingUploadThreadText({ file, uploader }) {
     `- 업로더: ${uploaderName}`,
     `- 파일: ${fileName}`,
     '- 상태: 업로드 기록 완료',
-    '다음 단계에서 전사와 Speaker A/B/C 매핑을 진행합니다.'
+    '다음 단계에서 전사를 진행하고 IDEA CRUISE 참고 맥락으로 저장합니다.'
   ].join('\n');
 }

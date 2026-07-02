@@ -100,6 +100,9 @@ function createFakeStore({
     async createChangeRequest(input) {
       calls.push(['createChangeRequest', input]);
     },
+    async updateTaskContextFromChange(input) {
+      calls.push(['updateTaskContextFromChange', input]);
+    },
     async updateTaskStatus(input) {
       calls.push(['updateTaskStatus', input]);
     },
@@ -1048,12 +1051,24 @@ test('handleTaskActionSubmission stores change request output', async () => {
     taskId: 'task-1',
     assigneeUserKey: 'suhyeon',
     submittedByUserKey: 'suhyeon',
-    rawText: '[변경 요청]'
+    rawText: [
+      '[해야 할 일 변경]',
+      'ESP32 기준 비교로 좁힘',
+      '',
+      '[확인할 것 추가/수정]',
+      '가격과 전력 확인',
+      '',
+      '[완료 기준 변경 제안]',
+      '추천 후보 1개 제시'
+    ].join('\n')
   });
 
-  assert.equal(result.status, '변경 요청 중');
-  assert.equal(store.calls.find(([name]) => name === 'createChangeRequest')[1].rawText, '[변경 요청]');
-  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '변경 요청 중');
+  assert.equal(result.status, '수락');
+  assert.match(store.calls.find(([name]) => name === 'createChangeRequest')[1].rawText, /해야 할 일 변경/);
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskContextFromChange')[1].why, 'ESP32 기준 비교로 좁힘');
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskContextFromChange')[1].neededInfo, '가격과 전력 확인');
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskContextFromChange')[1].doneCriteria, '추천 후보 1개 제시');
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '수락');
 });
 
 test('handleEndWork stores the end time and returns a daily summary', async () => {

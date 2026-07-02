@@ -63,5 +63,5 @@ test('buildMeetingUploadThreadText explains the next processing step', () => {
   assert.match(text, /회의 녹음 업로드를 확인했습니다/);
   assert.match(text, /수현님/);
   assert.match(text, /subjector-meeting\.m4a/);
-  assert.match(text, /전사와 Speaker A\/B\/C 매핑/);
+  assert.match(text, /IDEA CRUISE 참고 맥락/);
 });

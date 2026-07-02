@@ -50,6 +50,10 @@ function shouldExtractTaskCandidates({ meeting }) {
     });
 }
 
+function isMeetingTaskFlowEnabled(config) {
+  return config?.features?.enableMeetingTaskFlow === true;
+}
+
 function candidateReviewMessages({ taskCandidates, sourceChannelId, sourceMessageTs, config }) {
   const grouped = new Map();
 
@@ -137,6 +141,12 @@ export function createMeetingService({
       participantUserKeys
     });
 
+    if (!isMeetingTaskFlowEnabled(config)) {
+      return {
+        text: '수동 회의 기록을 IDEA CRUISE 참고 맥락으로 저장했습니다. 자동 task 생성은 진행하지 않습니다.'
+      };
+    }
+
     return {
       text: '수동 회의 기록을 저장했습니다. 팀원에게 중요하다고 보는 일을 입력하라는 DM을 보냈습니다.',
       directMessages: config.users
@@ -199,13 +209,15 @@ export function createMeetingService({
         channel: message.channel,
         threadTs: message.thread_ts ?? message.ts,
         text,
-        blocks: buildSpeakerMappingBlocks({
-          text,
-          transcript,
-          users: config.users,
-          sourceChannelId: source.sourceChannelId,
-          sourceMessageTs: source.sourceMessageTs
-        })
+        blocks: isMeetingTaskFlowEnabled(config)
+          ? buildSpeakerMappingBlocks({
+            text,
+            transcript,
+            users: config.users,
+            sourceChannelId: source.sourceChannelId,
+            sourceMessageTs: source.sourceMessageTs
+          })
+          : [{ type: 'section', text: { type: 'mrkdwn', text } }]
       };
     } catch (error) {
       await store.failMeetingTranscription({
@@ -238,7 +250,7 @@ export function createMeetingService({
       speakerMapping: result.speakerMapping
     };
 
-    if (!taskExtractor || !shouldExtractTaskCandidates({ meeting: mappedMeeting })) {
+    if (!isMeetingTaskFlowEnabled(config) || !taskExtractor || !shouldExtractTaskCandidates({ meeting: mappedMeeting })) {
       return response;
     }
 

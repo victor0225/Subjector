@@ -324,6 +324,33 @@ export function createSupabaseStore(supabase) {
     return mapMeeting(result.data);
   }
 
+  async function listRecentMeetingContexts({ limit = 5 } = {}) {
+    const result = await supabase
+      .from('meetings')
+      .select('id,status,audio_file_name,summary,created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    throwIfError(result, 'Failed to list recent meeting contexts');
+    return result.data
+      .map((row) => {
+        const transcript = row.summary?.transcript ?? {};
+        const title = transcript.meetingTitle || row.audio_file_name || '회의 기록';
+        const summary = transcript.conciseSummary || row.summary?.rawText || '';
+        const decisions = Array.isArray(transcript.decisions) ? transcript.decisions : [];
+        const actionItems = Array.isArray(transcript.actionItems) ? transcript.actionItems : [];
+        const pieces = [
+          `회의: ${title}`,
+          summary ? `요약: ${summary}` : '',
+          decisions.length ? `결정: ${decisions.slice(0, 5).join(' / ')}` : '',
+          actionItems.length ? `확인할 것: ${actionItems.slice(0, 5).join(' / ')}` : ''
+        ].filter(Boolean);
+
+        return pieces.join('\n');
+      })
+      .filter(Boolean);
+  }
+
   async function saveMeetingSpeakerMapping({ sourceChannelId, sourceMessageTs, speakerLabel, userKey }) {
     const meeting = await getMeetingBySource({ sourceChannelId, sourceMessageTs });
     const speakerMapping = {
@@ -712,6 +739,59 @@ export function createSupabaseStore(supabase) {
     };
   }
 
+  async function updateTaskContextFromChange({
+    taskId,
+    proposerUserKey,
+    why = '',
+    neededInfo = '',
+    doneCriteria = '',
+    rawText = ''
+  }) {
+    const existingResult = await supabase
+      .from('tasks')
+      .select('id,assignee_user_key,context')
+      .eq('id', taskId)
+      .maybeSingle();
+
+    throwIfError(existingResult, 'Failed to read task for change context update');
+    if (!existingResult.data) {
+      throw new Error('Failed to read task for change context update: task not found');
+    }
+
+    const context = existingResult.data.context ?? {};
+    const changeRecord = {
+      proposerUserKey,
+      why,
+      neededInfo,
+      doneCriteria,
+      rawText,
+      createdAt: new Date().toISOString()
+    };
+    const nextContext = {
+      ...context,
+      why: String(why || context.why || context.reason || '').trim(),
+      neededInfo: String(neededInfo || context.neededInfo || '').trim(),
+      doneCriteria: String(doneCriteria || context.doneCriteria || context.completionCriteria || '').trim(),
+      changeHistory: [
+        ...(Array.isArray(context.changeHistory) ? context.changeHistory : []),
+        changeRecord
+      ]
+    };
+
+    const updateResult = await supabase
+      .from('tasks')
+      .update({ context: nextContext })
+      .eq('id', taskId);
+
+    throwIfError(updateResult, 'Failed to update task context from change request');
+
+    return {
+      taskId,
+      assigneeUserKey: existingResult.data.assignee_user_key,
+      context: nextContext
+    };
+  }
+
   async function findSlackMessage({ purpose, channelId }) {
     const result = await supabase
       .from('slack_messages')
@@ -967,6 +1047,7 @@ export function createSupabaseStore(supabase) {
     completeMeetingTranscription,
     failMeetingTranscription,
     getMeetingBySource,
+    listRecentMeetingContexts,
     saveMeetingSpeakerMapping,
     saveMeetingTaskCandidates,
     requestMeetingParticipantTaskInputs,
@@ -983,6 +1064,7 @@ export function createSupabaseStore(supabase) {
     listDailyTasksForUser,
     listAllTasks,
     updateIdeaCruiseTaskContext,
+    updateTaskContextFromChange,
     findSlackMessage,
     listTaskDetailMessagesForThread,
     getTaskById,

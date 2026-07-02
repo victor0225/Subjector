@@ -80,7 +80,7 @@ async function readErrorBody(response) {
   }
 }
 
-function buildIdeaCruiseCardInput({ entryText, completedEntries = [], githubOrganization = '' }) {
+function buildIdeaCruiseCardInput({ entryText, completedEntries = [], meetingContexts = [], githubOrganization = '' }) {
   return [
     'You are IDEA CRUISE, a live brainstorming intervention assistant for a 3-person graduation-project team.',
     'Your job is not to emit generic templates. Give concrete help for the exact entry.',
@@ -101,6 +101,9 @@ function buildIdeaCruiseCardInput({ entryText, completedEntries = [], githubOrga
     '',
     'Completed brainstorming inputs:',
     completedEntries.length > 0 ? completedEntries.join('\n---\n') : 'none yet',
+    '',
+    'Recent meeting/transcript context:',
+    meetingContexts.length > 0 ? meetingContexts.join('\n---\n') : 'none yet',
     '',
     'Current entry:',
     entryText
@@ -141,7 +144,7 @@ export function createOpenAiIdeaCruiseCardAnalyzer({ apiKey, model = 'gpt-5.4', 
     throw new Error('OpenAI IDEA CRUISE card analyzer requires fetch');
   }
 
-  async function analyze({ entryText, completedEntries = [], githubOrganization = '' }) {
+  async function analyze({ entryText, completedEntries = [], meetingContexts = [], githubOrganization = '' }) {
     const response = await fetchImpl(OPENAI_RESPONSES_URL, {
       method: 'POST',
       headers: {
@@ -156,6 +159,7 @@ export function createOpenAiIdeaCruiseCardAnalyzer({ apiKey, model = 'gpt-5.4', 
             content: buildIdeaCruiseCardInput({
               entryText,
               completedEntries,
+              meetingContexts,
               githubOrganization
             })
           }

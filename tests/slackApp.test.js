@@ -277,6 +277,7 @@ test('registerIdeaCruiseRoute boosts an existing IDEA CRUISE task and refreshes 
 test('registerIdeaCruiseRoute creates live intervention cards through the analyzer', async () => {
   const routes = [];
   const analyzerCalls = [];
+  const storeCalls = [];
   const receiver = {
     router: {
       get() {},
@@ -288,6 +289,12 @@ test('registerIdeaCruiseRoute creates live intervention cards through the analyz
 
   registerIdeaCruiseRoute(receiver, {
     config: teamConfig,
+    store: {
+      async listRecentMeetingContexts(input) {
+        storeCalls.push(['listRecentMeetingContexts', input]);
+        return ['최근 전사: 공사현장용과 전장용 목적이 충돌할 수 있음'];
+      }
+    },
     cardAnalyzer: {
       async analyze(input) {
         analyzerCalls.push(input);
@@ -318,6 +325,8 @@ test('registerIdeaCruiseRoute creates live intervention cards through the analyz
   assert.equal(response.body.cards[0].title, '폭음 정의부터 고정');
   assert.match(analyzerCalls[0].entryText, /폭음/);
   assert.equal(analyzerCalls[0].githubOrganization, 'https://github.com/SAFIRA-ondevice');
+  assert.deepEqual(analyzerCalls[0].meetingContexts, ['최근 전사: 공사현장용과 전장용 목적이 충돌할 수 있음']);
+  assert.deepEqual(storeCalls[0], ['listRecentMeetingContexts', { limit: 5 }]);
 });
 
 test('registerIdeaCruiseRoute creates IDEA CRUISE task candidates through the generator', async () => {
