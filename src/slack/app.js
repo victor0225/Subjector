@@ -227,6 +227,7 @@ export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, i
         importance: String(body.importance ?? '보통').trim() || '보통',
         context: {
           source: 'IDEA CRUISE',
+          why: String(body.reason ?? body.why ?? '').trim() || `IDEA CRUISE에서 "${title}" task로 분리된 실행 항목입니다.`,
           neededInfo: String(body.neededInfo ?? '').trim(),
           doneCriteria: String(body.doneCriteria ?? '').trim(),
           meetingRecord: String(body.meetingRecord ?? '').trim()

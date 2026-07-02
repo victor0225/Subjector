@@ -205,6 +205,7 @@ test('registerIdeaCruiseRoute creates an IDEA CRUISE task and refreshes the assi
       title: 'ESP32와 라즈베리 파이 비교',
       neededInfo: '가격, 전력, 구현 난이도',
       doneCriteria: '비교표와 추천안이 정리됨',
+      reason: '하드웨어 후보를 좁혀야 실제 구매와 구현이 가능하다.',
       assignee: '김조은',
       importance: '높음',
       meetingRecord: '오늘은 후보 기준을 정했다.'
@@ -217,6 +218,7 @@ test('registerIdeaCruiseRoute creates an IDEA CRUISE task and refreshes the assi
   assert.equal(storeCalls[0].title, 'ESP32와 라즈베리 파이 비교');
   assert.equal(storeCalls[0].importance, '높음');
   assert.equal(storeCalls[0].context.source, 'IDEA CRUISE');
+  assert.equal(storeCalls[0].context.why, '하드웨어 후보를 좁혀야 실제 구매와 구현이 가능하다.');
   assert.equal(storeCalls[0].context.neededInfo, '가격, 전력, 구현 난이도');
   assert.equal(storeCalls[0].context.doneCriteria, '비교표와 추천안이 정리됨');
   assert.equal(refreshCalls[0].user.key, 'joeun');

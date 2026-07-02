@@ -1202,6 +1202,7 @@ export function renderIdeaCruisePage() {
             title: task.title,
             neededInfo: task.neededInfo,
             doneCriteria: task.doneCriteria,
+            reason: task.reason,
             assignee: task.assignee,
             importance: task.importance,
             meetingRecord: state.record

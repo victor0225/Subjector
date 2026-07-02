@@ -521,7 +521,28 @@ export function createInProcessService({
     const record = await store.getLatestCodexPromptForTask(taskId);
 
     if (!record?.prompt) {
-      const text = '저장된 Codex 프롬프트를 찾지 못했습니다. task에서 `수락 및 Codex 프롬프트 생성`을 다시 실행해 주세요.';
+      const task = await store.getTaskById(taskId);
+      const context = task?.context ?? {};
+      const neededInfo = String(context.neededInfo ?? context.requiredInfo ?? context.needs ?? '').trim();
+      const completionCriteria = String(context.completionCriteria ?? context.acceptanceCriteria ?? context.doneCriteria ?? '').trim();
+      const why = String(context.why ?? context.reason ?? context.goal ?? '').trim();
+      const text = [
+        `*${task?.title ?? 'task'}* 도움 받기`,
+        '',
+        '[왜 하는가]',
+        `- ${why || 'IDEA CRUISE에서 task로 분리된 실행 항목입니다.'}`,
+        '',
+        '[Codex를 쓰면 좋은 부분]',
+        '- 조사 결과를 완료 기준에 맞는 표/체크리스트로 정리하기',
+        '- 누락된 확인 항목이나 반례를 찾아 task 범위를 더 선명하게 만들기',
+        '- 제출 내용을 Slack에 올리기 좋은 형태로 다듬기',
+        '',
+        '[사람이 직접 확인할 것]',
+        `- ${neededInfo || '공식 자료, 최신 정보, 실제 테스트 결과처럼 직접 판단이 필요한 정보'}`,
+        '',
+        '[완료 기준]',
+        `- ${completionCriteria || 'IDEA CRUISE에서 정한 완료 기준을 충족하는 제출물'}`
+      ].join('\n');
       return {
         text,
         blocks: buildTextMessageBlocks(text)

@@ -48,7 +48,8 @@ function createFakeStore({
   taskDetailMessages = [],
   tasks = [],
   endedSessions = [],
-  finalsUpdateForDate = null
+  finalsUpdateForDate = null,
+  latestCodexPrompt = { prompt: 'Subjector Codex prompt' }
 } = {}) {
   const calls = [];
 
@@ -107,9 +108,12 @@ function createFakeStore({
     },
     async getLatestCodexPromptForTask(taskId) {
       calls.push(['getLatestCodexPromptForTask', taskId]);
+      if (latestCodexPrompt === null) {
+        return null;
+      }
       return {
         taskId,
-        prompt: 'Subjector Codex prompt',
+        prompt: latestCodexPrompt.prompt,
         slackChannelId: 'C_IN_PROCESS',
         slackMessageTs: '1710000000.000001'
       };
@@ -947,6 +951,27 @@ test('handleCodexPromptCopyRequest returns a copyable prompt message', async () 
   assert.match(result.blocks[1].text.text, /Subjector Codex prompt/);
   assert.deepEqual(store.calls.find(([name]) => name === 'getLatestCodexPromptForTask'), [
     'getLatestCodexPromptForTask',
+    'task-1'
+  ]);
+});
+
+test('handleCodexPromptCopyRequest returns task help when no stored prompt exists', async () => {
+  const store = createFakeStore({ latestCodexPrompt: null });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user]
+  });
+
+  const result = await service.handleCodexPromptCopyRequest({ taskId: 'task-1' });
+
+  assert.match(result.text, /도움 받기/);
+  assert.match(result.text, /Codex를 쓰면 좋은 부분/);
+  assert.match(result.text, /사람이 직접 확인할 것/);
+  assert.doesNotMatch(result.text, /수락 및 Codex 프롬프트 생성/);
+  assert.deepEqual(store.calls.find(([name]) => name === 'getTaskById'), [
+    'getTaskById',
     'task-1'
   ]);
 });
