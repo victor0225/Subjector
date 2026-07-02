@@ -47,7 +47,11 @@ test('buildInProcessBoardMessage includes assigned task summaries', () => {
         status: '미시작',
         importance: '🔴 상',
         coordination: '🟡 중',
-        context: { source: '회의 결과록 2026-06-28' }
+        context: {
+          why: '센서 선택 기준이 정해져야 다음 개발 방향을 잡을 수 있음',
+          neededInfo: '가격, 전력, 구현 난이도',
+          doneCriteria: '비교표와 추천안 1개'
+        }
       }
     ]
   });
@@ -55,9 +59,11 @@ test('buildInProcessBoardMessage includes assigned task summaries', () => {
   assert.match(message.text, /센서 후보 정리/);
   assert.match(message.text, /🟡 `미시작`/);
   assert.match(message.text, /🔴 상/);
-  assert.match(message.text, /🟡 중/);
-  assert.match(message.text, /회의 결과록 2026-06-28/);
-  assert.match(message.text, /상세 근거: 스레드 참고/);
+  assert.match(message.text, /해야 할 일: 센서 선택 기준이 정해져야 다음 개발 방향을 잡을 수 있음/);
+  assert.match(message.text, /확인할 것: 가격, 전력, 구현 난이도/);
+  assert.match(message.text, /완료 기준: 비교표와 추천안 1개/);
+  assert.doesNotMatch(message.text, /조율/);
+  assert.doesNotMatch(message.text, /상세 근거/);
 });
 
 test('buildInProcessBoardMessage orders important tasks first', () => {
@@ -106,6 +112,7 @@ test('buildTaskDetailThreadMessage explains task rationale and acceptance criter
       context: {
         source: '회의 결과록 2026-06-28',
         why: ['라즈베리파이에서 ESP32로 변경 가능성을 검토하기로 함'],
+        neededInfo: ['가격', '전력', '개발 난이도'],
         assignmentReason: ['수현님이 하드웨어 변경 논의를 주도함'],
         completionCriteria: ['ESP32 후보 3개 이상 비교', '추천안 1개와 근거 작성'],
         dependencies: ['민성님 데이터 수집 구조 task에 영향 가능'],
@@ -114,13 +121,17 @@ test('buildTaskDetailThreadMessage explains task rationale and acceptance criter
     }
   });
 
-  assert.match(message.text, /task 상세 맥락/);
-  assert.match(message.text, /왜 생긴 task인가/);
+  assert.match(message.text, /task 실행 정보/);
+  assert.match(message.text, /왜 하는가/);
   assert.match(message.text, /라즈베리파이에서 ESP32/);
-  assert.match(message.text, /왜 수현님 담당인가/);
+  assert.match(message.text, /확인할 것/);
+  assert.match(message.text, /가격/);
   assert.match(message.text, /완료 기준/);
-  assert.match(message.text, /의존성/);
-  assert.match(message.text, /확신도/);
+  assert.doesNotMatch(message.text, /왜 수현님 담당인가/);
+  assert.doesNotMatch(message.text, /의존성/);
+  assert.doesNotMatch(message.text, /확신도/);
+  assert.doesNotMatch(message.text, /출처/);
+  assert.doesNotMatch(message.text, /조율/);
 });
 
 test('buildTaskDetailThreadMessage uses task goal as rationale fallback', () => {
@@ -137,7 +148,7 @@ test('buildTaskDetailThreadMessage uses task goal as rationale fallback', () => 
     }
   });
 
-  assert.match(message.text, /왜 생긴 task인가/);
+  assert.match(message.text, /왜 하는가/);
   assert.match(message.text, /ESP32와 라즈베리파이를 비교한다/);
 });
 
@@ -161,18 +172,12 @@ test('buildInProcessBoardMessage attaches task action buttons including direct w
 
   assert.ok(actions);
   assert.deepEqual(actions.elements.map((element) => element.action_id), [
-    'task_accept_generate_prompt',
     'task_accept_direct',
-    'task_complete',
-    'task_stop_today',
     'task_change_request'
   ]);
   assert.deepEqual(actions.elements.map((element) => element.text.text), [
-    '수락 및 Codex 프롬프트 생성',
-    '수락하고 직접 진행',
-    '완료',
-    '오늘은 여기까지',
-    '변경 요청'
+    '수락',
+    '변경'
   ]);
   assert.ok(actions.elements.every((element) => element.value.includes('task-1')));
   assert.ok(actions.elements.every((element) => element.value.includes('suhyeon')));
@@ -199,17 +204,13 @@ test('buildInProcessBoardMessage replaces accept button with prompt copy after t
   assert.match(message.text, /🟡 `수락`/);
   assert.deepEqual(actions.elements.map((element) => element.action_id), [
     'copy_codex_prompt',
-    'task_complete',
-    'task_stop_today',
     'task_file_submission',
     'task_change_request'
   ]);
   assert.deepEqual(actions.elements.map((element) => element.text.text), [
-    'Codex 프롬프트 보기/복사',
-    '완료',
-    '오늘은 여기까지',
-    '파일 첨부 제출',
-    '변경 요청'
+    '도움 받기',
+    '작업 제출',
+    '변경'
   ]);
   assert.equal(actions.elements[0].value, 'task-1');
   assert.equal(actions.elements.some((element) => element.action_id === 'task_accept_generate_prompt'), false);
@@ -253,6 +254,6 @@ test('buildInProcessBoardMessage lets users submit revisions for needs-revision 
 
   const actions = message.blocks.find((block) => block.type === 'actions');
 
-  assert.equal(actions.elements[1].action_id, 'task_complete');
-  assert.equal(actions.elements[1].text.text, '보완 제출');
+  assert.equal(actions.elements[1].action_id, 'task_file_submission');
+  assert.equal(actions.elements[1].text.text, '작업 제출');
 });

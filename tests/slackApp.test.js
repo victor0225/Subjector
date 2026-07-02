@@ -1766,13 +1766,6 @@ test('handleTaskActionViewSubmission passes attachment metadata and note to the 
       }),
       state: {
         values: {
-          task_action_result_type: {
-            result_type: {
-              selected_option: {
-                value: 'task_complete'
-              }
-            }
-          },
           task_action_input: {
             raw_text: {
               value: '직접 조사 결과를 정리했습니다.'
@@ -1789,11 +1782,6 @@ test('handleTaskActionViewSubmission passes attachment metadata and note to the 
                   size: 12000
                 }
               ]
-            }
-          },
-          task_action_attachment_note: {
-            attachment_note: {
-              value: '첨부 Word 파일에 표와 결론이 있습니다.'
             }
           }
         }
@@ -1813,19 +1801,19 @@ test('handleTaskActionViewSubmission passes attachment metadata and note to the 
   });
 
   assert.equal(acked, true);
-  assert.equal(serviceCalls[0].actionId, 'task_complete');
-  assert.equal(serviceCalls[0].attachmentNote, '첨부 Word 파일에 표와 결론이 있습니다.');
+  assert.equal(serviceCalls[0].actionId, 'task_file_submission');
+  assert.equal(serviceCalls[0].attachmentNote, '');
   assert.equal(serviceCalls[0].attachments[0].id, 'F1');
   assert.equal(serviceCalls[0].attachments[0].name, '조사정리.docx');
 });
 
-test('handleTaskActionViewSubmission requires a file for file submission flow', async () => {
-  let ackPayload = null;
+test('handleTaskActionViewSubmission allows text-only work submission', async () => {
+  let acked = false;
   const serviceCalls = [];
 
   await handleTaskActionViewSubmission({
     ack: async (payload) => {
-      ackPayload = payload;
+      acked = payload ?? true;
     },
     body: {
       user: { id: 'U1' }
@@ -1838,13 +1826,6 @@ test('handleTaskActionViewSubmission requires a file for file submission flow', 
       }),
       state: {
         values: {
-          task_action_result_type: {
-            result_type: {
-              selected_option: {
-                value: 'task_complete'
-              }
-            }
-          },
           task_action_input: {
             raw_text: {
               value: '첨부 없이 제출합니다.'
@@ -1853,11 +1834,6 @@ test('handleTaskActionViewSubmission requires a file for file submission flow', 
           task_action_files: {
             files: {
               files: []
-            }
-          },
-          task_action_attachment_note: {
-            attachment_note: {
-              value: '첨부 파일 설명'
             }
           }
         }
@@ -1872,18 +1848,19 @@ test('handleTaskActionViewSubmission requires a file for file submission flow', 
     }
   });
 
-  assert.equal(ackPayload.response_action, 'errors');
-  assert.match(ackPayload.errors.task_action_files, /파일을 첨부/);
-  assert.equal(serviceCalls.length, 0);
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].rawText, '첨부 없이 제출합니다.');
+  assert.deepEqual(serviceCalls[0].attachments, []);
 });
 
-test('handleTaskActionViewSubmission requires a note when files are attached', async () => {
-  let ackPayload = null;
+test('handleTaskActionViewSubmission allows file work submission without a separate attachment note', async () => {
+  let acked = false;
   const serviceCalls = [];
 
   await handleTaskActionViewSubmission({
     ack: async (payload) => {
-      ackPayload = payload;
+      acked = payload ?? true;
     },
     body: {
       user: { id: 'U1' }
@@ -1896,13 +1873,6 @@ test('handleTaskActionViewSubmission requires a note when files are attached', a
       }),
       state: {
         values: {
-          task_action_result_type: {
-            result_type: {
-              selected_option: {
-                value: 'task_stop_today'
-              }
-            }
-          },
           task_action_input: {
             raw_text: {
               value: '오늘 진행한 그림을 첨부합니다.'
@@ -1920,11 +1890,6 @@ test('handleTaskActionViewSubmission requires a note when files are attached', a
                 }
               ]
             }
-          },
-          task_action_attachment_note: {
-            attachment_note: {
-              value: ' '
-            }
           }
         }
       }
@@ -1938,9 +1903,10 @@ test('handleTaskActionViewSubmission requires a note when files are attached', a
     }
   });
 
-  assert.equal(ackPayload.response_action, 'errors');
-  assert.match(ackPayload.errors.task_action_attachment_note, /첨부 파일 설명/);
-  assert.equal(serviceCalls.length, 0);
+  assert.equal(acked, true);
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].attachments[0].name, '흐름도.png');
+  assert.equal(serviceCalls[0].attachmentNote, '');
 });
 
 test('handleTaskActionViewSubmission acknowledges before evaluation and sends ephemeral feedback', async () => {

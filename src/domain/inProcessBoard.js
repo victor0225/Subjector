@@ -23,10 +23,6 @@ function plainText(text) {
   };
 }
 
-function taskContextSource(task) {
-  return task?.context?.source ?? task?.sourceType ?? '기록 없음';
-}
-
 function importanceRank(importance = '') {
   if (importance.includes('상') || importance.includes('🔴')) {
     return 0;
@@ -59,6 +55,7 @@ function statusBadge(status) {
     수락: '🟡',
     완료: '🟢',
     '오늘은 여기까지': '🟡',
+    '추가 진행 예정': '🟡',
     '보완 필요': '🔴',
     미정리: '🔴',
     '변경 요청 중': '🔴',
@@ -87,37 +84,32 @@ function detailFromContext(context, keys) {
   return null;
 }
 
+function compactDetail(value) {
+  const rows = Array.isArray(value) ? value : [value];
+  const normalized = rows
+    .map((row) => String(row ?? '').trim())
+    .filter(Boolean);
+
+  return normalized.length ? normalized.join(', ') : '기록 없음';
+}
+
 export function buildTaskDetailThreadMessage({ user, task }) {
   const context = task?.context ?? {};
-  const displayName = formatDisplayName(user);
   const why = detailFromContext(context, ['why', 'reason', 'goal', 'meetingContext']);
-  const assignmentReason = detailFromContext(context, ['assignmentReason', 'assigneeReason', 'ownerReason']);
+  const neededInfo = detailFromContext(context, ['neededInfo', 'requiredInfo', 'needs', 'checkpoints']);
   const completionCriteria = detailFromContext(context, ['completionCriteria', 'acceptanceCriteria', 'doneCriteria']);
-  const dependencies = detailFromContext(context, ['dependencies', 'dependency']);
-  const confidence = detailFromContext(context, ['confidence', 'assignmentConfidence']);
 
   const text = [
-    `*[task 상세 맥락] ${task.title}*`,
+    `*[task 실행 정보] ${task.title}*`,
     '',
-    `[왜 생긴 task인가]`,
+    `[왜 하는가]`,
     detailRows(why),
     '',
-    `[왜 ${displayName} 담당인가]`,
-    detailRows(assignmentReason),
+    `[확인할 것]`,
+    detailRows(neededInfo),
     '',
     `[완료 기준]`,
-    detailRows(completionCriteria),
-    '',
-    `[의존성]`,
-    detailRows(dependencies),
-    '',
-    `[확신도]`,
-    detailRows(confidence),
-    '',
-    `[출처]`,
-    `- ${taskContextSource(task)}`,
-    `- 중요도: ${task.importance ?? '🟡 중'}`,
-    `- 조율: ${task.coordination ?? '🟡 중'}`
+    detailRows(completionCriteria)
   ].join('\n');
 
   return {
@@ -127,13 +119,18 @@ export function buildTaskDetailThreadMessage({ user, task }) {
 }
 
 function formatTask(task, index) {
+  const context = task?.context ?? {};
+  const why = detailFromContext(context, ['why', 'reason', 'goal', 'meetingContext']);
+  const neededInfo = detailFromContext(context, ['neededInfo', 'requiredInfo', 'needs', 'checkpoints']);
+  const completionCriteria = detailFromContext(context, ['completionCriteria', 'acceptanceCriteria', 'doneCriteria']);
+
   return [
     `${index + 1}. *${task.title}*`,
     `   - 상태: ${statusBadge(task.status)}`,
     `   - 중요도: ${task.importance}`,
-    `   - 조율: ${task.coordination}`,
-    `   - 맥락: ${taskContextSource(task)}`,
-    `   - 상세 근거: 스레드 참고`
+    `   - 해야 할 일: ${compactDetail(why || task.title)}`,
+    `   - 확인할 것: ${compactDetail(neededInfo)}`,
+    `   - 완료 기준: ${compactDetail(completionCriteria)}`
   ].join('\n');
 }
 
@@ -160,33 +157,31 @@ function codexPromptCopyButton(task) {
   return {
     type: 'button',
     action_id: 'copy_codex_prompt',
-    text: plainText('Codex 프롬프트 보기/복사'),
+    text: plainText('도움 받기'),
     value: task.id
   };
 }
 
 function taskActionsBlock({ task, user }) {
-  const completeButtonText = task.status === '보완 필요' ? '보완 제출' : '완료';
-  const elements = [
-    taskActionButton({ actionId: 'task_complete', text: completeButtonText, task, user }),
-    taskActionButton({ actionId: 'task_stop_today', text: '오늘은 여기까지', task, user }),
-    taskActionButton({ actionId: 'task_change_request', text: '변경 요청', task, user, style: 'danger' })
-  ];
-
   if (task.status === '미시작') {
-    elements.unshift(
-      taskActionButton({ actionId: 'task_accept_generate_prompt', text: '수락 및 Codex 프롬프트 생성', task, user, style: 'primary' }),
-      taskActionButton({ actionId: 'task_accept_direct', text: '수락하고 직접 진행', task, user })
-    );
-  } else {
-    elements.unshift(codexPromptCopyButton(task));
-    elements.splice(3, 0, taskActionButton({ actionId: 'task_file_submission', text: '파일 첨부 제출', task, user }));
+    return {
+      type: 'actions',
+      block_id: `task_actions_${task.id}`,
+      elements: [
+        taskActionButton({ actionId: 'task_accept_direct', text: '수락', task, user, style: 'primary' }),
+        taskActionButton({ actionId: 'task_change_request', text: '변경', task, user, style: 'danger' })
+      ]
+    };
   }
 
   return {
     type: 'actions',
     block_id: `task_actions_${task.id}`,
-    elements
+    elements: [
+      codexPromptCopyButton(task),
+      taskActionButton({ actionId: 'task_file_submission', text: '작업 제출', task, user, style: 'primary' }),
+      taskActionButton({ actionId: 'task_change_request', text: '변경', task, user, style: 'danger' })
+    ]
   };
 }
 

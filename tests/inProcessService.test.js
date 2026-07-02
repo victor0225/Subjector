@@ -481,8 +481,8 @@ test('handleStartWork posts task detail threads for tasks that do not have one y
 
   const detailPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.thread_ts === '1700000000.000001');
   assert.ok(detailPost);
-  assert.match(detailPost[1].text, /task 상세 맥락/);
-  assert.match(detailPost[1].text, /왜 생긴 task인가/);
+  assert.match(detailPost[1].text, /task 실행 정보/);
+  assert.match(detailPost[1].text, /왜 하는가/);
 
   const detailUpsert = store.calls.find(([name, input]) => name === 'upsertSlackMessage' && input.purpose === 'task_detail:task-1');
   assert.ok(detailUpsert);
@@ -570,7 +570,7 @@ test('handleStartWork reposts task details when the board thread was recreated',
 
   const detailPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.thread_ts === '1710000000.000001');
   assert.ok(detailPost);
-  assert.match(detailPost[1].text, /task 상세 맥락/);
+  assert.match(detailPost[1].text, /task 실행 정보/);
 });
 
 test('handleTaskActionSubmission stores completed task output and refreshes the board', async () => {
@@ -759,6 +759,104 @@ test('handleTaskActionSubmission keeps weak completion as needs revision', async
   const statusUpdate = store.calls.find(([name]) => name === 'updateTaskStatus')[1];
   assert.equal(statusUpdate.status, '보완 필요');
   assert.equal(statusUpdate.completedAt, undefined);
+});
+
+test('handleTaskActionSubmission completes sufficient work submissions', async () => {
+  const evaluator = createFakeTaskEvaluator({
+    verdict: 'sufficient',
+    score: 92,
+    summary: '완료 기준을 충족했습니다.',
+    reasons: ['비교표와 추천안이 있습니다.'],
+    missingItems: [],
+    feedbackToUser: '완료 처리 가능합니다.',
+    blocksCompletion: false
+  });
+  const store = createFakeStore({ existingMessage: { channelId: 'C_IN_PROCESS', messageTs: '1700000000.000001' } });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    taskEvaluator: evaluator,
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskActionSubmission({
+    actionId: 'task_file_submission',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: '비교표와 추천안을 제출합니다.'
+  });
+
+  assert.equal(result.status, '완료');
+  assert.equal(evaluator.calls[0].actionId, 'task_file_submission');
+  assert.equal(store.calls.find(([name]) => name === 'submitTaskResult')[1].resultType, '작업 제출');
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '완료');
+});
+
+test('handleTaskActionSubmission keeps partial work submissions for next progress', async () => {
+  const evaluator = createFakeTaskEvaluator({
+    verdict: 'informational',
+    score: 62,
+    summary: '진행 내용은 있지만 완료 기준은 아직 부족합니다.',
+    reasons: ['자료 일부를 확인했습니다.'],
+    missingItems: ['최종 추천안'],
+    feedbackToUser: '다음 작업에서 추천안을 보완하세요.',
+    blocksCompletion: false
+  });
+  const store = createFakeStore({ existingMessage: { channelId: 'C_IN_PROCESS', messageTs: '1700000000.000001' } });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    taskEvaluator: evaluator,
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskActionSubmission({
+    actionId: 'task_file_submission',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: 'AudioSet 라이선스만 확인했습니다.'
+  });
+
+  assert.equal(result.status, '추가 진행 예정');
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '추가 진행 예정');
+});
+
+test('handleTaskActionSubmission marks weak work submissions as needs revision', async () => {
+  const evaluator = createFakeTaskEvaluator({
+    verdict: 'needs_revision',
+    score: 25,
+    summary: '제출 내용이 부족합니다.',
+    reasons: ['완료 기준과 관련된 증거가 없습니다.'],
+    missingItems: ['비교표', '추천안'],
+    feedbackToUser: '제출 내용을 다시 정리해 주세요.',
+    blocksCompletion: true
+  });
+  const store = createFakeStore({ existingMessage: { channelId: 'C_IN_PROCESS', messageTs: '1700000000.000001' } });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: [user],
+    taskEvaluator: evaluator,
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskActionSubmission({
+    actionId: 'task_file_submission',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: '했습니다.'
+  });
+
+  assert.equal(result.status, '보완 필요');
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '보완 필요');
 });
 
 test('handleTaskAcceptAndPrompt accepts a task and posts the Codex prompt in the board thread', async () => {

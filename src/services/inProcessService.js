@@ -676,7 +676,7 @@ export function createInProcessService({
     let evaluation = null;
     let finalStatus = action.status;
 
-    if (taskEvaluator && ['task_complete', 'task_stop_today'].includes(actionId)) {
+    if (taskEvaluator && ['task_complete', 'task_stop_today', 'task_file_submission'].includes(actionId)) {
       evaluation = normalizeTaskEvaluation(await taskEvaluator.evaluateSubmission({
         actionId,
         actionLabel: action.label,
@@ -684,7 +684,15 @@ export function createInProcessService({
         rawText: submissionText
       }));
 
-      if (actionId === 'task_complete' && evaluation.blocksCompletion) {
+      if (actionId === 'task_file_submission') {
+        if (evaluation.verdict === 'sufficient') {
+          finalStatus = '완료';
+        } else if (evaluation.verdict === 'informational') {
+          finalStatus = '추가 진행 예정';
+        } else {
+          finalStatus = '보완 필요';
+        }
+      } else if (actionId === 'task_complete' && evaluation.blocksCompletion) {
         finalStatus = '보완 필요';
       }
     }

@@ -10,10 +10,11 @@ import {
   taskActionFromActionId
 } from '../src/domain/taskActions.js';
 
-test('taskActionFromActionId maps the three MVP task actions', () => {
+test('taskActionFromActionId maps the simplified task actions', () => {
   assert.equal(taskActionFromActionId('task_complete').status, '완료');
   assert.equal(taskActionFromActionId('task_stop_today').status, '오늘은 여기까지');
   assert.equal(taskActionFromActionId('task_change_request').status, '변경 요청 중');
+  assert.equal(taskActionFromActionId('task_file_submission').status, '추가 진행 예정');
   assert.equal(taskActionFromActionId('unknown'), null);
 });
 
@@ -38,8 +39,8 @@ test('buildTaskActionModalView builds a Slack modal with private metadata', () =
 });
 
 test('buildTaskActionModalView customizes prompt labels for each action', () => {
-  const stopView = buildTaskActionModalView({
-    actionId: 'task_stop_today',
+  const submitView = buildTaskActionModalView({
+    actionId: 'task_file_submission',
     taskId: 'task-1',
     assigneeUserKey: 'suhyeon',
     taskTitle: '센서 후보 정리'
@@ -51,8 +52,8 @@ test('buildTaskActionModalView customizes prompt labels for each action', () => 
     taskTitle: '센서 후보 정리'
   });
 
-  assert.match(stopView.blocks[1].label.text, /오늘의 진행 상태/);
-  assert.match(changeView.blocks[1].label.text, /변경 요청 초안/);
+  assert.match(submitView.blocks[1].label.text, /제출 내용/);
+  assert.match(changeView.blocks[1].label.text, /^변경$/);
 });
 
 test('completion and stop-for-today modals stay text-only so empty attachments do not block submit', () => {
@@ -80,7 +81,7 @@ test('completion and stop-for-today modals stay text-only so empty attachments d
   assert.equal(changeView.blocks.some((block) => block.element?.type === 'file_input'), false);
 });
 
-test('file submission modal requires a result type and evidence files', () => {
+test('work submission modal accepts text and optional files without result type select', () => {
   const view = buildTaskActionModalView({
     actionId: 'task_file_submission',
     taskId: 'task-1',
@@ -88,12 +89,12 @@ test('file submission modal requires a result type and evidence files', () => {
     taskTitle: '센서 후보 정리'
   });
 
-  assert.equal(view.title.text, '파일 첨부 제출');
-  assert.equal(view.blocks[1].element.type, 'static_select');
-  assert.equal(view.blocks[2].element.action_id, 'raw_text');
-  assert.equal(view.blocks[3].element.type, 'file_input');
-  assert.equal(view.blocks[3].optional, false);
-  assert.equal(view.blocks[4].element.action_id, 'attachment_note');
+  assert.equal(view.title.text, '작업 제출');
+  assert.equal(view.blocks.some((block) => block.element?.type === 'static_select'), false);
+  assert.equal(view.blocks[1].element.action_id, 'raw_text');
+  assert.equal(view.blocks[2].element.type, 'file_input');
+  assert.equal(view.blocks[2].optional, true);
+  assert.equal(view.blocks.some((block) => block.element?.action_id === 'attachment_note'), false);
 });
 
 test('extractTaskActionSubmissionAttachments reads Slack file input state', () => {
@@ -134,7 +135,7 @@ test('extractTaskActionSubmissionAttachments reads Slack file input state', () =
   assert.equal(extractTaskActionSubmissionAttachmentNote(view), 'Word 파일에 비교표를 정리했습니다.');
 });
 
-test('extractTaskActionSubmissionActionId reads selected result type for file submissions', () => {
+test('extractTaskActionSubmissionActionId keeps work submissions as work submissions', () => {
   const view = {
     state: {
       values: {
@@ -149,11 +150,11 @@ test('extractTaskActionSubmissionActionId reads selected result type for file su
     }
   };
 
-  assert.equal(extractTaskActionSubmissionActionId(view, 'task_file_submission'), 'task_stop_today');
+  assert.equal(extractTaskActionSubmissionActionId(view, 'task_file_submission'), 'task_file_submission');
   assert.equal(extractTaskActionSubmissionActionId(view, 'task_complete'), 'task_complete');
 });
 
-test('change request modal asks for the Codex draft structure', () => {
+test('change modal asks for bounded task adjustment', () => {
   const view = buildTaskActionModalView({
     actionId: 'task_change_request',
     taskId: 'task-1',
@@ -163,8 +164,7 @@ test('change request modal asks for the Codex draft structure', () => {
 
   const placeholder = view.blocks[1].element.placeholder.text;
 
-  assert.match(placeholder, /Codex가 작성한 변경 요청 초안/);
-  assert.match(placeholder, /\[변경 제안\]/);
-  assert.match(placeholder, /\[주장\]/);
-  assert.match(placeholder, /\[근거\]/);
+  assert.match(placeholder, /완료 기준 안에서/);
+  assert.match(placeholder, /변경 내용/);
+  assert.match(placeholder, /변경 이유/);
 });

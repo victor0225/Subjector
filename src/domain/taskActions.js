@@ -28,20 +28,22 @@ const TASK_ACTIONS = {
   },
   task_change_request: {
     actionId: 'task_change_request',
-    label: '변경 요청',
+    label: '변경',
     status: '변경 요청 중',
-    resultType: '변경 요청',
-    inputLabel: '변경 요청 초안',
-    placeholder: 'Codex가 작성한 변경 요청 초안을 붙여넣어 주세요. 포함: [변경 제안] [주장] [근거]'
+    resultType: '변경',
+    inputLabel: '변경',
+    placeholder: '완료 기준 안에서 조정할 변경 내용과 변경 이유를 적어 주세요.'
   },
   [TASK_FILE_SUBMISSION_ACTION_ID]: {
     actionId: TASK_FILE_SUBMISSION_ACTION_ID,
-    label: '파일 첨부 제출',
-    inputLabel: '제출 요약',
-    placeholder: '첨부한 Word/그림/자료에서 무엇을 보면 되는지 요약해 주세요.',
+    label: '작업 제출',
+    status: '추가 진행 예정',
+    resultType: '작업 제출',
+    inputLabel: '제출 내용',
+    placeholder: '제출한 결과, 확인한 내용, 완료 기준 충족 여부, 남은 일을 적어 주세요. 파일을 첨부했다면 파일에서 무엇을 보면 되는지도 함께 적어 주세요.',
     acceptsAttachments: true,
-    requiresAttachments: true,
-    requiresResultTypeSelect: true
+    requiresAttachments: false,
+    requiresResultTypeSelect: false
   }
 };
 
@@ -65,7 +67,7 @@ function attachmentBlocks() {
     {
       type: 'input',
       block_id: TASK_ACTION_FILE_BLOCK_ID,
-      optional: false,
+      optional: true,
       label: plainText('첨부 파일'),
       hint: plainText('Word, PDF, 이미지 등 직접 작업 산출물을 첨부할 수 있습니다.'),
       element: {
@@ -73,18 +75,6 @@ function attachmentBlocks() {
         action_id: TASK_ACTION_FILE_ACTION_ID,
         max_files: 5,
         filetypes: ['docx', 'pdf', 'png', 'jpg', 'jpeg', 'pptx', 'xlsx', 'txt', 'md']
-      }
-    },
-    {
-      type: 'input',
-      block_id: TASK_ACTION_ATTACHMENT_NOTE_BLOCK_ID,
-      optional: true,
-      label: plainText('첨부 파일 설명'),
-      element: {
-        type: 'plain_text_input',
-        action_id: TASK_ACTION_ATTACHMENT_NOTE_ACTION_ID,
-        multiline: true,
-        placeholder: plainText('파일을 첨부했다면 무엇을 보면 되는지, 어떤 결론/진행 상태가 담겼는지 적어 주세요.')
       }
     }
   ];
@@ -188,10 +178,5 @@ export function extractTaskActionSubmissionAttachmentNote(view) {
 }
 
 export function extractTaskActionSubmissionActionId(view, fallbackActionId) {
-  if (fallbackActionId !== TASK_FILE_SUBMISSION_ACTION_ID) {
-    return fallbackActionId;
-  }
-
-  return view.state.values?.[TASK_ACTION_RESULT_TYPE_BLOCK_ID]?.[TASK_ACTION_RESULT_TYPE_ACTION_ID]?.selected_option?.value
-    ?? fallbackActionId;
+  return fallbackActionId;
 }

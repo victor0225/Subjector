@@ -1121,26 +1121,6 @@ export async function handleTaskActionViewSubmission({ ack, body, view, client =
     return;
   }
 
-  if (metadata.actionId === TASK_FILE_SUBMISSION_ACTION_ID && !attachments.length) {
-    await ack({
-      response_action: 'errors',
-      errors: {
-        task_action_files: '파일 첨부 제출은 파일을 첨부해야 합니다.'
-      }
-    });
-    return;
-  }
-
-  if (attachments.length && !attachmentNote) {
-    await ack({
-      response_action: 'errors',
-      errors: {
-        task_action_attachment_note: '첨부 파일 설명을 입력해 주세요.'
-      }
-    });
-    return;
-  }
-
   await ack();
 
   try {
