@@ -496,13 +496,12 @@ export function renderIdeaCruisePage() {
     <section>
       <div class="section-head">
         <h2>3. Task Candidates</h2>
-        <p class="hint">Task 후보 생성: Gemini 2.5 Flash-Lite. 적용/완료/Subjector 반영: AI 없음.</p>
+        <p class="hint">Task 후보는 왼쪽에서 완료를 누르면 Gemini 2.5 Flash-Lite가 생성합니다. 적용/완료/Subjector 반영: AI 없음.</p>
       </div>
       <div class="section-body">
         <div class="page-nav task-filter-nav" id="task-filter-nav"></div>
         <div class="actions">
           <button class="secondary" id="generate-record" type="button">회의록 생성</button>
-          <button id="generate-tasks" type="button">Task 후보 생성</button>
         </div>
         <div class="status">회의록 생성: Gemini 2.5 Flash-Lite</div>
         <article class="not-task" id="not-task"></article>
@@ -752,7 +751,7 @@ export function renderIdeaCruisePage() {
       });
       const result = await response.json().catch(function() { return {}; });
       if (!response.ok) {
-        state.taskGenerationError = result.error || 'Task 후보 생성에 실패했습니다.';
+        state.taskGenerationError = result.error || 'Task 후보를 만들지 못했습니다.';
         return;
       }
 
@@ -1050,11 +1049,6 @@ export function renderIdeaCruisePage() {
     document.getElementById('generate-record').addEventListener('click', function() {
       state.record = buildMeetingRecord();
       state.recordDrawerOpen = true;
-      render();
-    });
-
-    document.getElementById('generate-tasks').addEventListener('click', async function() {
-      await requestTaskCandidates();
       render();
     });
 

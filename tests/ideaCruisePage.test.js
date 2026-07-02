@@ -22,7 +22,7 @@ test('renderIdeaCruisePage documents the model split at each AI step', () => {
 
   assert.match(html, /카드 생성: GPT-5\.4/);
   assert.match(html, /회의록 생성: Gemini 2\.5 Flash-Lite/);
-  assert.match(html, /Task 후보 생성: Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /Task 후보는 왼쪽에서 완료를 누르면 Gemini 2\.5 Flash-Lite/);
   assert.match(html, /적용\/완료\/Subjector 반영: AI 없음/);
   assert.match(html, /https:\/\/github\.com\/SAFIRA-ondevice/);
 });
@@ -105,6 +105,8 @@ test('renderIdeaCruisePage generates task candidates from completed topic pages 
   assert.doesNotMatch(html, /function buildTasksFromCompletedPages\(\)/);
   assert.doesNotMatch(html, /id="clear-draft"/);
   assert.doesNotMatch(html, /초안 비우기/);
+  assert.doesNotMatch(html, /id="generate-tasks"/);
+  assert.doesNotMatch(html, /Task 후보 생성/);
 });
 
 test('renderIdeaCruisePage renders flexible card details and optional suggestions', () => {
