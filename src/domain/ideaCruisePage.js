@@ -488,7 +488,10 @@ export function renderIdeaCruisePage() {
             <h2>1. Topic Page</h2>
             <p class="hint">왼쪽 한 페이지는 하나의 주제를 담당합니다<br>다음 페이지로 가면 가운데 카드도 새 주제 전용으로 바뀝니다.</p>
           </div>
-          <button id="add-topic" type="button">다음 주제 추가</button>
+          <div class="actions">
+            <button id="add-topic" type="button">다음 주제 추가</button>
+            <button class="secondary" id="remove-topic" type="button">제거</button>
+          </div>
         </div>
       </div>
       <div class="section-body">
@@ -696,6 +699,45 @@ export function renderIdeaCruisePage() {
       };
       state.pages.push(page);
       state.activePageId = page.id;
+      render();
+    }
+
+    function createEmptyTopicPage() {
+      return {
+        id: 'page-' + Date.now(),
+        number: 1,
+        title: '새 주제',
+        text: '',
+        cards: [],
+        completed: false
+      };
+    }
+
+    function removeActiveTopicPage() {
+      const removedPageId = state.activePageId;
+      const removedIndex = state.pages.findIndex(function(page) { return page.id === removedPageId; });
+      state.pages = state.pages.filter(function(page) { return page.id !== removedPageId; });
+      if (state.pages.length === 0) {
+        state.pages = [createEmptyTopicPage()];
+      }
+      state.pages.forEach(function(page, index) {
+        page.number = index + 1;
+      });
+      const nextIndex = Math.min(Math.max(removedIndex, 0), state.pages.length - 1);
+      state.activePageId = state.pages[nextIndex].id;
+      state.tasks = state.tasks.filter(function(task) { return task.pageId !== removedPageId; });
+      state.tasks.forEach(function(task) {
+        const page = state.pages.find(function(item) { return item.id === task.pageId; });
+        if (page) {
+          task.pageNumber = page.number;
+        }
+      });
+      if (state.taskFilter === removedPageId) {
+        state.taskFilter = 'all';
+      }
+      state.existingTaskUpdates = [];
+      state.notTasks = [];
+      state.taskGenerationError = '';
       render();
     }
 
@@ -1068,6 +1110,7 @@ export function renderIdeaCruisePage() {
     });
 
     document.getElementById('add-topic').addEventListener('click', addTopicPage);
+    document.getElementById('remove-topic').addEventListener('click', removeActiveTopicPage);
     document.getElementById('complete-topic').addEventListener('click', function() {
       completeActivePage().catch(function(error) {
         state.taskGenerationError = error.message;

@@ -34,9 +34,21 @@ test('renderIdeaCruisePage uses one active topic page with page-specific cards',
   assert.match(html, /activePageId: 'page-1'/);
   assert.match(html, /function activePage\(\)/);
   assert.match(html, /function addTopicPage\(\)/);
+  assert.match(html, /function removeActiveTopicPage\(\)/);
   assert.match(html, /function setActivePage\(pageId\)/);
   assert.match(html, /page\.cards/);
   assert.match(html, /이 페이지의 가운데 카드는/);
+});
+
+test('renderIdeaCruisePage removes active topic pages and their generated right-side state', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /id="remove-topic"/);
+  assert.match(html, /state\.pages = state\.pages\.filter\(function\(page\) \{ return page\.id !== removedPageId; \}\)/);
+  assert.match(html, /page\.number = index \+ 1/);
+  assert.match(html, /state\.tasks = state\.tasks\.filter\(function\(task\) \{ return task\.pageId !== removedPageId; \}\)/);
+  assert.match(html, /state\.existingTaskUpdates = \[\]/);
+  assert.match(html, /state\.notTasks = \[\]/);
 });
 
 test('renderIdeaCruisePage appends applied card content to the active page and removes the card', () => {
