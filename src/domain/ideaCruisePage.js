@@ -4,7 +4,7 @@ export function renderIdeaCruisePage() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IDEA CRUISE Meeting Desk</title>
+  <title>IDEA CRUISE Roadmap Desk</title>
   <style>
     :root {
       color-scheme: light;
@@ -89,7 +89,7 @@ export function renderIdeaCruisePage() {
 
     main {
       display: grid;
-      grid-template-columns: minmax(330px, 0.95fr) minmax(440px, 1.18fr) minmax(390px, 1.05fr);
+      grid-template-columns: minmax(330px, 0.9fr) minmax(520px, 1.35fr) minmax(390px, 1fr);
       gap: 14px;
       padding: 14px;
       align-items: start;
@@ -159,7 +159,7 @@ export function renderIdeaCruisePage() {
       gap: 7px;
     }
 
-    .topic-card, .entry-card, .ai-card, .decision-card, .task-card, .not-task {
+    .topic-card, .entry-card, .ai-card, .decision-card, .task-card, .not-task, .roadmap-node {
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
@@ -243,6 +243,64 @@ export function renderIdeaCruisePage() {
     .pill.experiment { color: var(--red); background: var(--red-soft); }
     .pill.decision { color: var(--teal-dark); background: var(--teal-soft); }
     .pill.filter { color: var(--gray); background: var(--gray-soft); }
+
+    .roadmap-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(170px, 0.62fr);
+      gap: 10px;
+      align-items: start;
+    }
+
+    .roadmap-main {
+      display: grid;
+      gap: 9px;
+    }
+
+    .roadmap-branches {
+      display: grid;
+      gap: 8px;
+      max-height: calc(100vh - 250px);
+      overflow-y: auto;
+    }
+
+    .roadmap-node {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      background: #fbfcfd;
+    }
+
+    .roadmap-node strong {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .roadmap-node span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .branch-card {
+      min-height: 0;
+      max-height: 330px;
+      overflow-y: auto;
+    }
+
+    .branch-card h3 {
+      font-size: 13px;
+    }
+
+    .primary-roadmap-card {
+      min-height: 300px;
+    }
+
+    .rewrite-note {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
 
     .ai-card {
       display: grid;
@@ -472,8 +530,8 @@ export function renderIdeaCruisePage() {
 <body>
   <header>
     <div>
-      <h1>IDEA CRUISE Meeting Desk</h1>
-      <div class="subtitle">한 페이지에서 한 주제를 강화하고, 그 주제 전용 카드만 보면서 불필요한 task를 줄입니다.</div>
+      <h1>IDEA CRUISE Roadmap Desk</h1>
+      <div class="subtitle">주제를 던지고, 중요한 선택을 먼저 고른 뒤, 시간이 필요한 일만 Subjector task로 넘깁니다.</div>
     </div>
     <div class="top-actions">
       <button class="ghost" id="open-record" type="button">회의록 열기</button>
@@ -523,16 +581,16 @@ export function renderIdeaCruisePage() {
 
     <section>
       <div class="section-head">
-        <h2>2. Topic-Specific AI Cards</h2>
-        <p class="hint">카드 생성: GPT-5.4. GitHub organization https://github.com/SAFIRA-ondevice 와 완료된 page 맥락을 함께 참고합니다.</p>
+        <h2>2. Roadmap Intervention</h2>
+        <p class="hint">카드 생성: GPT-5.4. 가장 중요한 결정 1개를 크게 띄우고, 나머지는 branch 후보로 좁혀 둡니다.</p>
       </div>
       <div class="section-body" id="card-list"></div>
     </section>
 
     <section>
       <div class="section-head">
-        <h2>3. Final Task Refinement</h2>
-        <p class="hint">Task 최종 정제: Gemini 2.5 Flash. 새 task, 기존 task 보강, task 아님을 나누고 Subjector는 승인된 실행 항목만 받습니다.</p>
+        <h2>3. Outcome Tasks</h2>
+        <p class="hint">Task 최종 정제: Gemini 2.5 Flash-Lite. 결정 자체가 아니라 자료조사, 검증, 구현처럼 시간이 필요한 일만 남깁니다.</p>
       </div>
       <div class="section-body">
         <div class="page-nav task-filter-nav" id="task-filter-nav"></div>
@@ -628,7 +686,7 @@ export function renderIdeaCruisePage() {
             { title: 'ESC-50', body: '환경음 50종 분류 데이터셋입니다. 작고 구조가 단순해 빠른 실험에 좋지만 전장 폭음 특화는 아닙니다.' },
             { title: 'UrbanSound8K', body: '도시 소음 중심 데이터셋입니다. 사이렌, 드릴 같은 생활/공사장 소음 검토에는 유용하지만 총성/폭발음은 별도 확인이 필요합니다.' }
           ],
-          suggestion: '[알게 된 것]\\n- AudioSet은 넓은 오디오 이벤트 후보 탐색용, ESC-50은 빠른 환경음 실험용, UrbanSound8K는 도시/공사장 소음 검토용으로 볼 수 있습니다.'
+          suggestion: '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?\\n\\n[알게 된 것]\\n- AudioSet은 넓은 오디오 이벤트 후보 탐색용, ESC-50은 빠른 환경음 실험용, UrbanSound8K는 도시/공사장 소음 검토용으로 볼 수 있습니다.\\n\\n[조사할 것]\\n- \\n\\n[해볼 것]\\n- \\n\\n[정한 것]\\n- '
         },
         {
           id: 'card-research-1',
@@ -636,7 +694,7 @@ export function renderIdeaCruisePage() {
           type: '확인 필요 · task 후보 가능',
           title: '라이선스와 라벨 구조는 직접 확인해야 합니다',
           body: '후보의 이름을 아는 것과 프로젝트에 쓸 수 있는 것은 다릅니다. 그래서 이 항목은 자료조사 task 후보가 됩니다.',
-          suggestion: '[조사할 것]\\n- AudioSet, ESC-50, UrbanSound8K의 라이선스, 라벨 구조, 폭음/위험음 관련성, MVP 실험 적합성을 비교합니다.'
+          suggestion: '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?\\n\\n[알게 된 것]\\n- 후보 데이터셋 이름을 아는 것과 실제 프로젝트에 쓸 수 있는 것은 다릅니다.\\n\\n[조사할 것]\\n- AudioSet, ESC-50, UrbanSound8K의 라이선스, 라벨 구조, 폭음/위험음 관련성, MVP 실험 적합성을 비교합니다.\\n\\n[해볼 것]\\n- \\n\\n[정한 것]\\n- '
         },
         {
           id: 'card-decision-1',
@@ -645,10 +703,10 @@ export function renderIdeaCruisePage() {
           title: '전장용 vs 공사현장용 중 하나로 좁히기',
           body: '이건 task로 넘기기보다 지금 회의에서 선택해야 하는 기준입니다. 선택하면 왼쪽에 정한 것으로 기록됩니다.',
           choices: [
-            { label: '전장용', body: '발표 임팩트는 크지만 데이터 수집과 안전성 설명이 어려울 수 있습니다. 총성/폭발음 계열 데이터가 더 중요합니다.', suggestion: '[정한 것]\\n- MVP 방향을 전장용 폭음 감지로 좁힙니다.' },
-            { label: '공사현장용', body: '시연과 설득이 쉽고 도시/공사장 소음 데이터와 연결하기 좋습니다. 졸업작품 MVP 범위로 더 안정적입니다.', suggestion: '[정한 것]\\n- MVP 방향을 공사현장용 청력 보호/위험음 감지 흐름으로 좁힙니다.' }
+            { label: '전장용', body: '발표 임팩트는 크지만 데이터 수집과 안전성 설명이 어려울 수 있습니다. 총성/폭발음 계열 데이터가 더 중요합니다.', suggestion: '전장용 폭음 감지를 MVP 방향으로 좁힙니다.\\n\\n[알게 된 것]\\n- 총성/폭발음 계열 데이터가 중요합니다.\\n\\n[조사할 것]\\n- 전장 폭음 데이터셋 후보, 라이선스, 라벨 구조를 확인합니다.\\n\\n[해볼 것]\\n- 실제 모델 학습과 latency 측정은 후보 데이터셋 확인 뒤 진행합니다.\\n\\n[정한 것]\\n- 공사현장용은 이번 topic에서 제외합니다.' },
+            { label: '공사현장용', body: '시연과 설득이 쉽고 도시/공사장 소음 데이터와 연결하기 좋습니다. 졸업작품 MVP 범위로 더 안정적입니다.', suggestion: '공사현장용 청력 보호/위험음 감지를 MVP 방향으로 좁힙니다.\\n\\n[알게 된 것]\\n- 도시/공사장 소음 데이터와 연결하기 쉽고 시연 가능성이 높습니다.\\n\\n[조사할 것]\\n- 공사현장 소음 데이터셋과 위험음 라벨 구조를 확인합니다.\\n\\n[해볼 것]\\n- 현장 소음 샘플로 감지 latency를 측정합니다.\\n\\n[정한 것]\\n- 전장용 폭음 감지는 이번 topic에서 제외합니다.' }
           ],
-          suggestion: '[정한 것]\\n- 이번 회의에서 전장용과 공사현장용 중 하나로 MVP 범위를 좁힙니다.'
+          suggestion: '전장용과 공사현장용 중 하나로 MVP 범위를 좁혀야 합니다.\\n\\n[알게 된 것]\\n- 두 방향은 데이터셋, 시연 방식, 안전성 설명이 다릅니다.\\n\\n[조사할 것]\\n- \\n\\n[해볼 것]\\n- \\n\\n[정한 것]\\n- 아직 선택 전입니다.'
         },
         {
           id: 'card-experiment-1',
@@ -656,7 +714,7 @@ export function renderIdeaCruisePage() {
           type: '실험 필요 · task 후보 가능',
           title: '실시간 감지는 직접 돌려봐야 압니다',
           body: '모델이 라즈베리 파이에서 돌아가는지, latency가 시연 가능한 수준인지는 설명만으로 끝나지 않습니다.',
-          suggestion: '[해볼 것]\\n- 라즈베리 파이에서 샘플 sound event model의 평균 latency를 측정합니다.\\n- 마이크 입력 조건과 추론 시간을 함께 기록합니다.'
+          suggestion: '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터와 실시간 처리 가능성을 함께 확인합니다.\\n\\n[알게 된 것]\\n- 라즈베리 파이에서 돌아가는지와 latency는 설명만으로 확정할 수 없습니다.\\n\\n[조사할 것]\\n- 사용할 sound event model 후보를 정합니다.\\n\\n[해볼 것]\\n- 라즈베리 파이에서 샘플 sound event model의 평균 latency를 측정합니다.\\n- 마이크 입력 조건과 추론 시간을 함께 기록합니다.\\n\\n[정한 것]\\n- '
         }
       ];
     }
@@ -751,16 +809,12 @@ export function renderIdeaCruisePage() {
       render();
     }
 
-    function appendToActivePage(content) {
+    function rewriteActivePage(content) {
       const page = activePage();
       if (!content || !content.trim()) {
         throw new Error('적용할 내용이 비어 있습니다.');
       }
-      if (!page.text.trim()) {
-        page.text = content.trim();
-      } else {
-        page.text = page.text.trim() + '\\n\\n' + content.trim();
-      }
+      page.text = content.trim();
       page.title = titleFromText(page.text) || page.title;
     }
 
@@ -894,10 +948,29 @@ export function renderIdeaCruisePage() {
         list.innerHTML = '<div class="hint">AI Analysis를 누르면 현재 page 전용 카드가 여기에 표시됩니다.</div>';
         return;
       }
-      list.innerHTML = page.cards.map(function(card, index) {
+      const primaryIndex = page.cards.findIndex(function(card) { return normalizeKind(card.kind) === 'decision'; });
+      const mainIndex = primaryIndex >= 0 ? primaryIndex : 0;
+      const mainCard = page.cards[mainIndex];
+      const branchCards = page.cards
+        .map(function(card, index) { return { card: card, index: index }; })
+        .filter(function(item) { return item.index !== mainIndex; });
+
+      list.innerHTML = '<div class="roadmap-row">' +
+        '<div class="roadmap-main">' +
+          '<div class="roadmap-node"><span>현재 주제</span><strong>' + escapeHtml(compactText(page.text) || '주제 없음') + '</strong></div>' +
+          renderCardArticle(mainCard, mainIndex, true) +
+          '<div class="roadmap-node"><span>다음 단계</span><strong>선택하면 왼쪽 topic이 재작성됩니다. 다시 AI Analysis를 누르면 선택한 방향으로 더 깊게 들어갑니다.</strong></div>' +
+        '</div>' +
+        '<div class="roadmap-branches">' +
+          (branchCards.length ? branchCards.map(function(item) { return renderCardArticle(item.card, item.index, false); }).join('') : '<div class="hint">추가 branch가 없습니다.</div>') +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderCardArticle(card, index, isPrimary) {
         const kind = normalizeKind(card.kind);
         if (kind === 'decision') {
-          return renderDecisionCard(card, index);
+          return renderDecisionCard(card, index, isPrimary);
         }
         const details = Array.isArray(card.details) && card.details.length
           ? '<div class="info-grid">' + card.details.map(function(item) {
@@ -907,12 +980,13 @@ export function renderIdeaCruisePage() {
         let applyPreview = '<div class="actions"><button class="secondary" data-dismiss-card="' + index + '" type="button">확인</button></div>';
         if (card.suggestion) {
           applyPreview = '<div class="apply-preview">' +
-            '<label>왼쪽에 추가될 내용</label>' +
+            '<label>선택하면 왼쪽 topic이 이렇게 바뀝니다</label>' +
             '<textarea data-suggestion>' + escapeHtml(card.suggestion) + '</textarea>' +
-            '<div class="actions"><button data-apply-card="' + index + '" type="button">왼쪽에 적용</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
+            '<div class="rewrite-note">기존 topic에 붙이는 것이 아니라 이 내용으로 재작성됩니다.</div>' +
+            '<div class="actions"><button data-apply-card="' + index + '" type="button">선택하고 주제 재작성</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
           '</div>';
         }
-        return '<article class="ai-card ' + kind + '" data-card-index="' + index + '">' +
+        return '<article class="ai-card ' + kind + ' ' + (isPrimary ? 'primary-roadmap-card' : 'branch-card') + '" data-card-index="' + index + '">' +
           '<span class="pill ' + kind + '">' + escapeHtml(card.type) + '</span>' +
           '<h3>' + escapeHtml(card.title) + '</h3>' +
           '<p>' + escapeHtml(card.body) + '</p>' +
@@ -920,14 +994,13 @@ export function renderIdeaCruisePage() {
           applyPreview +
           (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
         '</article>';
-      }).join('');
     }
 
-    function renderDecisionCard(card, index) {
+    function renderDecisionCard(card, index, isPrimary) {
       const choices = Array.isArray(card.choices) && card.choices.length ? card.choices : [
         { label: '선택 A', body: card.body, suggestion: card.suggestion }
       ];
-      return '<article class="decision-card" data-card-index="' + index + '">' +
+      return '<article class="decision-card ' + (isPrimary ? 'primary-roadmap-card' : 'branch-card') + '" data-card-index="' + index + '">' +
         '<span class="pill decision">' + escapeHtml(card.type) + '</span>' +
         '<h3>' + escapeHtml(card.title) + '</h3>' +
         '<p>' + escapeHtml(card.body) + '</p>' +
@@ -939,9 +1012,10 @@ export function renderIdeaCruisePage() {
           '</div>';
         }).join('') + '</div>' +
         (card.suggestion ? '<div class="apply-preview">' +
-          '<label>왼쪽에 추가될 내용</label>' +
+          '<label>선택하면 왼쪽 topic이 이렇게 바뀝니다</label>' +
           '<textarea data-suggestion>' + escapeHtml(card.suggestion) + '</textarea>' +
-          '<div class="actions"><button data-apply-card="' + index + '" type="button">왼쪽에 적용</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
+          '<div class="rewrite-note">기존 topic에 붙이는 것이 아니라 이 내용으로 재작성됩니다.</div>' +
+          '<div class="actions"><button data-apply-card="' + index + '" type="button">선택하고 주제 재작성</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
         '</div>' : '<div class="actions"><button class="secondary" data-dismiss-card="' + index + '" type="button">확인</button></div>') +
         (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
       '</article>';
@@ -1053,7 +1127,7 @@ export function renderIdeaCruisePage() {
             '<label>담당자<select data-field="assignee"><option>미배정</option><option>조수현</option><option>김조은</option><option>배민성</option></select></label>' +
             '<label>중요도<select data-field="importance"><option>높음</option><option>보통</option><option>낮음</option></select></label>' +
           '</div>' +
-          '<button data-apply-task="' + task.id + '" type="button">Subjector in-process에 적용</button>' +
+          '<div class="actions"><button data-apply-task="' + task.id + '" type="button">Subjector in-process에 적용</button><button class="ghost" data-remove-task="' + task.id + '" type="button">제거</button></div>' +
           (task.error ? '<div class="error-log">반영 실패: ' + escapeHtml(task.error) + '</div>' : '') +
         '</article>';
       }).join('');
@@ -1161,7 +1235,7 @@ export function renderIdeaCruisePage() {
         try {
           const container = applyButton.closest('[data-card-index]');
           const content = container.querySelector('[data-suggestion]')?.value || card.suggestion || '';
-          appendToActivePage(content);
+          rewriteActivePage(content);
           page.cards.splice(cardIndex, 1);
         } catch (error) {
           card.error = error.message;
@@ -1184,6 +1258,13 @@ export function renderIdeaCruisePage() {
     });
 
     document.getElementById('task-list').addEventListener('click', async function(event) {
+      const removeButton = event.target.closest('[data-remove-task]');
+      if (removeButton) {
+        state.tasks = state.tasks.filter(function(item) { return item.id !== removeButton.dataset.removeTask; });
+        render();
+        return;
+      }
+
       const button = event.target.closest('[data-apply-task]');
       if (!button) return;
       const task = state.tasks.find(function(item) { return item.id === button.dataset.applyTask; });

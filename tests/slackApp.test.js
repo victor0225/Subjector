@@ -63,7 +63,7 @@ test('buildBootHealthStatus reports OpenAI when meeting task extraction uses Ope
   assert.match(status.openai.message, /task extraction/);
 });
 
-test('registerIdeaCruiseRoute serves the IDEA CRUISE meeting desk workspace', () => {
+test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
   const routes = [];
   const receiver = {
     router: {
@@ -104,8 +104,10 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE meeting desk workspace', ()
   assert.equal(response.statusCode, 200);
   assert.equal(response.contentType, 'html');
   assert.match(response.body, /IDEA CRUISE/);
+  assert.match(response.body, /Roadmap Intervention/);
   assert.match(response.body, /Meeting Record/);
-  assert.match(response.body, /3\. Final Task Refinement/);
+  assert.match(response.body, /3\. Outcome Tasks/);
+  assert.match(response.body, /선택하고 주제 재작성/);
 });
 
 test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee', async () => {

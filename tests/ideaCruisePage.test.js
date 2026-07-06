@@ -5,10 +5,10 @@ import { renderIdeaCruisePage } from '../src/domain/ideaCruisePage.js';
 test('renderIdeaCruisePage exposes the approved topic-page meeting desk', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /IDEA CRUISE Meeting Desk/);
+  assert.match(html, /IDEA CRUISE Roadmap Desk/);
   assert.match(html, /1\. Topic Page/);
-  assert.match(html, /2\. Topic-Specific AI Cards/);
-  assert.match(html, /3\. Final Task Refinement/);
+  assert.match(html, /2\. Roadmap Intervention/);
+  assert.match(html, /3\. Outcome Tasks/);
   assert.match(html, /다음 주제 추가/);
   assert.match(html, /회의록 열기/);
   assert.doesNotMatch(html, /간단 메모 붙여넣기/);
@@ -22,9 +22,8 @@ test('renderIdeaCruisePage documents the model split at each AI step', () => {
 
   assert.match(html, /카드 생성: GPT-5\.4/);
   assert.match(html, /회의록 생성: Gemini 2\.5 Flash-Lite/);
-  assert.match(html, /Task 최종 정제: Gemini 2\.5 Flash/);
-  assert.match(html, /새 task, 기존 task 보강, task 아님/);
-  assert.match(html, /https:\/\/github\.com\/SAFIRA-ondevice/);
+  assert.match(html, /Task 최종 정제: Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /자료조사, 검증, 구현/);
 });
 
 test('renderIdeaCruisePage uses one active topic page with page-specific cards', () => {
@@ -51,11 +50,11 @@ test('renderIdeaCruisePage removes active topic pages and their generated right-
   assert.match(html, /state\.notTasks = \[\]/);
 });
 
-test('renderIdeaCruisePage appends applied card content to the active page and removes the card', () => {
+test('renderIdeaCruisePage rewrites the active page from applied card content and removes the card', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /function appendToActivePage\(content\)/);
-  assert.match(html, /page\.text = page\.text\.trim\(\) \+ '\\n\\n' \+ content\.trim\(\)/);
+  assert.match(html, /function rewriteActivePage\(content\)/);
+  assert.match(html, /page\.text = content\.trim\(\)/);
   assert.match(html, /page\.cards\.splice\(cardIndex, 1\)/);
   assert.doesNotMatch(html, /entry\.text = cardEl\.querySelector\('textarea'\)\.value/);
 });
@@ -131,6 +130,7 @@ test('renderIdeaCruisePage separates final task refinement buckets', () => {
   assert.match(html, /완료 기준 변경 포함/);
   assert.match(html, /data-remove-not-task/);
   assert.match(html, /data-remove-task-update/);
+  assert.match(html, /data-remove-task/);
   assert.match(html, /fetch\('\/idea-cruise\/task-updates'/);
 });
 
@@ -141,6 +141,8 @@ test('renderIdeaCruisePage renders flexible card details and optional suggestion
   assert.match(html, /card\.choices/);
   assert.match(html, /if \(card\.suggestion\)/);
   assert.match(html, /data-suggestion/);
+  assert.match(html, /roadmap-row/);
+  assert.match(html, /primary-roadmap-card/);
 });
 
 test('renderIdeaCruisePage keeps meeting record as decision narrative, not task list', () => {
