@@ -141,8 +141,11 @@ test('renderIdeaCruisePage renders flexible card details and optional suggestion
   assert.match(html, /card\.choices/);
   assert.match(html, /if \(card\.suggestion\)/);
   assert.match(html, /data-suggestion/);
-  assert.match(html, /roadmap-row/);
-  assert.match(html, /primary-roadmap-card/);
+  assert.match(html, /roadmap-board/);
+  assert.match(html, /roadmap-lines/);
+  assert.match(html, /flow-node/);
+  assert.match(html, /data-select-roadmap-card/);
+  assert.match(html, /renderRoadmapDetail/);
 });
 
 test('renderIdeaCruisePage keeps meeting record as decision narrative, not task list', () => {

@@ -244,56 +244,130 @@ export function renderIdeaCruisePage() {
     .pill.decision { color: var(--teal-dark); background: var(--teal-soft); }
     .pill.filter { color: var(--gray); background: var(--gray-soft); }
 
-    .roadmap-row {
+    .roadmap-shell {
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(170px, 0.62fr);
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .roadmap-scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 5px;
+    }
+
+    .roadmap-board {
+      position: relative;
+      width: 940px;
+      height: 345px;
+      border: 1px solid #c7d5e2;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .roadmap-lines {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .roadmap-lines line,
+    .roadmap-lines path {
+      stroke: #1f6d8c;
+      stroke-width: 2;
+      fill: none;
+      marker-end: url(#roadmap-arrow);
+    }
+
+    .flow-node {
+      position: absolute;
+      display: grid;
+      align-content: center;
+      gap: 7px;
+      min-height: 76px;
+      padding: 12px;
+      border: 2px solid #123244;
+      border-radius: 2px;
+      background: #1f6d8c;
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(23, 32, 42, 0.08);
+    }
+
+    .flow-node.topic-node { left: 22px; top: 132px; width: 148px; }
+    .flow-node.generate-node { left: 220px; top: 115px; width: 150px; }
+    .flow-node.branch-top { left: 430px; top: 44px; width: 170px; min-height: 72px; }
+    .flow-node.branch-main { left: 430px; top: 132px; width: 170px; min-height: 88px; }
+    .flow-node.branch-bottom { left: 430px; top: 242px; width: 170px; min-height: 72px; }
+    .flow-node.strengthen-node { left: 660px; top: 132px; width: 150px; }
+    .flow-node.task-node { left: 815px; top: 44px; width: 105px; min-height: 88px; }
+
+    .flow-node.selected {
+      outline: 4px solid rgba(15, 118, 110, 0.2);
+      background: #115e59;
+    }
+
+    .flow-node.dimmed {
+      opacity: 0.62;
+    }
+
+    .flow-node small {
+      display: block;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .flow-node strong {
+      font-size: 15px;
+      line-height: 1.35;
+      word-break: keep-all;
+    }
+
+    .flow-node button {
+      justify-self: start;
+      border-color: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      padding: 6px 8px;
+    }
+
+    .roadmap-detail {
+      display: grid;
       gap: 10px;
-      align-items: start;
-    }
-
-    .roadmap-main {
-      display: grid;
-      gap: 9px;
-    }
-
-    .roadmap-branches {
-      display: grid;
-      gap: 8px;
-      max-height: calc(100vh - 250px);
-      overflow-y: auto;
-    }
-
-    .roadmap-node {
-      display: grid;
-      gap: 8px;
-      padding: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
       background: #fbfcfd;
     }
 
-    .roadmap-node strong {
+    .roadmap-detail-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .roadmap-detail h3 {
+      margin-bottom: 0;
+      font-size: 15px;
+    }
+
+    .roadmap-detail p {
+      margin-bottom: 0;
+      color: #334155;
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.5;
     }
 
-    .roadmap-node span {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .branch-card {
-      min-height: 0;
-      max-height: 330px;
-      overflow-y: auto;
-    }
-
-    .branch-card h3 {
-      font-size: 13px;
-    }
-
-    .primary-roadmap-card {
-      min-height: 300px;
+    .roadmap-empty {
+      padding: 14px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
     }
 
     .rewrite-note {
@@ -634,6 +708,7 @@ export function renderIdeaCruisePage() {
           title: '폭음 데이터',
           text: defaultTopicText,
           cards: seedCards(),
+          selectedCardIndex: 2,
           completed: false
         }
       ],
@@ -650,6 +725,7 @@ export function renderIdeaCruisePage() {
     normalizeState();
 
     function normalizeState() {
+      const shouldResetRoadmapSelection = state.roadmapUiVersion !== 'arrow-roadmap-v1';
       if (!Array.isArray(state.pages) || state.pages.length === 0) {
         state.pages = [{ id: 'page-1', number: 1, title: '새 주제', text: defaultTopicText, cards: seedCards(), completed: false }];
       }
@@ -659,8 +735,13 @@ export function renderIdeaCruisePage() {
         page.title = page.title || titleFromText(page.text) || '새 주제';
         page.text = page.text || '';
         page.cards = Array.isArray(page.cards) ? page.cards : [];
+        if (shouldResetRoadmapSelection || !Number.isInteger(page.selectedCardIndex)) {
+          const decisionIndex = page.cards.findIndex(function(card) { return normalizeKind(card.kind) === 'decision'; });
+          page.selectedCardIndex = decisionIndex >= 0 ? decisionIndex : 0;
+        }
         page.completed = Boolean(page.completed);
       });
+      state.roadmapUiVersion = 'arrow-roadmap-v1';
       if (!state.pages.some(function(page) { return page.id === state.activePageId; })) {
         state.activePageId = state.pages[0].id;
       }
@@ -858,6 +939,7 @@ export function renderIdeaCruisePage() {
         throw new Error(result.error || 'AI Analysis 연결에 실패했습니다.');
       }
       page.cards = (result.cards || []).map(mapApiCard);
+      page.selectedCardIndex = Math.max(0, page.cards.findIndex(function(card) { return normalizeKind(card.kind) === 'decision'; }));
     }
 
     async function requestTaskCandidates() {
@@ -941,84 +1023,125 @@ export function renderIdeaCruisePage() {
       });
     }
 
-    function renderCards() {
-      const page = activePage();
-      const list = document.getElementById('card-list');
-      if (!page.cards.length) {
-        list.innerHTML = '<div class="hint">AI Analysis를 누르면 현재 page 전용 카드가 여기에 표시됩니다.</div>';
-        return;
+    function selectedCardIndex(page) {
+      if (!page.cards.length) return -1;
+      if (!Number.isInteger(page.selectedCardIndex)) {
+        const decisionIndex = page.cards.findIndex(function(card) { return normalizeKind(card.kind) === 'decision'; });
+        page.selectedCardIndex = decisionIndex >= 0 ? decisionIndex : 0;
       }
-      const primaryIndex = page.cards.findIndex(function(card) { return normalizeKind(card.kind) === 'decision'; });
-      const mainIndex = primaryIndex >= 0 ? primaryIndex : 0;
-      const mainCard = page.cards[mainIndex];
-      const branchCards = page.cards
-        .map(function(card, index) { return { card: card, index: index }; })
-        .filter(function(item) { return item.index !== mainIndex; });
+      if (page.selectedCardIndex < 0 || page.selectedCardIndex >= page.cards.length) {
+        page.selectedCardIndex = 0;
+      }
+      return page.selectedCardIndex;
+    }
 
-      list.innerHTML = '<div class="roadmap-row">' +
-        '<div class="roadmap-main">' +
-          '<div class="roadmap-node"><span>현재 주제</span><strong>' + escapeHtml(compactText(page.text) || '주제 없음') + '</strong></div>' +
-          renderCardArticle(mainCard, mainIndex, true) +
-          '<div class="roadmap-node"><span>다음 단계</span><strong>선택하면 왼쪽 topic이 재작성됩니다. 다시 AI Analysis를 누르면 선택한 방향으로 더 깊게 들어갑니다.</strong></div>' +
-        '</div>' +
-        '<div class="roadmap-branches">' +
-          (branchCards.length ? branchCards.map(function(item) { return renderCardArticle(item.card, item.index, false); }).join('') : '<div class="hint">추가 branch가 없습니다.</div>') +
-        '</div>' +
+    function nodeTitle(text, fallback) {
+      const value = compactText(text || fallback || '');
+      return value.length > 42 ? value.slice(0, 42) + '...' : value;
+    }
+
+    function kindLabel(kind) {
+      return {
+        answer: '즉시 답변',
+        research: '확인 필요',
+        experiment: '실험 필요',
+        decision: '지금 결정',
+        filter: '제외/보류'
+      }[normalizeKind(kind)] || 'card';
+    }
+
+    function outcomeLabel(card) {
+      const kind = normalizeKind(card.kind);
+      if (kind === 'research' || kind === 'experiment') return 'Task 채택';
+      if (kind === 'decision') return '결정 반영';
+      if (kind === 'filter') return '범위 제외';
+      return '지식 반영';
+    }
+
+    function renderFlowNode(slotClass, label, title, index, selectedIndex) {
+      const selectable = Number.isInteger(index);
+      return '<div class="flow-node ' + slotClass + (index === selectedIndex ? ' selected' : '') + (!selectable ? ' dimmed' : '') + '">' +
+        '<small>' + escapeHtml(label) + '</small>' +
+        '<strong>' + escapeHtml(title) + '</strong>' +
+        (selectable ? '<button data-select-roadmap-card="' + index + '" type="button">보기</button>' : '') +
       '</div>';
     }
 
-    function renderCardArticle(card, index, isPrimary) {
-        const kind = normalizeKind(card.kind);
-        if (kind === 'decision') {
-          return renderDecisionCard(card, index, isPrimary);
-        }
-        const details = Array.isArray(card.details) && card.details.length
-          ? '<div class="info-grid">' + card.details.map(function(item) {
-              return '<div class="info-box"><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(item.body) + '</span></div>';
-            }).join('') + '</div>'
-          : '';
-        let applyPreview = '<div class="actions"><button class="secondary" data-dismiss-card="' + index + '" type="button">확인</button></div>';
-        if (card.suggestion) {
-          applyPreview = '<div class="apply-preview">' +
-            '<label>선택하면 왼쪽 topic이 이렇게 바뀝니다</label>' +
-            '<textarea data-suggestion>' + escapeHtml(card.suggestion) + '</textarea>' +
-            '<div class="rewrite-note">기존 topic에 붙이는 것이 아니라 이 내용으로 재작성됩니다.</div>' +
-            '<div class="actions"><button data-apply-card="' + index + '" type="button">선택하고 주제 재작성</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
-          '</div>';
-        }
-        return '<article class="ai-card ' + kind + ' ' + (isPrimary ? 'primary-roadmap-card' : 'branch-card') + '" data-card-index="' + index + '">' +
-          '<span class="pill ' + kind + '">' + escapeHtml(card.type) + '</span>' +
-          '<h3>' + escapeHtml(card.title) + '</h3>' +
-          '<p>' + escapeHtml(card.body) + '</p>' +
-          details +
-          applyPreview +
-          (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
-        '</article>';
-    }
-
-    function renderDecisionCard(card, index, isPrimary) {
-      const choices = Array.isArray(card.choices) && card.choices.length ? card.choices : [
-        { label: '선택 A', body: card.body, suggestion: card.suggestion }
-      ];
-      return '<article class="decision-card ' + (isPrimary ? 'primary-roadmap-card' : 'branch-card') + '" data-card-index="' + index + '">' +
-        '<span class="pill decision">' + escapeHtml(card.type) + '</span>' +
-        '<h3>' + escapeHtml(card.title) + '</h3>' +
-        '<p>' + escapeHtml(card.body) + '</p>' +
-        '<div class="choice-row">' + choices.map(function(choice, choiceIndex) {
-          return '<div class="choice-card">' +
-            '<strong>' + escapeHtml(choice.label) + '</strong>' +
-            '<p>' + escapeHtml(choice.body) + '</p>' +
-            '<button class="secondary" data-choice-card="' + index + '" data-choice-index="' + choiceIndex + '" type="button">' + escapeHtml(choice.label) + ' 선택</button>' +
-          '</div>';
-        }).join('') + '</div>' +
-        (card.suggestion ? '<div class="apply-preview">' +
+    function renderRoadmapDetail(card, index) {
+      const kind = normalizeKind(card.kind);
+      const details = Array.isArray(card.details) && card.details.length
+        ? '<div class="info-grid">' + card.details.map(function(item) {
+            return '<div class="info-box"><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(item.body) + '</span></div>';
+          }).join('') + '</div>'
+        : '';
+      const choices = kind === 'decision'
+        ? '<div class="choice-row">' + (Array.isArray(card.choices) && card.choices.length ? card.choices : [{ label: '선택 A', body: card.body, suggestion: card.suggestion }]).map(function(choice, choiceIndex) {
+            return '<div class="choice-card">' +
+              '<strong>' + escapeHtml(choice.label) + '</strong>' +
+              '<p>' + escapeHtml(choice.body) + '</p>' +
+              '<button class="secondary" data-choice-card="' + index + '" data-choice-index="' + choiceIndex + '" type="button">' + escapeHtml(choice.label) + ' 선택</button>' +
+            '</div>';
+          }).join('') + '</div>'
+        : '';
+      let applyPreview = '<div class="actions"><button class="secondary" data-dismiss-card="' + index + '" type="button">확인</button></div>';
+      if (card.suggestion) {
+        applyPreview = '<div class="apply-preview">' +
           '<label>선택하면 왼쪽 topic이 이렇게 바뀝니다</label>' +
           '<textarea data-suggestion>' + escapeHtml(card.suggestion) + '</textarea>' +
           '<div class="rewrite-note">기존 topic에 붙이는 것이 아니라 이 내용으로 재작성됩니다.</div>' +
           '<div class="actions"><button data-apply-card="' + index + '" type="button">선택하고 주제 재작성</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
-        '</div>' : '<div class="actions"><button class="secondary" data-dismiss-card="' + index + '" type="button">확인</button></div>') +
+        '</div>';
+      }
+      return '<article class="roadmap-detail ' + kind + '" data-card-index="' + index + '">' +
+        '<div class="roadmap-detail-head"><div><span class="pill ' + kind + '">' + escapeHtml(card.type || kindLabel(kind)) + '</span><h3>' + escapeHtml(card.title) + '</h3></div><button class="ghost" data-dismiss-card="' + index + '" type="button">제거</button></div>' +
+        '<p>' + escapeHtml(card.body) + '</p>' +
+        details +
+        choices +
+        applyPreview +
         (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
       '</article>';
+    }
+
+    function renderCards() {
+      const page = activePage();
+      const list = document.getElementById('card-list');
+      if (!page.cards.length) {
+        list.innerHTML = '<div class="roadmap-empty">AI Analysis를 누르면 현재 page 전용 로드맵이 여기에 표시됩니다.</div>';
+        return;
+      }
+
+      const selectedIndex = selectedCardIndex(page);
+      const selectedCard = page.cards[selectedIndex];
+      const branches = page.cards
+        .map(function(card, index) { return { card: card, index: index }; })
+        .filter(function(item) { return item.index !== selectedIndex; });
+      const topBranch = branches[0];
+      const bottomBranch = branches[1];
+      const extraCount = Math.max(0, branches.length - 2);
+
+      list.innerHTML = '<div class="roadmap-shell">' +
+        '<div class="roadmap-scroll">' +
+          '<div class="roadmap-board">' +
+            '<svg class="roadmap-lines" viewBox="0 0 940 345" preserveAspectRatio="none" aria-hidden="true">' +
+              '<defs><marker id="roadmap-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1f6d8c"></path></marker></defs>' +
+              '<line x1="170" y1="170" x2="220" y2="154"></line>' +
+              '<path d="M370 154 L430 80"></path>' +
+              '<line x1="370" y1="154" x2="430" y2="176"></line>' +
+              '<path d="M370 174 L430 278"></path>' +
+              '<line x1="600" y1="176" x2="660" y2="176"></line>' +
+              '<path d="M810 176 L815 88"></path>' +
+            '</svg>' +
+            renderFlowNode('topic-node', '주제 던지기', nodeTitle(page.text, '현재 주제'), null, selectedIndex) +
+            renderFlowNode('generate-node', '카드 생성', 'AI가 선택지를 만든다', null, selectedIndex) +
+            (topBranch ? renderFlowNode('branch-top', kindLabel(topBranch.card.kind), nodeTitle(topBranch.card.title, topBranch.card.body), topBranch.index, selectedIndex) : renderFlowNode('branch-top', '보조 branch', '대기', null, selectedIndex)) +
+            renderFlowNode('branch-main', kindLabel(selectedCard.kind), nodeTitle(selectedCard.title, selectedCard.body), selectedIndex, selectedIndex) +
+            (bottomBranch ? renderFlowNode('branch-bottom', kindLabel(bottomBranch.card.kind), nodeTitle(bottomBranch.card.title, bottomBranch.card.body) + (extraCount ? ' +' + extraCount : ''), bottomBranch.index, selectedIndex) : renderFlowNode('branch-bottom', '보조 branch', '대기', null, selectedIndex)) +
+            renderFlowNode('strengthen-node', '주제 강화', '선택한 방향으로 심화', null, selectedIndex) +
+            renderFlowNode('task-node', '최종 후보', outcomeLabel(selectedCard), null, selectedIndex) +
+          '</div>' +
+        '</div>' +
+        renderRoadmapDetail(selectedCard, selectedIndex) +
+      '</div>';
     }
 
     function normalizeKind(kind) {
@@ -1214,12 +1337,20 @@ export function renderIdeaCruisePage() {
     });
 
     document.getElementById('card-list').addEventListener('click', function(event) {
+      const selectButton = event.target.closest('[data-select-roadmap-card]');
+      if (selectButton) {
+        activePage().selectedCardIndex = Number(selectButton.dataset.selectRoadmapCard);
+        render();
+        return;
+      }
+
       const choiceButton = event.target.closest('[data-choice-card]');
       if (choiceButton) {
         const page = activePage();
         const card = page.cards[Number(choiceButton.dataset.choiceCard)];
         const choice = card?.choices?.[Number(choiceButton.dataset.choiceIndex)];
         if (choice) {
+          page.selectedCardIndex = Number(choiceButton.dataset.choiceCard);
           card.suggestion = choice.suggestion;
           card.body = '선택 결과: ' + choice.label + ' 방향으로 정리합니다.';
           renderCards();
@@ -1237,6 +1368,7 @@ export function renderIdeaCruisePage() {
           const content = container.querySelector('[data-suggestion]')?.value || card.suggestion || '';
           rewriteActivePage(content);
           page.cards.splice(cardIndex, 1);
+          page.selectedCardIndex = Math.max(0, Math.min(cardIndex, page.cards.length - 1));
         } catch (error) {
           card.error = error.message;
         }
@@ -1246,7 +1378,10 @@ export function renderIdeaCruisePage() {
 
       const dismissButton = event.target.closest('[data-dismiss-card]');
       if (dismissButton) {
-        activePage().cards.splice(Number(dismissButton.dataset.dismissCard), 1);
+        const page = activePage();
+        const removedIndex = Number(dismissButton.dataset.dismissCard);
+        page.cards.splice(removedIndex, 1);
+        page.selectedCardIndex = Math.max(0, Math.min(removedIndex, page.cards.length - 1));
         render();
       }
     });
