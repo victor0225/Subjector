@@ -1,0 +1,385 @@
+:root {
+  --bg: #f5f7fa;
+  --panel: #fff;
+  --ink: #15202b;
+  --muted: #657386;
+  --line: #dbe3ec;
+  --blue: #2463eb;
+  --green: #0e7c5c;
+  --red: #bf3f36;
+  --amber: #a86810;
+  --soft-blue: #eaf1ff;
+  --soft-red: #fff0ee;
+  --soft-green: #e8f7f0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 24px 14px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+h1, h2, h3, p { margin-top: 0; }
+h1 { font-size: 22px; margin-bottom: 4px; }
+h2 { font-size: 15px; margin-bottom: 4px; }
+p { color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+.status {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.status span,
+.tag {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tag-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+main {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(520px, 1.35fr) minmax(320px, 0.9fr);
+  gap: 16px;
+  padding: 18px 24px;
+}
+
+.panel,
+.task-board {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(21, 32, 43, 0.08);
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfe;
+}
+
+.mode-row,
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  padding: 8px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.danger {
+  color: var(--red);
+  border-color: #f0c0bb;
+  background: #fff8f7;
+}
+
+.entries,
+.card-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  max-height: calc(100vh - 245px);
+  min-height: 430px;
+  overflow: auto;
+}
+
+.entry,
+.card,
+.task {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.entry.strengthened {
+  background: #fbfdff;
+  border-color: #b8d7ff;
+}
+
+.entry-head,
+.card-head,
+.task-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.entry p {
+  white-space: pre-wrap;
+}
+
+.trail {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.composer {
+  margin: 0 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+textarea,
+input,
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.composer textarea {
+  border: 0;
+  border-radius: 0;
+  min-height: 100px;
+}
+
+.composer .actions {
+  border-top: 1px solid var(--line);
+  background: #fbfcfe;
+  padding: 9px;
+}
+
+.roadmap-panel {
+  min-width: 0;
+}
+
+.roadmap-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.55fr) 26px minmax(260px, 1.1fr) 26px minmax(180px, 0.78fr) 26px minmax(130px, 0.55fr);
+  gap: 8px;
+  align-items: stretch;
+  min-width: 920px;
+}
+
+.roadmap-row.empty {
+  grid-template-columns: minmax(160px, 0.65fr) 26px minmax(280px, 1fr);
+  min-width: 520px;
+}
+
+.roadmap-node,
+.quiet-box {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 12px;
+}
+
+.source-node {
+  background: #f7fbff;
+}
+
+.outcome-node {
+  background: #effaf5;
+}
+
+.roadmap-node span,
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.roadmap-node strong {
+  display: block;
+  line-height: 1.45;
+}
+
+.roadmap-node small {
+  display: block;
+  color: var(--muted);
+  margin-top: 8px;
+  line-height: 1.35;
+}
+
+.arrow {
+  display: grid;
+  place-items: center;
+  color: #44707d;
+  font-weight: 900;
+}
+
+.card {
+  border-left: 4px solid var(--green);
+}
+
+.card.source-conflict { border-left-color: var(--red); }
+.card.concept-comparison { border-left-color: var(--amber); }
+.card.research-task { border-left-color: var(--blue); }
+.card.defer-scope { border-left-color: var(--muted); }
+.card.decision-branch { border-left-color: var(--green); }
+
+.roadmap-card {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+}
+
+.primary-card {
+  background: #fff;
+}
+
+.branch-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 500px;
+  overflow: auto;
+}
+
+.branch-card {
+  min-height: 0;
+  max-height: 330px;
+  overflow: auto;
+}
+
+.branch-card .improve textarea {
+  min-height: 72px;
+}
+
+.hint {
+  border-radius: 7px;
+  background: #f3f7fb;
+  color: #4d6075;
+  padding: 9px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 8px;
+}
+
+.improve {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.improve label,
+.criteria label,
+.selectors label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.improve textarea {
+  margin-top: 6px;
+  min-height: 96px;
+}
+
+.record {
+  margin: 14px;
+  padding: 12px;
+  min-height: 330px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  white-space: pre-wrap;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.task-board {
+  margin: 0 24px 24px;
+}
+
+.tasks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  padding: 14px;
+}
+
+.task {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.criteria {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.selectors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-width: 620px;
+  width: calc(100vw - 40px);
+}
+
+dialog textarea {
+  min-height: 260px;
+}
+
+@media (max-width: 1100px) {
+  header,
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  main,
+  .tasks {
+    grid-template-columns: 1fr;
+  }
+}
