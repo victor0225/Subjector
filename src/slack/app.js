@@ -17,6 +17,7 @@ import {
 import { createGeminiMeetingTranscriber } from '../services/geminiMeetingTranscriber.js';
 import { createGeminiIdeaCruiseTaskGenerator } from '../services/geminiIdeaCruiseTaskGenerator.js';
 import { createFinalsNarrator } from '../services/finalsNarratorFactory.js';
+import { createGitHubOrganizationContextProvider } from '../services/githubOrganizationContext.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createMeetingTaskExtractor } from '../services/meetingTaskExtractorFactory.js';
 import { createMeetingService } from '../services/meetingService.js';
@@ -105,9 +106,157 @@ async function readIdeaCruiseTaskBody(req) {
   return JSON.parse(raw);
 }
 
-export function registerIdeaCruiseRoute(receiver, { config = {}, store = null, inProcessService = null, cardAnalyzer = null, taskCandidateGenerator = null } = {}) {
+const IDEA_CRUISE_ROADMAP_TASK_STATUSES = new Set([
+  '미시작',
+  '수락',
+  '오늘은 여기까지',
+  '추가 진행 예정',
+  '보완 필요',
+  '미정리',
+  '변경 요청 중',
+  '회의 필요'
+]);
+
+function isValidIdeaCruisePin(req, config) {
+  const provided = String(req.query?.pin ?? req.headers?.['x-idea-cruise-pin'] ?? '').trim();
+  return Boolean(config.healthPin && provided && provided === config.healthPin);
+}
+
+function trimForRoadmap(text, limit = 900) {
+  const normalized = String(text ?? '').replace(/\s+/g, ' ').trim();
+  return normalized.length > limit ? `${normalized.slice(0, limit)}...` : normalized;
+}
+
+function userDisplayFromKey(config, userKey) {
+  const user = config.users?.find((item) => item.key === userKey);
+  return user?.displayName || user?.fullName || userKey || '미배정';
+}
+
+function taskRoadmapText(task, config) {
+  const context = task.context ?? {};
+  const latestChange = Array.isArray(context.changeHistory) && context.changeHistory.length > 0
+    ? context.changeHistory[context.changeHistory.length - 1]
+    : null;
+
+  return [
+    '[Subjector task]',
+    `상태: ${task.status || '기록 없음'}`,
+    `담당자: ${userDisplayFromKey(config, task.assigneeUserKey)}`,
+    `왜 하는가: ${context.why || context.reason || context.goal || '기록 없음'}`,
+    `필요 정보: ${context.neededInfo || context.requiredInfo || '기록 없음'}`,
+    `완료 기준: ${context.doneCriteria || context.completionCriteria || context.acceptanceCriteria || '기록 없음'}`,
+    latestChange ? `최근 변경: ${latestChange.why || latestChange.rawText || '변경 기록 있음'}` : ''
+  ].filter(Boolean).join('\n');
+}
+
+function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], githubContexts = [], config = {} }) {
+  const topics = [];
+
+  for (const task of tasks.filter((item) => IDEA_CRUISE_ROADMAP_TASK_STATUSES.has(item.status))) {
+    const taskExternalId = `subjector-task-${task.id}`;
+    topics.push({
+      externalId: taskExternalId,
+      parentExternalId: '',
+      sourceType: 'subjector-task',
+      sourceTaskId: task.id,
+      title: `Task: ${task.title}`,
+      text: taskRoadmapText(task, config)
+    });
+
+    const changeHistory = Array.isArray(task.context?.changeHistory) ? task.context.changeHistory : [];
+    for (const change of changeHistory.slice(-3)) {
+      topics.push({
+        externalId: `subjector-task-change-${task.id}-${change.createdAt || topics.length}`,
+        parentExternalId: taskExternalId,
+        sourceType: 'subjector-change',
+        sourceTaskId: task.id,
+        title: `변경 반영: ${task.title}`,
+        text: [
+          '[담당자 변경 반영]',
+          `해야 할 일 변경: ${change.why || '기록 없음'}`,
+          `확인할 것: ${change.neededInfo || '기록 없음'}`,
+          `완료 기준: ${change.doneCriteria || '기록 없음'}`,
+          change.rawText ? `원문: ${trimForRoadmap(change.rawText, 500)}` : ''
+        ].filter(Boolean).join('\n')
+      });
+    }
+  }
+
+  for (const request of changeRequests.slice(0, 20)) {
+    topics.push({
+      externalId: `subjector-change-request-${request.taskId}-${request.createdAt}`,
+      parentExternalId: `subjector-task-${request.taskId}`,
+      sourceType: 'change-request',
+      sourceTaskId: request.taskId,
+      title: `변경 요청: ${request.taskTitle}`,
+      text: [
+        '[변경 요청]',
+        `상태: ${request.status}`,
+        `대상 task: ${request.taskTitle}`,
+        `내용: ${trimForRoadmap(request.rawText)}`
+      ].join('\n')
+    });
+  }
+
+  if (githubContexts.length > 0) {
+    topics.push({
+      externalId: 'github-safira-ondevice',
+      parentExternalId: '',
+      sourceType: 'github',
+      title: 'GitHub 프로젝트 상태',
+      text: [
+        '[GitHub organization]',
+        ...githubContexts.map((item) => `- ${item}`)
+      ].join('\n')
+    });
+  }
+
+  return topics;
+}
+
+export function registerIdeaCruiseRoute(receiver, {
+  config = {},
+  store = null,
+  inProcessService = null,
+  cardAnalyzer = null,
+  taskCandidateGenerator = null,
+  githubContextProvider = null
+} = {}) {
   receiver.router.get('/idea-cruise', (req, res) => {
     res.status(200).type('html').send(renderIdeaCruisePage());
+  });
+
+  receiver.router.get('/idea-cruise/roadmap-context', async (req, res) => {
+    try {
+      if (!isValidIdeaCruisePin(req, config)) {
+        return res.status(403).json({
+          ok: false,
+          error: 'IDEA CRUISE 최신화 PIN이 필요합니다.'
+        });
+      }
+
+      const [tasks, changeRequests, githubContexts] = await Promise.all([
+        store?.listAllTasks ? store.listAllTasks({ limit: 100 }) : [],
+        store?.listAllChangeRequests ? store.listAllChangeRequests({ limit: 50 }) : [],
+        githubContextProvider?.listContext ? githubContextProvider.listContext({ repoLimit: 6, issueLimit: 4 }) : []
+      ]);
+
+      return res.status(200).json({
+        ok: true,
+        generatedAt: new Date().toISOString(),
+        topics: buildIdeaCruiseRoadmapContext({
+          tasks,
+          changeRequests,
+          githubContexts,
+          config
+        })
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: error.message
+      });
+    }
   });
 
   receiver.router.post('/idea-cruise/cards', async (req, res) => {
@@ -1387,12 +1536,18 @@ export function createSlackApp({
     })
     : null;
 
+  const githubContextProvider = createGitHubOrganizationContextProvider({
+    organizationUrl: config.github?.organizationUrl,
+    token: config.github?.token
+  });
+
   registerIdeaCruiseRoute(receiver, {
     config,
     store,
     inProcessService: service,
     cardAnalyzer: ideaCruiseCardAnalyzer,
-    taskCandidateGenerator: ideaCruiseTaskCandidateGenerator
+    taskCandidateGenerator: ideaCruiseTaskCandidateGenerator,
+    githubContextProvider
   });
 
   const meetings = meetingService ?? createMeetingService({

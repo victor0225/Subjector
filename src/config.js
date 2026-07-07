@@ -144,6 +144,10 @@ export function loadConfigFromEnv(env = process.env) {
       inProcess: env.IN_PROCESS_CHANNEL_ID.trim(),
       finals: env.FINALS_CHANNEL_ID.trim()
     },
+    github: {
+      organizationUrl: env.GITHUB_ORGANIZATION_URL?.trim() || 'https://github.com/SAFIRA-ondevice',
+      token: env.GITHUB_TOKEN?.trim() || ''
+    },
     features: {
       enableTestParticipantSkip: envFlag(env.ENABLE_TEST_PARTICIPANT_SKIP),
       enableMeetingTaskFlow: envFlag(env.ENABLE_MEETING_TASK_FLOW)

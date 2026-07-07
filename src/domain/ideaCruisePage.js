@@ -380,6 +380,7 @@ export function renderIdeaCruisePage() {
         </div>
         <div class="actions">
           <button id="add-topic" class="primary" type="button">Topic 추가</button>
+          <button id="refresh-roadmap" type="button">최신화</button>
           <button id="generate-record" type="button">회의록 생성</button>
         </div>
       </div>
@@ -472,7 +473,8 @@ export function renderIdeaCruisePage() {
         notTasks: [],
         taskFilter: 'all',
         taskGenerationError: '',
-        record: ''
+        record: '',
+        refreshMessage: ''
       };
     }
 
@@ -558,6 +560,18 @@ export function renderIdeaCruisePage() {
         suggestion: topic.text,
         impact: '영향 topic: ' + fixedTopic.title,
         affectedTopicIds: [fixedTopic.id]
+      };
+    }
+
+    function externalUpdateCard(topic, incoming) {
+      return {
+        id: 'external-update-' + incoming.externalId,
+        kind: 'conflict',
+        type: '최신 변경 반영 필요',
+        title: '고정 topic에 최신 변경이 도착했습니다',
+        body: 'Subjector에서 변경된 내용이 있지만 이 topic은 고정되어 있어 자동으로 덮어쓰지 않았습니다. 고정 해제 후 반영하거나 별도 topic으로 유지하세요.',
+        suggestion: incoming.text,
+        impact: '최신화 source: ' + (incoming.sourceType || 'Subjector')
       };
     }
 
@@ -684,6 +698,88 @@ export function renderIdeaCruisePage() {
       state.activeTopicId = topic.id;
     }
 
+    function mergeRoadmapContext(topics) {
+      const externalIdToTopicId = new Map();
+      state.topics.forEach(function(topic) {
+        if (topic.sourceExternalId) {
+          externalIdToTopicId.set(topic.sourceExternalId, topic.id);
+        }
+      });
+
+      const created = [];
+      const updated = [];
+      const waiting = [];
+
+      (topics || []).forEach(function(incoming) {
+        const existingId = externalIdToTopicId.get(incoming.externalId);
+        const parentId = incoming.parentExternalId ? externalIdToTopicId.get(incoming.parentExternalId) || null : null;
+
+        if (existingId) {
+          const existing = state.topics.find(function(topic) { return topic.id === existingId; });
+          if (!existing) return;
+          if (existing.fixed) {
+            existing.cards = [externalUpdateCard(existing, incoming)].concat((existing.cards || []).filter(function(card) {
+              return card.id !== 'external-update-' + incoming.externalId;
+            }));
+            waiting.push(existing.title);
+            return;
+          }
+          existing.title = incoming.title || existing.title;
+          existing.text = incoming.text || existing.text;
+          existing.parentId = parentId;
+          existing.sourceType = incoming.sourceType || existing.sourceType;
+          updated.push(existing.title);
+          ensurePriorityCards(existing);
+          return;
+        }
+
+        const topic = {
+          id: createId('topic'),
+          title: incoming.title || 'Subjector 최신 항목',
+          text: incoming.text || '',
+          parentId: parentId,
+          fixed: false,
+          completed: false,
+          cards: [],
+          sourceExternalId: incoming.externalId,
+          sourceType: incoming.sourceType || 'external'
+        };
+        state.topics.push(topic);
+        externalIdToTopicId.set(incoming.externalId, topic.id);
+        created.push(topic.title);
+        ensurePriorityCards(topic);
+      });
+
+      state.refreshMessage = [
+        created.length ? '추가 ' + created.length + '개' : '',
+        updated.length ? '갱신 ' + updated.length + '개' : '',
+        waiting.length ? '고정 topic 대기 ' + waiting.length + '개' : ''
+      ].filter(Boolean).join(' · ') || '새로 반영할 항목이 없습니다.';
+
+      if (!state.activeTopicId && state.topics.length) {
+        state.activeTopicId = state.topics[0].id;
+      }
+    }
+
+    async function refreshRoadmapContext() {
+      let pin = localStorage.getItem('idea-cruise-refresh-pin') || '';
+      if (!pin) {
+        pin = window.prompt('IDEA CRUISE 최신화 PIN을 입력하세요.');
+        if (!pin) return;
+        localStorage.setItem('idea-cruise-refresh-pin', pin);
+      }
+
+      const response = await fetch('/idea-cruise/roadmap-context?pin=' + encodeURIComponent(pin));
+      const result = await response.json().catch(function() { return {}; });
+      if (!response.ok) {
+        if (response.status === 403) {
+          localStorage.removeItem('idea-cruise-refresh-pin');
+        }
+        throw new Error(result.error || '로드맵 최신화에 실패했습니다.');
+      }
+      mergeRoadmapContext(result.topics || []);
+    }
+
     function removeActiveTopic() {
       const topic = activeTopic();
       if (!topic) return;
@@ -780,7 +876,7 @@ export function renderIdeaCruisePage() {
       roadmapEl.classList.toggle('card-layer-on', Boolean(state.activeTopicId));
       layerStateEl.textContent = state.activeTopicId
         ? (activeTopic()?.title || '선택 topic') + ' topic의 2층 AI 카드가 켜져 있습니다.'
-        : 'topic을 클릭하면 2층 AI 카드가 켜집니다.';
+        : (state.refreshMessage || 'topic을 클릭하면 2층 AI 카드가 켜집니다.');
 
       topicNodesEl.innerHTML = state.topics.map(function(topic) {
         const position = layout.positions.get(topic.id);
@@ -1014,6 +1110,16 @@ export function renderIdeaCruisePage() {
     }
 
     document.getElementById('add-topic').addEventListener('click', openTopicDialog);
+    document.getElementById('refresh-roadmap').addEventListener('click', async function(event) {
+      event.target.disabled = true;
+      try {
+        await refreshRoadmapContext();
+      } catch (error) {
+        state.refreshMessage = error.message;
+      }
+      event.target.disabled = false;
+      render();
+    });
     document.getElementById('close-topic-dialog').addEventListener('click', function() { topicDialog.close(); });
     document.getElementById('topic-form').addEventListener('submit', function(event) {
       event.preventDefault();

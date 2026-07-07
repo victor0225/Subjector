@@ -142,6 +142,78 @@ test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee
   assert.match(response.body.error, /담당자/);
 });
 
+test('registerIdeaCruiseRoute protects roadmap refresh context with the health pin', async () => {
+  const routes = [];
+  const receiver = {
+    router: {
+      get(path, handler) {
+        routes.push({ method: 'get', path, handler });
+      },
+      post() {}
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: { ...teamConfig, healthPin: '1234' },
+    store: {
+      async listAllTasks() {
+        return [
+          {
+            id: 'task-1',
+            assigneeUserKey: 'suhyeon',
+            title: '하드웨어 후보 비교',
+            status: '수락',
+            context: {
+              why: '초기 개발 보드를 정해야 함',
+              neededInfo: '가격과 전력',
+              doneCriteria: '추천 후보 1개',
+              changeHistory: [
+                {
+                  why: 'ESP32 기준 비교로 좁힘',
+                  neededInfo: '전력 확인',
+                  doneCriteria: '추천 후보 1개 제시',
+                  rawText: '[해야 할 일 변경]\nESP32 기준 비교',
+                  createdAt: '2026-07-08T01:00:00.000Z'
+                }
+              ]
+            }
+          }
+        ];
+      },
+      async listAllChangeRequests() {
+        return [
+          {
+            taskId: 'task-1',
+            taskTitle: '하드웨어 후보 비교',
+            status: '기록됨',
+            rawText: '[변경 제안]\nESP32 중심으로 비교',
+            createdAt: '2026-07-08T02:00:00.000Z'
+          }
+        ];
+      }
+    },
+    githubContextProvider: {
+      async listContext() {
+        return ['repo SAFIRA-ondevice/headset | updated: 2026-07-08'];
+      }
+    }
+  });
+
+  const route = routes.find((item) => item.path === '/idea-cruise/roadmap-context');
+
+  const rejected = createJsonResponse();
+  await route.handler({ query: {} }, rejected);
+  assert.equal(rejected.statusCode, 403);
+
+  const accepted = createJsonResponse();
+  await route.handler({ query: { pin: '1234' } }, accepted);
+  assert.equal(accepted.statusCode, 200);
+  assert.equal(accepted.body.ok, true);
+  assert.ok(accepted.body.topics.some((topic) => topic.title === 'Task: 하드웨어 후보 비교'));
+  assert.ok(accepted.body.topics.some((topic) => topic.title === '변경 반영: 하드웨어 후보 비교'));
+  assert.ok(accepted.body.topics.some((topic) => topic.title === 'GitHub 프로젝트 상태'));
+});
+
 test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply with an unknown assignee', async () => {
   const routes = [];
   const receiver = {

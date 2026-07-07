@@ -11,6 +11,7 @@ test('renderIdeaCruisePage exposes the two-layer roadmap desk', () => {
   assert.match(html, /card-popover/);
   assert.match(html, /Task Candidates/);
   assert.match(html, /Meeting Record/);
+  assert.match(html, /id="refresh-roadmap"/);
   assert.doesNotMatch(html, /간단 메모 붙여넣기/);
   assert.doesNotMatch(html, /라이브 회의/);
   assert.doesNotMatch(html, /Completed Brainstorming Inputs/);
@@ -71,11 +72,22 @@ test('renderIdeaCruisePage keeps one visible AI card and pending count', () => {
 test('renderIdeaCruisePage calls existing IDEA CRUISE APIs', () => {
   const html = renderIdeaCruisePage();
 
+  assert.match(html, /fetch\('\/idea-cruise\/roadmap-context\?pin='/);
   assert.match(html, /fetch\('\/idea-cruise\/cards'/);
   assert.match(html, /fetch\('\/idea-cruise\/task-candidates'/);
   assert.match(html, /fetch\('\/idea-cruise\/tasks'/);
   assert.match(html, /fetch\('\/idea-cruise\/task-updates'/);
   assert.match(html, /completedTopics\(\)\.map/);
+});
+
+test('renderIdeaCruisePage merges refreshed Subjector context without overwriting fixed topics', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /function mergeRoadmapContext\(topics\)/);
+  assert.match(html, /sourceExternalId/);
+  assert.match(html, /externalUpdateCard\(existing, incoming\)/);
+  assert.match(html, /고정 topic에 최신 변경이 도착했습니다/);
+  assert.match(html, /idea-cruise-refresh-pin/);
 });
 
 test('renderIdeaCruisePage task candidates use the approved editable fields and source reason', () => {
