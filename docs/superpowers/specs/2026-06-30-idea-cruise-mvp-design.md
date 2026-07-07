@@ -1,430 +1,270 @@
 # IDEA CRUISE MVP Design
 
-Date: 2026-06-30
-Status: Written for user review
+Date: 2026-07-01
+Status: Approved for implementation
 
 ## 1. Purpose
 
-IDEA CRUISE is a local live brainstorming tool that helps a user notice conflicts, stalled thinking, scope creep, cost risks, and useful alternatives while ideas are still being formed.
+IDEA CRUISE is the meeting and task-birth layer for the Subjector workflow. It helps a team clarify decisions, sharpen meeting ideas, and create criteria-aligned task candidates before those tasks enter Subjector.
 
-The MVP focuses on solo brainstorming first. It does not assume the user is using Codex. The user can type ideas directly into IDEA CRUISE, and the app watches the session in real time. GitHub organization data provides project context, so the app can compare new ideas against the team's actual repositories, open work, and recent progress.
+Subjector is no longer responsible for meeting transcription or meeting-result-based task generation. Subjector receives approved IDEA CRUISE tasks and operates them through `in-process`, progress updates, completion, daily summaries, and project memory.
 
-The MVP must stay cheap. It avoids audio transcription, always-on AI calls, cloud hosting, team sync, automatic task assignment, and real reinforcement learning. Instead, it uses local event detection, selective LLM calls, and local feedback-based personalization.
+The main product question is not "can AI summarize a meeting?" It is:
 
-## 2. Product Scope
+- Did the team align on why this task exists?
+- Is the expected output level clear enough?
+- What is required, what can be skipped, and what can the assignee decide alone?
+- Can the next person continue from the output without rediscovering context?
 
-### 2.1 In Scope
+## 2. Product Boundary
 
-- Local web app for solo live brainstorming.
-- Direct text input as the primary brainstorming surface.
-- Three-panel workspace:
-  - Brainstorm Stream.
-  - Project State.
-  - Live Intervention Cards.
-- GitHub organization read integration:
-  - repositories,
-  - README/project descriptions,
-  - open issues,
-  - open pull requests,
-  - recent commits.
-- GitHub Issue draft generation at session end.
-- No automatic issue creation in GitHub.
-- Local event detection before AI calls.
-- Manual AI analysis button.
-- Card feedback: accept, defer, ignore.
-- Local storage of sessions, cards, feedback, GitHub context cache, and personalized signal weights.
-- LLM provider abstraction with Gemini as the default low-cost provider and OpenAI as an optional provider.
+### 2.1 IDEA CRUISE Owns
 
-### 2.2 Out of Scope
+- Live meeting input.
+- Simple memo paste input.
+- Live intervention cards that strengthen meeting entries.
+- Manual meeting record generation.
+- Task candidate generation.
+- AI-drafted task criteria.
+- Assignee and importance selection.
+- Applying approved task candidates to Subjector.
 
-- Audio recording or transcription.
-- Local speech models.
-- Real reinforcement learning model training.
-- Automatic GitHub issue creation.
-- Automatic task assignment.
-- Team-wide shared storage.
-- Subjector task board duplication.
-- Slack integration.
-- Cloud deployment.
+### 2.2 Subjector Owns
 
-## 3. Core UX
+- Receiving approved IDEA CRUISE tasks.
+- Showing assigned tasks in `in-process`.
+- Work-start guidance.
+- Progress updates.
+- `오늘은 여기까지`.
+- Completion submission.
+- Daily summary.
+- Current project memory.
 
-The MVP screen uses a three-panel layout.
+### 2.3 Removed From Subjector
 
-```text
-[Left] Brainstorm Stream
-- User enters ideas, decisions, concerns, and questions.
-- Entries are stored chronologically.
-- Each entry can be classified as idea, decision, concern, question, or note.
+- Meeting transcription as a primary workflow.
+- Meeting-result-channel text analysis for task generation.
+- Meeting-record-based task generation.
 
-[Center] Project State
-- GitHub organization context.
-- Repository summaries.
-- Open issues and pull requests.
-- Recent commits.
-- Current inferred decisions, constraints, and open questions.
+Subjector may keep historical code during migration, but the product source of new meeting tasks is IDEA CRUISE only.
 
-[Right] Live Intervention Cards
-- Conflict cards.
-- Stuck-thinking cards.
-- Alternative cards.
-- Clarifying question cards.
-- Scope warning cards.
-- GitHub comparison cards.
-```
+## 3. Modes
 
-The app must not block the user's thinking flow. Cards appear on the side and can be handled later. Each card has three feedback actions:
+IDEA CRUISE has two input modes.
 
-- Accept: the intervention was useful.
-- Defer: not now, but it may still matter.
-- Ignore: the intervention was unnecessary.
+### 3.1 Live Meeting Mode
 
-Deferred cards are hidden for the moment, but they can return during a later automatic analysis if the same concern is still relevant. Deferred cards are also considered in the session-end summary.
-
-## 4. GitHub Integration
-
-GitHub is used as a low-cost project context source, not as an execution system in the MVP.
+The user types short entries during the meeting.
 
 ```text
-GitHub organization
--> repository list
--> README / open issues / open PRs / recent commits
--> raw GitHub data
--> repo snapshots
--> project context summary
--> live analysis context
+entry -> live intervention cards -> apply card -> entry is strengthened
 ```
 
-The app reads:
+Cards can explain conflicts, alternatives, missing criteria, concept comparisons, and project-context conflicts. A vague entry such as "라즈베리 파이와 ESP32의 차이를 모르겠다" should produce a comparison / decision-support card, not just a generic "stuck" card.
 
-- repository name,
-- repository description,
-- default branch,
-- recent update time,
-- README content or project overview,
-- open issues,
-- open pull requests,
-- recent commits.
+### 3.2 Simple Memo Paste Mode
 
-Raw GitHub data must not be sent to the LLM on every analysis. The backend summarizes GitHub data into a compact Project Context Summary and reuses that summary for live analysis.
-
-GitHub authentication uses local environment variables:
+The user opens a large paste window and pastes rough meeting notes after a meeting.
 
 ```text
-GITHUB_TOKEN
-GITHUB_ORG
+rough memo -> structure decisions/risks/questions -> meeting record -> task candidates
 ```
 
-The token is used only by the local backend and must never be exposed to the frontend.
+This mode does not provide real-time live cards. It is a fallback when IDEA CRUISE was not used during the meeting. The output still enters the same meeting-record and task-candidate pipeline.
 
-If GitHub sync fails, the app continues in local-only mode:
+## 4. Main Screen
 
-- brainstorming input still works,
-- local event detection still works,
-- AI analysis can still run without GitHub context,
-- Project State shows a clear connection failure,
-- the user can retry sync manually,
-- the latest cached context is used if available.
-
-## 5. Live Event Detection
-
-The MVP uses a two-stage intervention system:
+The local web app has three primary columns and a bottom task board.
 
 ```text
-1. Local event detector
-2. LLM analysis
+[Left] Meeting Input
+- Live entries.
+- Mode buttons: Live Meeting / Simple Memo Paste.
+- Add Entry.
+- AI Analysis.
+- Applied cards directly rewrite/strengthen the original entry.
+
+[Middle] Live Intervention Cards
+- Cards are aligned to the entry that triggered them.
+- Multiple cards for one entry appear in the same row.
+- The most important card appears expanded on the left of the row.
+- Other cards are compressed tabs.
+- Applying a card strengthens the left entry and removes that card.
+
+[Right] Meeting Record
+- The user manually clicks Generate Meeting Record.
+- Record is prepared for Slack #project-log.
+- The record is not the task-generation source of truth; IDEA CRUISE is.
+- The record is an audit trail: decisions, evidence, risks, and task rationale.
+
+[Bottom] Task Candidates From IDEA CRUISE
+- Generated from strengthened meeting context by gpt-5.4.
+- Each task card includes AI-drafted criteria fields.
+- User edits criteria, selects assignee and importance.
+- User applies selected tasks to Subjector.
 ```
 
-The local detector is free and runs before any LLM call. It scores new entries using signal groups, sentence patterns, and recent session flow.
+## 5. Live Intervention Cards
 
-Signal groups include:
+Card generation should use a cheap, fast model because cards may be frequent.
 
-- Conflict: but, however, problem, tradeoff, conflict, "may not work", "on the other hand".
-- Uncertainty: "I don't know", "not sure", "unclear", "hard to judge", "does this make sense".
-- Stuck thinking: stuck, blocked, "what should we do", "need another way".
-- Alternative need: alternative, other way, plan B, fallback.
-- Decision: "let's go with", fixed, MVP is, exclude, defer.
-- Scope expansion: later, automate, audio, reinforcement learning, auto assignment, add everything.
-- Cost: price, cheap, API, token, local, cost.
-- GitHub conflict: duplicate task board, database overlap, repo ownership, existing issue, active PR.
-
-The detector must not rely on one exact keyword such as "모르겠음". It should recognize expression groups such as "모르겠다", "잘 모르겠네", "애매하다", "판단이 안 된다", and similar forms.
-
-Local scoring behavior:
+Default card model:
 
 ```text
-Low score:
-- store the entry only.
-
-Medium score:
-- update Project State and session summary.
-
-High score:
-- request LLM analysis and create a card.
+Gemini 2.5 Flash-Lite
 ```
 
-The MVP defaults are:
+Card types:
 
-- automatic analysis minimum interval: 1 minute or more,
-- automatic analysis limit: up to 30 calls per session,
-- manual analysis: always available, with call count visible.
+- Criteria Alignment Card.
+- Completion Criteria Card.
+- Output Level Card.
+- Must / Can Skip Card.
+- Assignee Discretion Card.
+- Team Lead Question Card.
+- Handoff Card.
+- Goal Mismatch Card.
+- Conflict Card.
+- Alternative Card.
+- Concept Comparison Card.
 
-These values are expected to change after real use.
+Cards should be practical and directly applicable. The card should include an improvement draft that can be applied to the triggering entry.
 
-## 6. Manual AI Analysis
-
-Automatic detection is not enough. The user may urgently want a conflict check, alternative, or scope review before the detector chooses to intervene.
-
-The input area includes a manual AI analysis button. The first MVP can expose one button with a small mode menu:
+Example:
 
 ```text
-AI Analysis
-- Conflict check
-- Alternative suggestion
-- Next question
-- Compare with GitHub state
-- MVP scope check
+Entry:
+라즈베리 파이와 ESP32의 차이를 모르겠다.
+
+Card:
+Raspberry Pi is better for Linux, Python, camera, and heavier processing.
+ESP32 is better for low-power sensor control, BLE/Wi-Fi, and simple embedded tasks.
+
+Improvement draft:
+Raspberry Pi is the main computer candidate for camera/AI work, while ESP32 is the low-power sensor/control candidate. Decide based on whether this task needs local processing or lightweight device control.
 ```
 
-Manual analysis bypasses the automatic event score. The result appears as a Live Intervention Card and is still stored with feedback.
+## 6. Meeting Record
 
-## 7. Feedback-Based Personalization
-
-The MVP does not implement real reinforcement learning. It implements a local feedback loop that can later evolve into stronger learning.
-
-Each user has local signal weights stored on their own computer.
-
-```json
-{
-  "userSignalWeights": {
-    "cost": 1.4,
-    "scopeExpansion": 1.3,
-    "uncertainty": 0.7,
-    "githubConflict": 1.5
-  }
-}
-```
-
-Feedback changes future sensitivity:
-
-- Accept increases related signal weights.
-- Ignore decreases related signal weights.
-- Defer keeps weights mostly stable and allows later reappearance if still relevant.
-
-If a teammate runs IDEA CRUISE on their own computer, their sessions, feedback, and signal weights stay local to that computer. This gives each person a different personalized detector without central sync, reducing privacy risk and operational cost.
-
-Future versions may add explicit export/import or opt-in team sync.
-
-## 8. Session-End Outputs
-
-When the user ends a brainstorming session, IDEA CRUISE creates three outputs:
-
-1. Session Summary.
-2. Execution Roadmap.
-3. GitHub Issue Drafts.
-
-The Session Summary records:
-
-- core decisions,
-- constraints,
-- conflicts found,
-- deferred concerns,
-- open questions,
-- useful alternatives.
-
-The Execution Roadmap turns the session into phases and next actions.
-
-GitHub Issue Drafts turn ideas into task cards that can be copied into GitHub. The MVP does not upload them automatically.
-
-Issue draft format:
-
-```md
-Title: Add manual AI analysis button to IDEA CRUISE
-
-Why:
-Automatic event detection can miss moments where the user urgently wants conflict checks or alternatives.
-
-Tasks:
-- Add AI analysis button near the input area.
-- Provide analysis modes: conflict, alternative, scope check, GitHub comparison.
-- Generate a live card from the selected mode.
-
-Acceptance Criteria:
-- User can manually request AI analysis anytime.
-- Manual analysis does not depend on automatic event score.
-- Result appears in the Live Intervention Cards panel.
-
-Related Context:
-- Session decisions.
-- Relevant GitHub repository or issue references.
-```
-
-Issue drafts exist to bridge brainstorming and execution. They answer: what should be done next, why does it matter, and how will we know it is done?
-
-## 9. Architecture
-
-The MVP architecture is local-first.
+The official Slack channel is unified as:
 
 ```text
-Browser frontend
--> local Node.js backend
--> SQLite storage
--> GitHub API
--> LLM provider abstraction
+#project-log
 ```
 
-Frontend responsibilities:
-
-- render the three-panel workspace,
-- handle brainstorming input,
-- show project state,
-- show live cards,
-- provide manual AI analysis controls,
-- show AI call counters and sync status,
-- show session-end outputs.
-
-Backend responsibilities:
-
-- serve the frontend,
-- read local environment configuration,
-- sync GitHub context,
-- summarize GitHub data,
-- run local event detection,
-- enforce automatic analysis limits,
-- call the selected LLM provider,
-- store sessions, entries, cards, feedback, and signal weights,
-- generate session-end outputs.
-
-Storage:
-
-- SQLite is preferred over loose JSON files.
-- SQLite stores sessions, entries, cards, feedback, signal weights, GitHub context cache, and generated issue drafts.
-- The database lives locally on the user's machine.
-
-## 10. LLM Provider Strategy
-
-The MVP should not hard-code a single model provider into the product logic.
+Slack display behavior is separate from the local web app. In Slack, a day can show only two main official posts:
 
 ```text
-LLM Provider Interface
-- analyzeLiveMoment(input)
-- generateSessionSummary(input)
-- generateIssueDrafts(input)
+[회의 결과문] YYYY-MM-DD <topic>
+[하루 요약 + 현재 프로젝트 상태] YYYY-MM-DD
 ```
 
-Default provider:
+Clicking a Slack post can open a separate detail/modal-style view. The local IDEA CRUISE web app still shows the right-side panel as `Meeting Record`, not as a Slack channel preview.
 
-- Gemini 2.5 Flash-Lite for low-cost live cards.
+Meeting record role:
 
-Optional provider:
+- Preserve why decisions were made.
+- Preserve evidence, risks, and unresolved questions.
+- Explain why tasks were generated.
+- Give tomorrow's meeting a clear reference point.
+- Avoid becoming a second task source.
 
-- OpenAI for fallback or higher-quality analysis if needed.
+## 7. Task Candidates
 
-Cost control rules:
+Task generation uses a stronger model because task quality matters.
 
-- Do not call the LLM on every entry.
-- Use local event detection first.
-- Send compact project context, not raw GitHub data.
-- Send recent entries plus session summary, not the full session every time.
-- Show call counts in the UI.
-- Enforce automatic analysis limits.
+Task generation model:
 
-Under the planning assumption of at least 1 minute between automatic analyses and up to 30 automatic calls per session, Gemini Flash-Lite is the default cost-first choice. The model choice can be changed after quality testing.
+```text
+gpt-5.4
+```
 
-## 11. Error Handling
+Each generated task has:
 
-GitHub failures:
+```text
+Title
+Purpose
+Output Level
+Success Criteria
+Must Do
+Can Skip
+Assignee Discretion
+Handoff Notes
+Ambiguous Criteria
+Questions For Team Lead
+Assignee
+Importance
+```
 
-- keep the session usable,
-- show clear sync status,
-- use cached context if available,
-- allow manual retry.
+The AI drafts the criteria fields first. The user edits the fields directly in the task card. There is no separate edit button.
 
-LLM failures:
+Only `Assignee` and `Importance` are shown as compact selection fields in the MVP. Coordination level and status are excluded from this screen.
 
-- show a failed-analysis card or inline error,
-- keep input and local detection working,
-- allow retry,
-- record the failed request metadata without exposing secrets.
+Applying a task sends the approved task to Subjector's `in-process` flow.
 
-Storage failures:
+## 8. Models And Cost Strategy
 
-- show a local storage error,
-- keep unsaved entries in memory during the session if possible,
-- tell the user when persistence is not reliable.
+```text
+Live cards:
+Gemini 2.5 Flash-Lite
 
-Rate limits:
+Task generation:
+gpt-5.4
+```
 
-- GitHub rate limits fall back to cached context.
-- LLM auto-analysis limits stop automatic calls but preserve manual calls with visible counters.
+Reasoning:
 
-## 12. Testing And Success Criteria
+- Cards can be frequent and should be cheap.
+- Task generation happens less often and needs better context, criteria drafting, and handoff quality.
+- Model provider boundaries should be explicit in code so models can be swapped later.
 
-Functional tests:
+## 9. MVP Implementation Scope
 
-- user can start a session,
-- user can add entries,
-- event detector classifies and scores entries,
-- high scores request automatic analysis,
-- manual AI analysis works regardless of score,
-- cards can be accepted, deferred, or ignored,
-- feedback changes local signal weights,
-- GitHub context can be synced and summarized,
-- GitHub failures do not break local brainstorming,
-- session-end summary, roadmap, and issue drafts are generated.
+The first implementation should build a local web app with deterministic mock AI behavior first. Real model calls and Subjector network integration can be wired after the UI and data flow are stable.
 
-Cost tests:
+MVP should include:
 
-- normal entries do not trigger LLM calls every time,
-- automatic analysis respects the minimum interval,
-- automatic analysis respects the session limit,
-- raw GitHub data is not sent on every live analysis.
+- Static/local Node web app.
+- Live Meeting mode.
+- Simple Memo Paste mode UI.
+- Entry list.
+- Live card rows aligned to entries.
+- Card apply behavior that directly rewrites/strengthens the entry and removes the card.
+- Manual meeting record generation.
+- Task candidate generation from strengthened context.
+- Editable AI-drafted task criteria fields.
+- Assignee and importance selectors.
+- Mock "apply to Subjector" behavior.
 
-UX tests:
+Deferred:
 
-- the user can keep typing while cards appear,
-- cards do not block the input flow,
-- the manual analysis button is easy to reach,
-- cards explain why they appeared,
-- GitHub sync status and AI call counts are visible.
+- Real Gemini API calls.
+- Real OpenAI API calls.
+- Real Subjector API calls.
+- Slack modal rendering.
+- GitHub API sync.
+- Audio transcription.
 
-MVP success criteria:
+## 10. Success Criteria
 
-- In a 20-30 minute real brainstorming session, IDEA CRUISE produces at least one useful conflict, scope, alternative, or GitHub-context card.
-- The user can manually request analysis at any time.
-- The session-end output includes at least three usable GitHub Issue drafts.
-- Automatic AI calls do not feel excessive.
-- Feedback affects later detection behavior on the same local machine.
+The MVP is usable if:
 
-## 13. Original Idea Alignment
+- A user can enter live meeting ideas.
+- The app can show multiple cards aligned to one entry.
+- Applying cards strengthens the original entry.
+- A user can paste rough notes through Simple Memo Paste mode.
+- A user can manually generate a meeting record.
+- The app can generate task candidates from IDEA CRUISE context.
+- Each task candidate includes editable AI-drafted criteria.
+- The user can select assignee and importance.
+- The user can mark tasks as applied to Subjector.
 
-Preserved:
+## 11. Self-Review
 
-- Live brainstorming support.
-- Conflict detection.
-- Alternative generation.
-- Roadmap generation.
-- Task handoff through GitHub Issue drafts.
-- Cost sensitivity.
-- Future path toward user-specific learning.
-
-Changed for MVP:
-
-- Audio is deferred.
-- Real reinforcement learning is deferred.
-- Automatic task assignment is deferred.
-- Team meeting mode is deferred.
-- GitHub writes are deferred.
-- Subjector integration is deferred.
-
-## 14. Self-Review
-
-- The MVP scope is focused on solo text-based live brainstorming.
-- GitHub integration is read plus draft output only.
-- The cost-control strategy is explicit.
-- Manual AI analysis is included alongside automatic detection.
-- Feedback-based personalization is included without claiming real reinforcement learning.
-- Local storage behavior for each teammate is explicit.
-- Issue drafts are explained as execution handoff artifacts.
-- The design does not duplicate Subjector's task board.
-- Deferred features are documented.
+- The spec reflects IDEA CRUISE as the sole task-generation front end.
+- Subjector transcription and meeting-result task generation are removed from the target product boundary.
+- `#project-log` is the single official Slack record channel.
+- The local right panel remains Meeting Record.
+- Live cards use Gemini 2.5 Flash-Lite.
+- Task generation uses gpt-5.4.
+- The MVP can be implemented without real external API calls first.

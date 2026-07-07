@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IDEA CRUISE Final Task Refinement Mockup</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7f8;
+      --surface: #ffffff;
+      --panel: #eaf1ee;
+      --line: #d4dee4;
+      --text: #17202a;
+      --muted: #66717d;
+      --teal: #0f766e;
+      --teal-dark: #115e59;
+      --blue: #235f9f;
+      --amber: #a36000;
+      --red: #a64242;
+      --gray: #4b5563;
+      --blue-soft: #e9f2fb;
+      --teal-soft: #e6f5f1;
+      --amber-soft: #fff1db;
+      --red-soft: #fae8e8;
+      --gray-soft: #eef1f4;
+      --shadow: 0 12px 26px rgba(23, 32, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 3px; font-size: 22px; line-height: 1.2; }
+    h2 { margin-bottom: 4px; font-size: 15px; }
+    h3 { margin-bottom: 5px; font-size: 14px; line-height: 1.35; }
+    p { line-height: 1.52; }
+
+    .subtitle, .hint, .meta, .small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    button {
+      border: 1px solid var(--teal);
+      border-radius: 6px;
+      padding: 8px 11px;
+      background: var(--teal);
+      color: #fff;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--teal);
+    }
+
+    button.ghost {
+      border-color: var(--line);
+      background: #fff;
+      color: var(--gray);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(330px, 0.95fr) minmax(430px, 1.08fr) minmax(430px, 1.1fr);
+      gap: 14px;
+      padding: 14px;
+      align-items: start;
+    }
+
+    section {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: calc(100vh - 90px);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section-head {
+      min-height: 98px;
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .head-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .section-body {
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      min-height: 0;
+      padding: 14px;
+      overflow-y: auto;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      color: var(--text);
+      background: #fff;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    textarea { min-height: 260px; resize: vertical; }
+
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .actions, .page-nav, .choice-row, .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .topic-card textarea {
+      min-height: 310px;
+      font-size: 14px;
+    }
+
+    .page-nav {
+      justify-content: center;
+      padding: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .dot {
+      min-width: 28px;
+      height: 28px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: #fff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .dot.active {
+      color: #fff;
+      background: var(--teal-dark);
+      border-color: var(--teal-dark);
+    }
+
+    .pill {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .pill.answer { color: var(--blue); background: var(--blue-soft); }
+    .pill.research { color: var(--amber); background: var(--amber-soft); }
+    .pill.decision { color: var(--teal-dark); background: var(--teal-soft); }
+    .pill.filter { color: var(--gray); background: var(--gray-soft); }
+    .pill.blocked { color: var(--red); background: var(--red-soft); }
+
+    .intervention {
+      border-left: 5px solid var(--blue);
+    }
+
+    .intervention.research { border-left-color: var(--amber); }
+    .intervention.decision { border-left-color: var(--teal); }
+    .intervention.blocked { border-left-color: var(--red); }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .info-box {
+      display: grid;
+      gap: 5px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .info-box strong { font-size: 12px; }
+    .info-box span {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .task-tabs {
+      position: sticky;
+      top: -14px;
+      z-index: 3;
+      margin: -14px -14px 0;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+    }
+
+    .tab {
+      border-color: var(--line);
+      background: #fff;
+      color: var(--gray);
+    }
+
+    .tab.active {
+      border-color: var(--teal-dark);
+      background: var(--teal-dark);
+      color: #fff;
+    }
+
+    .task-card {
+      border-left: 5px solid var(--teal);
+    }
+
+    .update-card {
+      border-left: 5px solid var(--amber);
+      background: #fffdf8;
+    }
+
+    .not-task-card {
+      border-left: 5px solid var(--gray);
+      background: #fbfcfd;
+    }
+
+    .blocked-card {
+      border-left: 5px solid var(--red);
+      background: #fffafa;
+    }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .field strong {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .field span {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .reason-box {
+      padding: 10px;
+      border-radius: 7px;
+      background: var(--teal-soft);
+      color: var(--teal-dark);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .update-box {
+      padding: 10px;
+      border-radius: 7px;
+      background: var(--amber-soft);
+      color: #704100;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .split-update {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .update-part {
+      display: grid;
+      gap: 7px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .update-part strong {
+      font-size: 12px;
+    }
+
+    .update-part p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .update-part ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .not-box {
+      padding: 10px;
+      border-radius: 7px;
+      background: var(--gray-soft);
+      color: var(--gray);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .record-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 20;
+      width: min(560px, 100vw);
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      background: var(--surface);
+      border-left: 1px solid var(--line);
+      box-shadow: -18px 0 32px rgba(23, 32, 42, 0.18);
+      transform: translateX(105%);
+    }
+
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .drawer-body {
+      display: grid;
+      gap: 12px;
+      min-height: 0;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .record-preview {
+      min-height: 360px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      white-space: pre-wrap;
+      line-height: 1.52;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1160px) {
+      main { grid-template-columns: 1fr; }
+      section { height: auto; min-height: 540px; }
+      .info-grid, .task-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>IDEA CRUISE Meeting Desk</h1>
+      <div class="subtitle">가운데에서 회의 중 겹침을 줄이고, 오른쪽에서 기존 task와 겹치지 않는 새 task만 최종 후보로 남깁니다.</div>
+    </div>
+    <div class="actions">
+      <button class="ghost" type="button">회의록 열기</button>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="section-head">
+        <div class="head-row">
+          <div>
+            <h2>1. Topic Page</h2>
+            <p class="hint">왼쪽 한 페이지는 하나의 주제를 담당합니다<br>다음 페이지로 가면 가운데 카드도 새 주제 전용으로 바뀝니다.</p>
+          </div>
+          <button type="button">다음 주제 추가</button>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="page-nav">
+          <span class="dot active">1</span>
+          <span class="dot">2</span>
+          <span class="dot">3</span>
+        </div>
+
+        <article class="card topic-card">
+          <div class="head-row">
+            <div>
+              <h3>전장 상황 폭음 감지 데이터셋</h3>
+              <div class="meta">Page 1 · 완료 전</div>
+            </div>
+            <div class="actions">
+              <button class="secondary" type="button">AI Analysis</button>
+              <button type="button">완료</button>
+            </div>
+          </div>
+          <textarea>전장 상황에서 폭음을 막아주는 헤드셋을 만들려면 어떤 데이터를 학습해야 하는지 모르겠다.
+
+현재 정리:
+- 폭음은 총성, 폭발음, 충격음처럼 순간적으로 큰 소리로 정의한다.
+- 모든 소음을 막는 것이 아니라 위험한 순간음을 감지하고 보호하는 방향이 더 맞다.
+- AudioSet, ESC-50, UrbanSound8K가 후보로 언급됐지만 라벨 구조와 라이선스가 다르다.
+- 기존 in-process에는 하드웨어 후보 비교 기준 확정 task가 있으므로 데이터셋 조사는 새 task로 분리될 수 있다.</textarea>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>2. Live Intervention Cards</h2>
+        <p class="hint">카드 생성: GPT-5.4. 기존 in-process task, GitHub organization, 현재 topic page를 함께 보고 회의 중 중복/충돌/보강 가능성을 잡습니다.</p>
+      </div>
+      <div class="section-body">
+        <article class="card intervention decision">
+          <span class="pill decision">결정 유도</span>
+          <h3>폭음의 범위를 먼저 고정</h3>
+          <p>데이터셋 조사를 시작하기 전에 폭음 범위를 총성/폭발음/충격음 중 어디까지 포함할지 정해야 합니다. 범위가 넓으면 task가 자료조사로 커지고, 범위가 좁으면 바로 후보 비교로 갈 수 있습니다.</p>
+          <div class="choice-row">
+            <button class="secondary" type="button">총성/폭발음 중심</button>
+            <button class="ghost" type="button">공사장 충격음 포함</button>
+          </div>
+        </article>
+
+        <article class="card intervention research">
+          <span class="pill research">즉시 답변</span>
+          <h3>AudioSet, ESC-50, UrbanSound8K 차이</h3>
+          <div class="info-grid">
+            <div class="info-box">
+              <strong>AudioSet</strong>
+              <span>YouTube 기반 대규모 오디오 이벤트 데이터. 라벨 폭은 넓지만 사용/다운로드 조건 확인이 중요합니다.</span>
+            </div>
+            <div class="info-box">
+              <strong>ESC-50</strong>
+              <span>환경음 50종의 작은 벤치마크 데이터셋. 빠른 실험에는 좋지만 규모가 작습니다.</span>
+            </div>
+            <div class="info-box">
+              <strong>UrbanSound8K</strong>
+              <span>도시 소음 중심 데이터셋. 전장 폭음보다는 공사/도시 소음 방향 검토에 가깝습니다.</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card intervention blocked">
+          <span class="pill blocked">기존 task와 충돌 가능</span>
+          <h3>하드웨어 후보 비교 task와 산출물이 섞일 수 있음</h3>
+          <p>기존 in-process의 “하드웨어 후보 비교 기준 확정”은 개발 보드 선택 기준을 정하는 task입니다. 데이터셋 조사는 별도 산출물이므로 새 task가 될 수 있지만, “MVP 방향 확정”까지 포함하면 기존 task와 겹칩니다.</p>
+          <div class="reason-box">적용 제안: 이번 topic은 데이터셋 라이선스/라벨 구조 비교까지만 남기고, 하드웨어 방향 결정은 기존 task에 보강 제안으로 보냅니다.</div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>3. Final Task Refinement</h2>
+        <p class="hint">Task 최종 정제: Gemini 2.5 Flash. 오른쪽은 새 task만 반영 대상으로 두고, 기존 task 보강/회의에서 끝난 결정은 분리해서 보여줍니다.</p>
+      </div>
+      <div class="section-body">
+        <div class="tabs task-tabs">
+          <button class="tab active" type="button">새 task 1</button>
+          <button class="tab" type="button">기존 task 보강 1</button>
+          <button class="tab" type="button">task 아님 2</button>
+        </div>
+
+        <article class="card task-card">
+          <div class="head-row">
+            <div>
+              <span class="pill decision">새 task</span>
+              <h3>폭음 감지 학습 후보 데이터셋의 라이선스와 라벨 구조를 비교한다</h3>
+            </div>
+            <select aria-label="담당자">
+              <option>미배정</option>
+              <option selected>조수현</option>
+              <option>김조은</option>
+              <option>배민성</option>
+            </select>
+          </div>
+
+          <div class="task-grid">
+            <div class="field">
+              <strong>필요 정보</strong>
+              <span>AudioSet, ESC-50, UrbanSound8K의 라이선스, 라벨 목록, 총성/폭발음/충격음 포함 여부, 다운로드 가능성</span>
+            </div>
+            <div class="field">
+              <strong>완료 기준</strong>
+              <span>세 데이터셋 비교표 작성, 우리 MVP에 바로 쓸 수 있는 후보 1개 이상 추천, 제외 후보는 이유 명시</span>
+            </div>
+            <div class="field">
+              <strong>중요도</strong>
+              <span>높음</span>
+            </div>
+            <div class="field">
+              <strong>겹치지 않는 이유</strong>
+              <span>기존 하드웨어 task는 개발 보드 선택 기준이고, 이 task는 학습 데이터셋의 사용 가능성 판단입니다.</span>
+            </div>
+          </div>
+
+          <div class="reason-box">
+            이 task는 시간이 필요한 자료조사이고, 회의에서 바로 결정할 수 없습니다. 산출물도 비교표와 후보 추천으로 명확합니다.
+          </div>
+
+          <div class="actions">
+            <button type="button">Subjector in-process 반영</button>
+            <button class="secondary" type="button">수정</button>
+            <button class="ghost" type="button">제외</button>
+          </div>
+        </article>
+
+        <article class="card update-card">
+          <div class="head-row">
+            <div>
+              <span class="pill research">기존 task 보강</span>
+              <h3>하드웨어 후보 비교 기준 확정</h3>
+            </div>
+            <button class="ghost" type="button">제거</button>
+          </div>
+          <div class="update-box">
+            새 task로 만들면 하드웨어 방향 결정이 중복됩니다. 기존 task를 보강하되, 완료 기준까지 바꿀지는 사람이 선택합니다.
+          </div>
+          <div class="split-update">
+            <div class="update-part">
+              <strong>확인할 것에 추가</strong>
+              <ul>
+                <li>1차 개발 보드와 최종 목표 보드를 분리해서 비교</li>
+                <li>라즈베리파이와 Seeed Studio C형의 역할을 각각 정리</li>
+              </ul>
+              <p>기존 완료 기준을 유지하면서 task를 더 선명하게 만듭니다.</p>
+            </div>
+            <div class="update-part">
+              <strong>완료 기준 변경 제안</strong>
+              <ul>
+                <li>비교표에 최종 추천 후보 1개를 반드시 포함</li>
+                <li>1차 개발용과 최종 결과물용 후보를 분리해서 결론 작성</li>
+              </ul>
+              <p>완료 기준이 넓어질 수 있으므로 적용 전에 의식적으로 선택해야 합니다.</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="secondary" type="button">확인할 것만 보강</button>
+            <button type="button">완료 기준 변경 포함</button>
+          </div>
+        </article>
+
+        <article class="card not-task-card">
+          <div class="head-row">
+            <div>
+              <span class="pill filter">task 아님</span>
+              <h3>라즈베리파이로 1차 개발을 시작한다</h3>
+            </div>
+            <button class="ghost" type="button">제거</button>
+          </div>
+          <div class="not-box">회의에서 결정된 방향입니다. 새 task로 만들지 말고 회의록에 판단 근거로 기록합니다.</div>
+        </article>
+
+        <article class="card not-task-card">
+          <div class="head-row">
+            <div>
+              <span class="pill filter">task 아님</span>
+              <h3>전장용과 공사현장용 중 우선순위를 정한다</h3>
+            </div>
+            <button class="ghost" type="button">제거</button>
+          </div>
+          <div class="not-box">회의 중 버튼 선택으로 결정할 수 있는 범위입니다. 자료조사 task가 아니라 project-log에 남길 결정입니다.</div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <aside class="record-drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <h2>Meeting Record</h2>
+        <p class="hint">회의록은 task 나열이 아니라 어떤 판단을 했는지 정리합니다.</p>
+      </div>
+      <button class="ghost" type="button">닫기</button>
+    </div>
+    <div class="drawer-body">
+      <div class="record-preview">오늘 회의에서는 폭음 감지 MVP의 범위를 총성/폭발음/충격음 중심으로 좁혔다. 하드웨어 후보 비교 task와 데이터셋 조사는 산출물이 다르므로 분리하되, 하드웨어 방향 결정은 기존 task에 보강 제안으로 남긴다.</div>
+    </div>
+  </aside>
+</body>
+</html>

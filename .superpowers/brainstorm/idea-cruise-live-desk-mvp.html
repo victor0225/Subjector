@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IDEA CRUISE Meeting Desk</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --ink: #15202b;
+      --muted: #657386;
+      --line: #dbe3ec;
+      --blue: #2463eb;
+      --green: #0e7c5c;
+      --amber: #a86810;
+      --red: #bf3f36;
+      --violet: #6846dc;
+      --soft-blue: #eaf1ff;
+      --soft-green: #e8f7f0;
+      --soft-amber: #fff4dc;
+      --soft-red: #fff0ee;
+      --soft-violet: #f0edff;
+      --shadow: 0 14px 34px rgba(21, 32, 43, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 24px 14px;
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .status-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .pill strong {
+      color: var(--ink);
+      margin-left: 4px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(310px, 0.92fr) minmax(390px, 1.14fr) minmax(360px, 1.05fr);
+      gap: 16px;
+      padding: 18px 24px 16px;
+      align-items: start;
+    }
+
+    .panel,
+    .task-board {
+      min-width: 0;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 15px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .panel-body { padding: 14px; }
+
+    .entry-list,
+    .record-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .entry,
+    .record-block,
+    .task-card,
+    .mini-note {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .entry {
+      min-height: 154px;
+    }
+
+    .entry.enhanced {
+      border-color: #b8d7ff;
+      background: #fbfdff;
+    }
+
+    .entry-meta,
+    .card-head,
+    .record-head,
+    .task-head,
+    .field-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .entry p,
+    .intervention p,
+    .record-block p,
+    .task-card p,
+    .mini-note p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .tag.idea { background: var(--soft-blue); color: var(--blue); }
+    .tag.decision { background: var(--soft-green); color: var(--green); }
+    .tag.concern { background: var(--soft-amber); color: var(--amber); }
+    .tag.conflict { background: var(--soft-red); color: var(--red); }
+    .tag.scope { background: var(--soft-violet); color: var(--violet); }
+
+    .composer {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    textarea,
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      outline: 0;
+      padding: 9px 10px;
+      font: inherit;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .composer textarea {
+      display: block;
+      min-height: 98px;
+      resize: vertical;
+      border: 0;
+      border-radius: 0;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .composer-actions,
+    .improve-actions,
+    .task-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 9px;
+      border-top: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 7px;
+      padding: 8px 10px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: default;
+    }
+
+    .primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .copy,
+    .apply {
+      border-color: var(--green);
+      background: var(--green);
+      color: #fff;
+    }
+
+    .danger {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .ghost {
+      color: var(--muted);
+    }
+
+    .alignment {
+      display: grid;
+      grid-template-rows: 154px 154px 154px;
+      gap: 12px;
+    }
+
+    .card-stack {
+      display: grid;
+      grid-template-columns: 1.7fr 0.55fr 0.55fr;
+      gap: 8px;
+      min-height: 154px;
+    }
+
+    .intervention {
+      border: 1px solid var(--line);
+      border-left-width: 4px;
+      border-radius: 8px;
+      background: #fff;
+      padding: 11px;
+      min-width: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .intervention.collapsed {
+      justify-content: center;
+      text-align: center;
+      padding: 10px 8px;
+    }
+
+    .intervention.red { border-left-color: var(--red); }
+    .intervention.amber { border-left-color: var(--amber); }
+    .intervention.blue { border-left-color: var(--blue); }
+    .intervention.violet { border-left-color: var(--violet); }
+
+    .collapsed h3 {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .why {
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7f9fc;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .improve-box {
+      margin-top: 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .improve-box textarea {
+      min-height: 55px;
+      border: 0;
+      border-radius: 0;
+      resize: vertical;
+    }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .record-block {
+      background: #fcfdfd;
+    }
+
+    .record-placeholder {
+      border: 1px dashed #b8c5d6;
+      border-radius: 8px;
+      background: #f8fafc;
+      padding: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .log-channel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .log-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .log-item.active {
+      border-color: #b8d7ff;
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+
+    .log-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+
+    .log-title strong {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .modal-preview {
+      margin-top: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(21, 32, 43, 0.08);
+      padding: 14px;
+    }
+
+    .modal-window {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .modal-body {
+      padding: 14px;
+    }
+
+    .modal-section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 10px;
+      background: #fff;
+    }
+
+    footer {
+      padding: 0 24px 22px;
+    }
+
+    .task-board {
+      padding-bottom: 14px;
+    }
+
+    .task-board .panel-head {
+      margin-bottom: 0;
+    }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .task-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 360px;
+    }
+
+    .task-title {
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .criteria {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      padding: 10px;
+    }
+
+    .criteria h4 {
+      margin: 0 0 8px;
+      font-size: 12px;
+    }
+
+    .criteria-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .criterion {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .criterion span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      padding-top: 8px;
+    }
+
+    @media (max-width: 1180px) {
+      main,
+      .task-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .alignment {
+        grid-template-rows: auto;
+      }
+
+      .card-stack {
+        min-height: auto;
+      }
+
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .status-row {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>IDEA CRUISE Meeting Desk</h1>
+        <p class="subtitle">라이브 회의 또는 간단 메모를 IDEA CRUISE에서 정제하고, 승인된 task만 Subjector in-process로 넘기는 회의 주력 화면.</p>
+      </div>
+      <div class="status-row">
+        <span class="pill">Mode <strong>Live Meeting</strong></span>
+        <span class="pill">Cards <strong>Gemini 2.5 Flash-Lite</strong></span>
+        <span class="pill">Tasks <strong>gpt-5.4</strong></span>
+        <span class="pill">Subjector task source <strong>IDEA CRUISE only</strong></span>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Brainstorming Input</h2>
+            <div class="small">카드를 적용할수록 왼쪽 원문이 직접 강화됩니다.</div>
+          </div>
+          <div class="button-row">
+            <button class="primary">라이브 회의</button>
+            <button>간단 메모 붙여넣기</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="entry-list">
+            <article class="entry enhanced">
+              <div class="entry-meta">
+                <span class="small">10:31</span>
+                <span class="tag decision">enhanced decision</span>
+              </div>
+              <p>IDEA CRUISE는 회의 중 결과록과 task 후보를 만들고, Subjector는 회의 전사/task 생성 없이 승인된 task를 각 담당자의 in-process에 반영한다.</p>
+            </article>
+
+            <article class="entry enhanced">
+              <div class="entry-meta">
+                <span class="small">10:35</span>
+                <span class="tag conflict">strengthened</span>
+              </div>
+              <p>Task 후보는 바로 반영하지 않고, 각 task별로 부족한 기준/필요 정보/완료 조건을 먼저 보완한 뒤 담당자를 지정한다.</p>
+            </article>
+
+            <article class="entry">
+              <div class="entry-meta">
+                <span class="small">10:42</span>
+                <span class="tag idea">raw idea</span>
+              </div>
+              <p>회의가 끝나면 내가 결과록 생성 버튼을 누르고, 그 회의록을 바탕으로 task 후보들이 아래에 나오면 좋겠다.</p>
+            </article>
+          </div>
+
+          <div class="composer">
+            <textarea readonly>다음 회의 아이디어를 입력합니다. 예: task 후보마다 AI가 "이 기준은 더 정해야 함" 같은 보완 질문을 뽑아주면 좋겠다.</textarea>
+            <div class="composer-actions">
+              <div class="button-row">
+                <button class="primary">Add Entry</button>
+                <button>AI Analysis</button>
+              </div>
+              <span class="small">input is editable after card apply</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Live Intervention Cards</h2>
+            <div class="small">한 입력에 여러 카드가 나오면 같은 행에서 압축되고, 하나를 열면 넓어집니다.</div>
+          </div>
+          <span class="tag conflict">stacked by input</span>
+        </div>
+        <div class="panel-body">
+          <div class="alignment">
+            <div class="card-stack">
+              <article class="intervention red">
+                <div>
+                  <div class="card-head">
+                    <h3>충돌 감지</h3>
+                    <span class="tag conflict">expanded</span>
+                  </div>
+                  <p>현재 Subjector의 "회의 전사 기반 task 추출" 기능은 IDEA CRUISE의 회의 중 task 생성 흐름과 충돌될 수 있습니다. 이 기능은 제거하고 IDEA CRUISE만 task 생성 source로 두는 편이 선명합니다.</p>
+                  <div class="why">강화 제안: Subjector는 전사/task 생성 기능을 내려놓고, IDEA CRUISE가 승인한 task를 in-process/finals 운영으로만 이어받음.</div>
+                </div>
+                <div class="improve-box">
+                  <textarea readonly>IDEA CRUISE만 회의 기반 task를 생성하고, Subjector는 전사/task 생성 없이 승인된 task를 각 담당자의 in-process에 반영한다.</textarea>
+                  <div class="improve-actions">
+                    <div class="button-row">
+                      <button class="primary">Apply to Left Input</button>
+                      <button>Remove Card</button>
+                    </div>
+                    <span class="small">적용하면 카드 1개 제거</span>
+                  </div>
+                </div>
+              </article>
+              <article class="intervention collapsed amber">
+                <h3>대안</h3>
+              </article>
+              <article class="intervention collapsed blue">
+                <h3>질문</h3>
+              </article>
+            </div>
+
+            <div class="card-stack">
+              <article class="intervention amber">
+                <div>
+                  <div class="card-head">
+                    <h3>기준 보완</h3>
+                    <span class="tag concern">task quality</span>
+                  </div>
+                  <p>Task 후보를 만들기 전에 "완료 기준", "필요 자료", "담당자 권한", "기존 task 영향"을 확인해야 합니다.</p>
+                  <div class="why">현재 진행 중인 Subjector task status flow와 연결하려면 task가 충분히 구체적이어야 합니다.</div>
+                </div>
+                <div class="improve-box">
+                  <textarea readonly>각 task 후보는 반영 전 완료 기준, 필요한 정보, 기존 task 영향, 담당자 권한을 먼저 보완한다.</textarea>
+                  <div class="improve-actions">
+                    <div class="button-row">
+                      <button class="primary">Apply to Left Input</button>
+                      <button>Defer</button>
+                    </div>
+                    <span class="small">왼쪽 원문 직접 강화</span>
+                  </div>
+                </div>
+              </article>
+              <article class="intervention collapsed red">
+                <h3>충돌</h3>
+              </article>
+              <article class="intervention collapsed violet">
+                <h3>범위</h3>
+              </article>
+            </div>
+
+            <div class="card-stack">
+              <article class="intervention blue">
+                <div>
+                  <div class="card-head">
+                    <h3>수동 결과록 생성</h3>
+                    <span class="tag idea">manual</span>
+                  </div>
+                  <p>회의 중 자동 결과록 생성은 미완성 결론을 확정처럼 보이게 할 수 있습니다. 사용자가 회의를 마친 뒤 버튼을 눌러 생성하는 방식이 더 안전합니다.</p>
+                  <div class="why">추천: 오른쪽은 미리보기 상태로 두고, [회의록 생성] 클릭 후 하단 task 후보 생성.</div>
+                </div>
+                <div class="improve-box">
+                  <textarea readonly>회의를 마치면 사용자가 [회의록 생성]을 누르고, 생성된 회의록을 기반으로 task 후보를 만든다.</textarea>
+                  <div class="improve-actions">
+                    <div class="button-row">
+                      <button class="primary">Apply to Left Input</button>
+                      <button>Ignore</button>
+                    </div>
+                    <span class="small">결정 강화</span>
+                  </div>
+                </div>
+              </article>
+              <article class="intervention collapsed amber">
+                <h3>대안</h3>
+              </article>
+              <article class="intervention collapsed red">
+                <h3>위험</h3>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Meeting Record</h2>
+            <div class="small">회의를 마친 뒤 수동으로 생성하고, Slack #project-log에 게시할 내용을 준비합니다.</div>
+          </div>
+          <div class="button-row">
+            <button class="primary">회의록 생성</button>
+            <button class="copy">결과록 복사</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="record-list">
+            <div class="record-placeholder">
+              회의 결과록은 task 생성의 입력이 아니라, IDEA CRUISE가 어떤 판단으로 task를 만들었는지 남기는 근거 기록입니다. 왼쪽 입력을 충분히 강화한 뒤 사용자가 [회의록 생성]을 누르면 Slack #project-log에 올릴 확정 기록이 만들어집니다.
+            </div>
+
+            <article class="record-block">
+              <div class="record-head">
+                <h3>확정 결정</h3>
+                <span class="tag decision">generated</span>
+              </div>
+              <ul>
+                <li>IDEA CRUISE는 회의 중 입력 강화와 결과록/task 후보 생성을 담당한다.</li>
+                <li>Subjector의 회의 전사 기능과 회의-결과록 기반 task 생성 기능은 제거한다.</li>
+                <li>Subjector는 IDEA CRUISE가 승인한 task를 in-process와 finals 운영으로 이어받는다.</li>
+                <li>회의 결과록은 task 생성 source가 아니라 결정/근거/리스크를 남기는 감사 기록이다.</li>
+              </ul>
+            </article>
+
+            <article class="record-block">
+              <div class="record-head">
+                <h3>충돌/리스크</h3>
+                <span class="tag conflict">generated</span>
+              </div>
+              <ul>
+                <li>Subjector가 회의 전사/task 생성을 계속 맡으면 IDEA CRUISE와 task source가 중복된다.</li>
+                <li>Task 후보의 완료 기준이 약하면 in-process에 들어간 뒤 다시 회의가 필요해질 수 있다.</li>
+                <li>Slack #project-log에서는 이 결과록이 하루 기록 글 중 하나로 게시된다.</li>
+              </ul>
+            </article>
+
+            <article class="record-block">
+              <div class="record-head">
+                <h3>Task 후보 근거</h3>
+                <span class="tag idea">feeds task board</span>
+              </div>
+              <ul>
+                <li>라이브 카드 스택 UI 정리.</li>
+                <li>IDEA CRUISE가 유일한 task 생성 source가 되도록 Subjector 역할 조정.</li>
+                <li>task별 기준/목표/필요 정보 보완 UI 설계.</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <section class="task-board">
+        <div class="panel-head">
+          <div>
+            <h2>Task Candidates From IDEA CRUISE</h2>
+            <div class="small">gpt-5.4가 강화된 회의 맥락에서 task 후보와 보완 기준 초안을 만들고, 사용자가 담당자/중요도를 정한 뒤 Subjector에 반영합니다.</div>
+          </div>
+          <div class="button-row">
+            <button>Regenerate Tasks</button>
+            <button class="apply">Selected Tasks 반영</button>
+          </div>
+        </div>
+
+        <div class="task-grid">
+          <article class="task-card">
+            <div class="task-head">
+              <div>
+                <div class="task-title">라이브 카드 스택 UI 설계</div>
+                <div class="small">한 input에서 여러 카드가 생길 때 확장/적용/제거 흐름 정의</div>
+              </div>
+              <span class="tag concern">needs criteria</span>
+            </div>
+            <p>AI 판단: 이 task는 UI 동작 기준이 더 필요합니다. 아래 보완 기준은 AI가 먼저 초안으로 작성하고, 사용자가 수정한 뒤 반영합니다.</p>
+            <div class="criteria">
+              <h4>AI 초안 보완 기준</h4>
+              <div class="criteria-list">
+                <div class="criterion">
+                  <span>완료 기준</span>
+                  <input value="5개 카드 중 하나 적용 시 원문이 수정되고 해당 카드가 제거된다." />
+                </div>
+                <div class="criterion">
+                  <span>필요 정보</span>
+                  <input value="카드 최대 개수, collapsed 카드 폭, 적용 취소 가능 여부" />
+                </div>
+                <div class="criterion">
+                  <span>충돌 확인</span>
+                  <input value="Subjector in-process 반영 흐름과 UI 역할이 겹치지 않게 분리" />
+                </div>
+              </div>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label>담당자</label>
+                <select>
+                  <option>조수현</option>
+                  <option>김조은</option>
+                  <option>배민성</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>중요도</label>
+                <select>
+                  <option>상</option>
+                  <option>중</option>
+                  <option>하</option>
+                </select>
+              </div>
+            </div>
+            <div class="task-actions">
+              <div class="button-row">
+                <button class="apply">Subjector task로 반영</button>
+                <button class="danger">제외</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="task-card">
+            <div class="task-head">
+              <div>
+                <div class="task-title">회의록 생성 -> task 후보 생성 흐름 구현</div>
+                <div class="small">수동 회의록 생성 이후 하단 task 후보 보드 표시</div>
+              </div>
+              <span class="tag decision">ready-ish</span>
+            </div>
+            <p>AI 판단: 이 task는 생성 타이밍과 source of truth 기준이 중요합니다. 아래 보완 기준은 AI가 먼저 초안으로 작성하고, 사용자가 확정합니다.</p>
+            <div class="criteria">
+              <h4>AI 초안 보완 기준</h4>
+              <div class="criteria-list">
+                <div class="criterion">
+                  <span>생성 조건</span>
+                  <input value="사용자가 [회의록 생성]을 누른 뒤에만 task 후보 생성" />
+                </div>
+                <div class="criterion">
+                  <span>필요 정보</span>
+                  <input value="회의록의 결정, 리스크, 보류 질문, task 후보 요약" />
+                </div>
+                <div class="criterion">
+                  <span>성공 기준</span>
+                  <input value="회의 결과록에는 task 생성 근거가 남고, 실제 task 생성 source는 IDEA CRUISE로 유지" />
+                </div>
+              </div>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label>담당자</label>
+                <select>
+                  <option>김조은</option>
+                  <option>조수현</option>
+                  <option>배민성</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>중요도</label>
+                <select>
+                  <option>상</option>
+                  <option>중</option>
+                  <option>하</option>
+                </select>
+              </div>
+            </div>
+            <div class="task-actions">
+              <div class="button-row">
+                <button class="apply">Subjector task로 반영</button>
+                <button class="danger">제외</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="task-card">
+            <div class="task-head">
+              <div>
+                <div class="task-title">Task 후보별 기준/목표 보완 UX 정의</div>
+                <div class="small">AI가 task마다 부족한 기준을 뽑고 사용자가 채우는 흐름</div>
+              </div>
+              <span class="tag scope">needs owner</span>
+            </div>
+            <p>AI 판단: 이 task는 사람별 권한과 판단 기준이 더 필요합니다. 아래 보완 기준은 AI가 초안으로 채우고, 사용자는 중요한 기준만 수정합니다.</p>
+            <div class="criteria">
+              <h4>AI 초안 보완 기준</h4>
+              <div class="criteria-list">
+                <div class="criterion">
+                  <span>완료 목표</span>
+                  <input value="각 task 카드에 완료 기준/필요 정보/담당자/중요도 필드 포함" />
+                </div>
+                <div class="criterion">
+                  <span>추가 질문</span>
+                  <input value="담당자가 결정할 수 있는 범위와 승인 필요한 변경 기준" />
+                </div>
+                <div class="criterion">
+                  <span>반영 조건</span>
+                  <input value="필수 기준이 비어 있으면 Subjector 반영 버튼 비활성화" />
+                </div>
+              </div>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label>담당자</label>
+                <select>
+                  <option>배민성</option>
+                  <option>조수현</option>
+                  <option>김조은</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>중요도</label>
+                <select>
+                  <option>상</option>
+                  <option>중</option>
+                  <option>하</option>
+                </select>
+              </div>
+            </div>
+            <div class="task-actions">
+              <div class="button-row">
+                <button class="apply">Subjector task로 반영</button>
+                <button class="danger">제외</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </footer>
+  </div>
+</body>
+</html>

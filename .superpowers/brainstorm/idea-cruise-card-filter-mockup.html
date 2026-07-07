@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IDEA CRUISE Card Filter Mockup</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --surface-alt: #eef3f1;
+      --line: #d9e1e6;
+      --text: #17202a;
+      --muted: #64707d;
+      --teal: #0f766e;
+      --teal-dark: #115e59;
+      --blue: #245f9f;
+      --amber: #a35d00;
+      --red: #a64242;
+      --green-soft: #e8f5f1;
+      --blue-soft: #eaf2fb;
+      --amber-soft: #fff0da;
+      --red-soft: #fae9e9;
+      --shadow: 0 10px 24px rgba(23, 32, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 4px; font-size: 22px; line-height: 1.2; }
+    h2 { margin-bottom: 4px; font-size: 15px; }
+    h3 { margin-bottom: 6px; font-size: 14px; line-height: 1.35; }
+
+    .subtitle, .hint, .meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(310px, 0.9fr) minmax(430px, 1.25fr) minmax(340px, 0.95fr);
+      gap: 14px;
+      padding: 14px;
+      align-items: start;
+    }
+
+    section {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: calc(100vh - 112px);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section-head {
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-alt);
+    }
+
+    .section-body {
+      display: grid;
+      gap: 12px;
+      min-height: 0;
+      padding: 14px;
+      overflow-y: auto;
+    }
+
+    button {
+      border: 1px solid var(--teal);
+      border-radius: 6px;
+      padding: 8px 11px;
+      background: var(--teal);
+      color: #fff;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--teal);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 126px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 11px;
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .entry-card, .completed-card, .task-card, .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .entry-card { overflow: hidden; }
+    .entry-card textarea { border: 0; border-radius: 0; min-height: 148px; }
+
+    .entry-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .pill {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .pill.answer { background: var(--blue-soft); color: var(--blue); }
+    .pill.research { background: var(--amber-soft); color: var(--amber); }
+    .pill.experiment { background: var(--red-soft); color: var(--red); }
+    .pill.decision { background: var(--green-soft); color: var(--teal-dark); }
+    .pill.task { background: #edf0f3; color: #45515d; }
+
+    .card {
+      display: grid;
+      gap: 9px;
+      padding: 12px;
+    }
+
+    .card.answer {
+      border-left: 5px solid var(--blue);
+    }
+
+    .card.research {
+      border-left: 5px solid var(--amber);
+    }
+
+    .card.experiment {
+      border-left: 5px solid var(--red);
+    }
+
+    .card.decision {
+      border-left: 5px solid var(--teal);
+    }
+
+    .card.task {
+      border-left: 5px solid #6b7280;
+    }
+
+    .card p, .card ul {
+      margin-bottom: 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .card ul {
+      padding-left: 18px;
+    }
+
+    .apply-box {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 7px;
+      background: #f8fafb;
+      border: 1px solid var(--line);
+    }
+
+    .apply-box textarea {
+      min-height: 82px;
+      background: #fff;
+    }
+
+    .status-note {
+      padding: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .completed-card {
+      padding: 12px;
+      white-space: pre-wrap;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .task-card {
+      display: grid;
+      gap: 9px;
+      padding: 12px;
+    }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .arrow-note {
+      display: grid;
+      gap: 5px;
+      padding: 11px;
+      border-radius: 8px;
+      background: #f4fbf9;
+      border: 1px solid #cde7e2;
+      color: var(--teal-dark);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1120px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      section {
+        height: auto;
+        min-height: 540px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>IDEA CRUISE Meeting Desk</h1>
+      <div class="subtitle">가운데 카드는 task를 많이 만드는 장치가 아니라, 바로 알 수 있는 것을 해결하고 시간 드는 일만 task로 남기는 필터입니다.</div>
+    </div>
+    <div class="actions">
+      <button>라이브 회의</button>
+      <button class="secondary">간단 메모 붙여넣기</button>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="section-head">
+        <h2>Brainstorming Input</h2>
+        <p class="hint">원문은 보존하고, 카드 적용 내용은 아래에 누적됩니다.</p>
+      </div>
+      <div class="section-body">
+        <article class="entry-card">
+          <textarea>전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?</textarea>
+          <div class="entry-foot">
+            <span class="meta">Entry 1</span>
+            <div class="actions">
+              <button class="secondary">AI Analysis</button>
+              <button class="secondary">삭제</button>
+              <button>완료</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="entry-card">
+          <textarea>전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?
+
+[AI 보강 - 즉시 답변]
+- 폭음을 막는다는 말은 위험음 감지와 소리 차단/필터링으로 나뉩니다.
+- 학습 데이터가 필요한 쪽은 주로 위험음 감지입니다.
+- 후보 범주는 총성, 폭발음, 충격음, 사이렌, 중장비 소음입니다.
+
+[AI 보강 - 확인 필요]
+- 실제 사용 가능한 공개 데이터셋은 라이선스와 라벨 구조를 확인해야 합니다.
+- AudioSet, UrbanSound8K, ESC-50, gunshot/explosion 계열 dataset 후보를 조사합니다.
+
+[남은 결정]
+- MVP 목표가 전장용인지 공사현장용인지 먼저 좁혀야 합니다.</textarea>
+          <div class="entry-foot">
+            <span class="meta">적용 후 entry 예시</span>
+            <div class="actions">
+              <button class="secondary">AI Analysis 다시</button>
+              <button>완료</button>
+            </div>
+          </div>
+        </article>
+
+        <div class="status-note">
+          완료 기준: 답이 완벽히 끝났다는 뜻이 아니라, task 후보 생성에 들어갈 만큼 원문, 알게 된 정보, 남은 조사/실험/결정 사항이 정리된 상태입니다.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Live Intervention Cards</h2>
+        <p class="hint">gpt-5.4가 entry를 분해해서 즉시 해결 가능한 정보와 시간이 드는 일을 구분합니다.</p>
+      </div>
+      <div class="section-body">
+        <article class="card answer">
+          <span class="pill answer">즉시 답변</span>
+          <h3>폭음 데이터는 목표에 따라 달라집니다</h3>
+          <p>“폭음을 막는다”는 표현은 위험음을 감지하는 모델과 오디오를 줄이는 필터링 시스템으로 나뉩니다. 학습 데이터가 필요한 것은 주로 위험음 감지 쪽입니다.</p>
+          <div class="apply-box">
+            <label>왼쪽 entry에 추가될 내용</label>
+            <textarea>- 폭음을 총성, 폭발음, 충격음, 사이렌, 중장비 소음으로 나눠 정의한다.
+- 학습 데이터는 sound event classification / gunshot detection / explosion sound dataset 쪽을 우선 본다.</textarea>
+            <button>적용</button>
+          </div>
+        </article>
+
+        <article class="card research">
+          <span class="pill research">확인 필요</span>
+          <h3>데이터셋은 라이선스와 라벨 구조 확인이 필요합니다</h3>
+          <p>AI가 후보명을 바로 말할 수는 있지만, 실제 프로젝트에 쓸 수 있는지는 최신 접근 가능성, 라이선스, 라벨 품질을 확인해야 합니다.</p>
+          <div class="apply-box">
+            <label>task 재료로 추가될 내용</label>
+            <textarea>- AudioSet, ESC-50, UrbanSound8K, gunshot/explosion 공개 dataset 후보를 조사한다.
+- 각 dataset의 라이선스, 라벨 종류, 실시간 감지 적합성을 비교한다.</textarea>
+            <button>적용</button>
+          </div>
+        </article>
+
+        <article class="card decision">
+          <span class="pill decision">결정 필요</span>
+          <h3>전장용과 공사현장용은 목표가 충돌할 수 있습니다</h3>
+          <p>전장 폭음 대응과 공사현장 청력 보호는 데이터, 평가 기준, 시연 장면이 달라집니다. 둘 다 잡으면 task가 커질 가능성이 큽니다.</p>
+          <div class="apply-box">
+            <label>회의 결정 항목으로 추가될 내용</label>
+            <textarea>- MVP 발표 기준에서 전장용과 공사현장용 중 하나를 주 목표로 좁힌다.
+- 나머지는 확장 가능성 또는 비교 대상 정도로만 둔다.</textarea>
+            <button>적용</button>
+          </div>
+        </article>
+
+        <article class="card experiment">
+          <span class="pill experiment">실험 필요</span>
+          <h3>실시간 감지는 직접 돌려봐야 판단됩니다</h3>
+          <p>ESP32나 라즈베리 파이에서 위험음 감지가 가능한지는 모델 크기, 마이크 품질, latency 조건을 직접 측정해야 합니다.</p>
+          <div class="apply-box">
+            <label>task 재료로 추가될 내용</label>
+            <textarea>- 라즈베리 파이에서 간단한 sound event model의 latency를 측정한다.
+- ESP32는 on-device inference 가능 여부를 샘플 모델로 확인한다.</textarea>
+            <button>적용</button>
+          </div>
+        </article>
+
+        <article class="card task">
+          <span class="pill task">task 후보</span>
+          <h3>시간이 드는 일만 task 후보로 남깁니다</h3>
+          <ul>
+            <li>공개 sound event dataset 후보 5개 조사</li>
+            <li>전장용/공사현장용 MVP 목표 선택 기준 정리</li>
+            <li>라즈베리 파이 실시간 감지 latency 실험</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Completed Inputs → Task Candidates</h2>
+        <p class="hint">완료된 input만 아래 task 후보 생성의 재료가 됩니다.</p>
+      </div>
+      <div class="section-body">
+        <article class="completed-card">전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?
+
+[알게 된 정보]
+- 위험음 감지와 소리 차단은 다른 문제입니다.
+- 학습 데이터는 총성, 폭발음, 충격음 등 sound event 데이터가 중심입니다.
+
+[자료조사 필요]
+- 공개 데이터셋 후보의 라이선스, 라벨 구조, 사용 가능성을 확인해야 합니다.
+
+[실험 필요]
+- 라즈베리 파이/ESP32에서 실시간 감지가 가능한지 latency를 측정해야 합니다.
+
+[결정 필요]
+- MVP 목표를 전장용 또는 공사현장용 중 하나로 좁힙니다.</article>
+
+        <div class="arrow-note">
+          Task 후보 생성 버튼은 위 Completed 내용을 source로 삼습니다.
+          AI는 “이미 알게 된 정보”는 task로 만들지 않고, 자료조사/실험/팀 결정처럼 시간이 드는 항목만 task로 제안합니다.
+        </div>
+
+        <article class="task-card">
+          <label>Task 제목<input value="공개 sound event dataset 후보 조사"></label>
+          <label>필요 정보<textarea>AudioSet, ESC-50, UrbanSound8K, gunshot/explosion dataset 후보의 라이선스, 라벨, 사용 가능성</textarea></label>
+          <label>완료기준<textarea>후보 5개를 표로 정리하고, 우리 MVP에 바로 쓸 수 있는 후보와 제외할 후보를 구분한다.</textarea></label>
+          <div class="task-grid">
+            <label>담당자<select><option>미배정</option><option>조수현</option><option>김조은</option><option>배민성</option></select></label>
+            <label>중요도<select><option>높음</option><option>보통</option><option>낮음</option></select></label>
+          </div>
+          <button>Subjector in-process에 적용</button>
+        </article>
+
+        <article class="task-card">
+          <label>Task 제목<input value="라즈베리 파이 실시간 위험음 감지 실험"></label>
+          <label>필요 정보<textarea>샘플 sound event model, 입력 마이크 조건, latency 측정 방식</textarea></label>
+          <label>완료기준<textarea>라즈베리 파이에서 샘플 입력을 처리한 평균 latency와 실시간 사용 가능 여부를 정리한다.</textarea></label>
+          <div class="task-grid">
+            <label>담당자<select><option>미배정</option><option>조수현</option><option>김조은</option><option>배민성</option></select></label>
+            <label>중요도<select><option>높음</option><option>보통</option><option>낮음</option></select></label>
+          </div>
+          <button>Subjector in-process에 적용</button>
+        </article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
