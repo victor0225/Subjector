@@ -200,13 +200,14 @@ export function renderIdeaCruisePage() {
     .topic-node {
       position: absolute;
       width: 220px;
-      min-height: 144px;
+      height: 158px;
       border: 1px solid var(--line);
       border-left: 5px solid var(--teal);
       border-radius: 8px;
       background: rgba(255, 255, 255, 0.97);
       box-shadow: 0 12px 24px rgba(19, 37, 48, 0.12);
       padding: 12px;
+      overflow: hidden;
       text-align: left;
       transition: transform 160ms ease, opacity 160ms ease, filter 160ms ease, box-shadow 160ms ease;
     }
@@ -223,7 +224,15 @@ export function renderIdeaCruisePage() {
       font-weight: 900;
       text-transform: uppercase;
     }
-    .topic-node strong { display: block; margin-bottom: 8px; font-size: 16px; line-height: 1.35; }
+    .topic-node strong {
+      display: -webkit-box;
+      margin-bottom: 8px;
+      overflow: hidden;
+      font-size: 16px;
+      line-height: 1.35;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
     .topic-node span {
       display: block;
       color: var(--muted);
@@ -231,7 +240,22 @@ export function renderIdeaCruisePage() {
       font-weight: 500;
       line-height: 1.45;
     }
-    .topic-meta { margin-top: 10px; }
+    .topic-summary {
+      display: -webkit-box;
+      max-height: 52px;
+      overflow: hidden;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+    .topic-meta {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 10px;
+      margin-top: 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.98));
+      padding-top: 4px;
+    }
 
     .empty-roadmap {
       position: absolute;
@@ -295,6 +319,39 @@ export function renderIdeaCruisePage() {
     .child-preview strong { display: block; margin-bottom: 5px; }
     .child-preview p { margin-bottom: 0; font-size: 12px; }
     .pending-count { align-self: center; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .pending-list {
+      display: grid;
+      gap: 7px;
+      max-height: 210px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fbfcfd;
+      padding: 8px;
+    }
+    .pending-card-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      padding: 8px;
+    }
+    .pending-card-row strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+    .pending-card-row span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+    }
 
     .tasks {
       display: grid;
@@ -474,7 +531,8 @@ export function renderIdeaCruisePage() {
         taskFilter: 'all',
         taskGenerationError: '',
         record: '',
-        refreshMessage: ''
+        refreshMessage: '',
+        expandedPendingTopicId: null
       };
     }
 
@@ -601,7 +659,7 @@ export function renderIdeaCruisePage() {
         topic.cards = [conflict].concat((topic.cards || []).filter(function(card) { return card.kind !== 'conflict'; }));
         return;
       }
-      if (broadTopicScore(topic.text) >= 3 && !(topic.cards || []).some(function(card) { return card.kind === 'split'; })) {
+      if (broadTopicScore(topic.text) >= 3 && !topic.splitApplied && !topic.splitDismissed && !(topic.cards || []).some(function(card) { return card.kind === 'split'; })) {
         topic.cards = [localSplitCard(topic)].concat(topic.cards || []);
       }
     }
@@ -630,7 +688,7 @@ export function renderIdeaCruisePage() {
     async function requestTaskCandidates() {
       const completed = completedTopics();
       if (completed.length === 0) {
-        state.taskGenerationError = '완료된 topic이 없습니다. topic 팝오버에서 완료를 누른 뒤 갱신하세요.';
+        state.taskGenerationError = 'Task 후보 대상으로 표시된 topic이 없습니다. topic 팝오버에서 "Task 후보로 보냄"을 누른 뒤 갱신하세요.';
         return;
       }
       const response = await fetch('/idea-cruise/task-candidates', {
@@ -691,6 +749,8 @@ export function renderIdeaCruisePage() {
         parentId: parentId || null,
         fixed: false,
         completed: false,
+        splitApplied: false,
+        splitDismissed: false,
         cards: []
       };
       ensurePriorityCards(topic);
@@ -740,6 +800,8 @@ export function renderIdeaCruisePage() {
           parentId: parentId,
           fixed: false,
           completed: false,
+          splitApplied: false,
+          splitDismissed: false,
           cards: [],
           sourceExternalId: incoming.externalId,
           sourceType: incoming.sourceType || 'external'
@@ -806,6 +868,7 @@ export function renderIdeaCruisePage() {
         throw new Error('고정된 topic은 고정 해제 후 수정할 수 있습니다.');
       }
       if (card.kind === 'split') {
+        topic.splitApplied = true;
         const existing = new Set(state.topics.filter(function(item) { return item.parentId === topic.id; }).map(function(item) { return item.title; }));
         (card.childTopics || []).forEach(function(child) {
           if (!existing.has(child.title)) {
@@ -818,6 +881,7 @@ export function renderIdeaCruisePage() {
         topic.title = titleFromText(topic.text) || topic.title;
       }
       topic.cards = (topic.cards || []).filter(function(item) { return item.id !== card.id; });
+      if (state.expandedPendingTopicId === topic.id) state.expandedPendingTopicId = null;
       ensurePriorityCards(topic);
     }
 
@@ -886,10 +950,10 @@ export function renderIdeaCruisePage() {
         return '<button class="topic-node ' + (topic.fixed ? 'fixed ' : '') + (conflict ? 'conflict ' : '') + (topic.id === state.activeTopicId ? 'active' : '') + '" style="left:' + position.x + 'px;top:' + position.y + 'px" data-topic="' + topic.id + '" type="button">' +
           '<small>' + (topic.parentId ? 'Topic' : 'Project Topic') + '</small>' +
           '<strong>' + escapeHtml(topic.title) + '</strong>' +
-          '<span>' + escapeHtml(compactText(topic.text, 112)) + '</span>' +
+          '<span class="topic-summary">' + escapeHtml(compactText(topic.text, 112)) + '</span>' +
           '<span class="topic-meta">' +
             tag(topic.fixed ? '고정' : '초안', topic.fixed ? 'blue' : '') +
-            tag(topic.completed ? '완료' : '진행') +
+            tag(topic.completed ? 'Task 후보 대상' : '진행') +
             tag('대기 카드 ' + Math.max(cardCount - 1, 0)) +
             (conflict ? tag('충돌', 'rose') : '') +
           '</span>' +
@@ -946,9 +1010,20 @@ export function renderIdeaCruisePage() {
         '<div class="topic-editor">' +
           '<label>Topic 제목<input data-topic-title value="' + escapeHtml(topic.title) + '" ' + (topic.fixed ? 'disabled' : '') + '></label>' +
           '<label>Topic 내용<textarea data-topic-text ' + (topic.fixed ? 'disabled' : '') + '>' + escapeHtml(topic.text) + '</textarea></label>' +
-          '<div class="actions"><button class="primary" data-save-topic ' + (topic.fixed ? 'disabled' : '') + ' type="button">저장</button><button data-toggle-fixed type="button">' + (topic.fixed ? '고정 해제' : '고정') + '</button><button data-analyze-topic type="button">AI 분석</button><button data-complete-topic type="button">완료</button><button class="danger" data-remove-topic type="button">제거</button></div>' +
+          '<div class="actions"><button class="primary" data-save-topic ' + (topic.fixed ? 'disabled' : '') + ' type="button">저장</button><button data-toggle-fixed type="button">' + (topic.fixed ? '고정 해제' : '고정') + '</button><button data-analyze-topic type="button">AI 분석</button><button data-complete-topic type="button">Task 후보로 보냄</button><button class="danger" data-remove-topic type="button">제거</button></div>' +
         '</div>' +
         (card ? renderPrimaryCard(topic, card, pendingCount) : '<article class="ai-card"><span class="tag">카드 없음</span><h3>현재 표시할 AI 카드가 없습니다</h3><p>필요할 때 AI 분석을 누르세요. 고정 topic과 충돌이 생기면 충돌 카드가 우선 표시됩니다.</p></article>');
+    }
+
+    function renderPendingCards(topic) {
+      const pending = (topic.cards || []).slice(1);
+      if (!pending.length || state.expandedPendingTopicId !== topic.id) return '';
+      return '<div class="pending-list" aria-label="대기 카드 목록">' + pending.map(function(card) {
+        return '<div class="pending-card-row">' +
+          '<div><strong>' + escapeHtml(card.title || kindLabel(card.kind)) + '</strong><span>' + escapeHtml(card.body || card.suggestion || '내용 없음') + '</span></div>' +
+          '<button data-promote-card="' + card.id + '" type="button">보기</button>' +
+        '</div>';
+      }).join('') + '</div>';
     }
 
     function renderPrimaryCard(topic, card, pendingCount) {
@@ -967,6 +1042,9 @@ export function renderIdeaCruisePage() {
       const suggestion = kind !== 'split' && kind !== 'conflict' && card.suggestion
         ? '<label>적용 후 topic 내용<textarea data-card-suggestion ' + (fixedBlocked ? 'disabled' : '') + '>' + escapeHtml(card.suggestion) + '</textarea></label>'
         : '';
+      const pendingControl = pendingCount > 0
+        ? '<button data-toggle-pending="' + topic.id + '" type="button">' + (state.expandedPendingTopicId === topic.id ? '대기 카드 접기' : '대기 카드 ' + pendingCount + ' 보기') + '</button>'
+        : '<span class="pending-count">대기 카드 0</span>';
       return '<article class="ai-card ' + kind + '" data-card-id="' + card.id + '">' +
         '<div class="card-head"><span class="tag strong">' + escapeHtml(card.type || kindLabel(kind)) + '</span><span class="tag">대기 카드 ' + pendingCount + '</span></div>' +
         '<h3>' + escapeHtml(card.title) + '</h3>' +
@@ -975,7 +1053,8 @@ export function renderIdeaCruisePage() {
         details +
         childPreview +
         suggestion +
-        '<div class="actions"><button class="primary" data-apply-card="' + card.id + '" ' + (fixedBlocked ? 'disabled' : '') + ' type="button">' + (fixedBlocked ? '고정 해제 후 적용' : applyLabel(kind)) + '</button><button data-dismiss-card="' + card.id + '" type="button">제거</button><span class="pending-count">대기 카드 ' + pendingCount + '</span></div>' +
+        '<div class="actions"><button class="primary" data-apply-card="' + card.id + '" ' + (fixedBlocked ? 'disabled' : '') + ' type="button">' + (fixedBlocked ? '고정 해제 후 적용' : applyLabel(kind)) + '</button><button data-dismiss-card="' + card.id + '" type="button">제거</button>' + pendingControl + '</div>' +
+        renderPendingCards(topic) +
         (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
       '</article>';
     }
@@ -1150,6 +1229,25 @@ export function renderIdeaCruisePage() {
       const topic = activeTopic();
       if (!topic) return;
 
+      const togglePendingButton = event.target.closest('[data-toggle-pending]');
+      if (togglePendingButton) {
+        state.expandedPendingTopicId = state.expandedPendingTopicId === topic.id ? null : topic.id;
+        render();
+        return;
+      }
+
+      const promoteButton = event.target.closest('[data-promote-card]');
+      if (promoteButton) {
+        const index = (topic.cards || []).findIndex(function(card) { return card.id === promoteButton.dataset.promoteCard; });
+        if (index > 0) {
+          const selected = topic.cards.splice(index, 1)[0];
+          topic.cards.unshift(selected);
+        }
+        state.expandedPendingTopicId = null;
+        render();
+        return;
+      }
+
       const saveButton = event.target.closest('[data-save-topic]');
       if (saveButton) {
         if (topic.fixed) return;
@@ -1222,8 +1320,12 @@ export function renderIdeaCruisePage() {
 
       const dismissButton = event.target.closest('[data-dismiss-card]');
       if (dismissButton) {
+        const dismissedCard = (topic.cards || []).find(function(card) { return card.id === dismissButton.dataset.dismissCard; });
+        if (dismissedCard && dismissedCard.kind === 'split') topic.splitDismissed = true;
         topic.cards = (topic.cards || []).filter(function(card) { return card.id !== dismissButton.dataset.dismissCard; });
+        if (state.expandedPendingTopicId === topic.id) state.expandedPendingTopicId = null;
         render();
+        return;
       }
     });
 

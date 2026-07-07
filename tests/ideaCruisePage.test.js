@@ -65,8 +65,36 @@ test('renderIdeaCruisePage keeps one visible AI card and pending count', () => {
   assert.match(html, /const card = topic\.cards && topic\.cards\[0\]/);
   assert.match(html, /대기 카드/);
   assert.match(html, /renderPrimaryCard\(topic, card, pendingCount\)/);
+  assert.match(html, /data-toggle-pending/);
+  assert.match(html, /data-promote-card/);
   assert.match(html, /data-dismiss-card/);
   assert.match(html, /적용 실패/);
+});
+
+test('renderIdeaCruisePage clamps topic nodes and opens details from the fixed card size', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /\.topic-node \{/);
+  assert.match(html, /height: 158px/);
+  assert.match(html, /overflow: hidden/);
+  assert.match(html, /\.topic-summary/);
+  assert.match(html, /<span class="topic-summary">/);
+});
+
+test('renderIdeaCruisePage consumes split cards after apply or dismiss', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /topic\.splitApplied = true/);
+  assert.match(html, /topic\.splitDismissed = true/);
+  assert.match(html, /!topic\.splitApplied && !topic\.splitDismissed/);
+});
+
+test('renderIdeaCruisePage labels topic completion as task candidate handoff', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /data-complete-topic type="button">Task 후보로 보냄/);
+  assert.match(html, /Task 후보 대상/);
+  assert.doesNotMatch(html, /완료된 topic이 없습니다/);
 });
 
 test('renderIdeaCruisePage calls existing IDEA CRUISE APIs', () => {
