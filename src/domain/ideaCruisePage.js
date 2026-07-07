@@ -8,24 +8,24 @@ export function renderIdeaCruisePage() {
   <style>
     :root {
       color-scheme: light;
-      --bg: #f5f7f8;
+      --bg: #edf3f5;
       --surface: #ffffff;
-      --panel: #eef3f1;
-      --line: #d7e0e5;
-      --text: #17202a;
-      --muted: #65717d;
-      --teal: #0f766e;
-      --teal-dark: #115e59;
-      --blue: #245f9f;
-      --amber: #a46100;
-      --red: #a64242;
-      --gray: #4b5563;
-      --blue-soft: #eaf2fb;
-      --teal-soft: #e7f5f1;
-      --amber-soft: #fff1db;
-      --red-soft: #fae9e9;
-      --gray-soft: #eef1f4;
-      --shadow: 0 10px 24px rgba(23, 32, 42, 0.08);
+      --panel: #f8fbfc;
+      --line: #d3e0e7;
+      --line-strong: #9eb8c4;
+      --text: #132530;
+      --muted: #617484;
+      --teal: #0b7769;
+      --blue: #285fc6;
+      --amber: #a96512;
+      --red: #b8424a;
+      --violet: #6a51b8;
+      --teal-soft: #e6f6f0;
+      --blue-soft: #eaf1ff;
+      --amber-soft: #fff3dd;
+      --red-soft: #fff0f1;
+      --violet-soft: #f2efff;
+      --shadow: 0 16px 34px rgba(19, 37, 48, 0.12);
     }
 
     * { box-sizing: border-box; }
@@ -38,566 +38,323 @@ export function renderIdeaCruisePage() {
       font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
     }
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      padding: 14px 22px;
-      border-bottom: 1px solid var(--line);
-      background: var(--surface);
-    }
-
     h1, h2, h3, p { margin-top: 0; }
-    h1 { margin-bottom: 3px; font-size: 22px; line-height: 1.2; }
+    h1 { margin-bottom: 4px; font-size: 22px; line-height: 1.2; }
     h2 { margin-bottom: 4px; font-size: 15px; }
-    h3 { margin-bottom: 5px; font-size: 14px; line-height: 1.35; }
+    h3 { margin-bottom: 8px; font-size: 15px; line-height: 1.35; }
+    p { color: var(--muted); font-size: 13px; line-height: 1.48; }
 
-    .subtitle, .hint, .meta, .small, .status {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
+    button, input, textarea, select { font: inherit; }
     button {
-      border: 1px solid var(--teal);
-      border-radius: 6px;
-      padding: 8px 11px;
-      background: var(--teal);
-      color: #fff;
-      font: inherit;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--text);
       font-size: 12px;
+      font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
     }
+    button.primary { border-color: var(--teal); background: var(--teal); color: #fff; }
+    button.danger { border-color: #efbdc2; background: #fff8f8; color: var(--red); }
+    button:disabled, input:disabled, textarea:disabled { cursor: not-allowed; opacity: 0.62; }
 
-    button.secondary {
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px 10px;
       background: #fff;
-      color: var(--teal);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
     }
-
-    button.ghost {
-      border-color: var(--line);
-      background: #fff;
-      color: var(--gray);
-    }
-
-    button:disabled {
-      cursor: default;
-      opacity: 0.62;
-    }
-
-    main {
+    textarea { min-height: 92px; resize: vertical; }
+    label {
       display: grid;
-      grid-template-columns: minmax(330px, 0.9fr) minmax(520px, 1.35fr) minmax(390px, 1fr);
-      gap: 14px;
-      padding: 14px;
-      align-items: start;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
     }
 
-    section {
+    header {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    header p { margin-bottom: 0; }
+
+    .status, .actions, .topic-meta, .card-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .status { justify-content: flex-end; }
+    .status span, .tag {
+      display: inline-flex;
+      align-items: center;
+      width: max-content;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .tag.strong, .tag.teal { border-color: #a6d9d1; background: var(--teal-soft); color: var(--teal); }
+    .tag.blue { border-color: #b7c9f6; background: var(--blue-soft); color: var(--blue); }
+    .tag.amber { border-color: #efca8a; background: var(--amber-soft); color: var(--amber); }
+    .tag.rose { border-color: #efbdc2; background: var(--red-soft); color: var(--red); }
+    .tag.violet { border-color: #c9c0f4; background: var(--violet-soft); color: var(--violet); }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: minmax(720px, 1.45fr) minmax(370px, 0.55fr);
+      gap: 16px;
+      padding: 18px 22px;
+    }
+
+    .panel {
       min-width: 0;
-      height: calc(100vh - 106px);
+      overflow: hidden;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--surface);
       box-shadow: var(--shadow);
-      overflow: hidden;
     }
-
-    .section-head {
-      min-height: 94px;
-      padding: 13px 15px;
-      border-bottom: 1px solid var(--line);
-      background: var(--panel);
-    }
-
-    .head-row {
+    .panel-head {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 10px;
-    }
-
-    .section-body {
-      display: grid;
-      align-content: start;
       gap: 12px;
-      min-height: 0;
+      min-height: 78px;
       padding: 14px;
-      overflow-y: auto;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
     }
+    .panel-head p { margin-bottom: 0; }
 
-    textarea, input, select {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 7px;
-      padding: 10px;
-      color: var(--text);
-      background: #fff;
-      font: inherit;
-      font-size: 13px;
-      line-height: 1.5;
+    .roadmap-panel, .task-panel { min-height: calc(100vh - 150px); }
+    .roadmap-shell {
+      position: relative;
+      height: calc(100vh - 230px);
+      min-height: 560px;
+      overflow: auto;
+      background:
+        linear-gradient(#dfe8ee 1px, transparent 1px),
+        linear-gradient(90deg, #dfe8ee 1px, transparent 1px);
+      background-size: 34px 34px;
     }
-
-    textarea { min-height: 92px; resize: vertical; }
-
-    label {
-      display: grid;
-      gap: 5px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .top-actions, .actions, .page-nav, .choice-row {
+    .layer-label {
+      position: sticky;
+      top: 14px;
+      left: 14px;
+      z-index: 8;
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .topic-card, .entry-card, .ai-card, .decision-card, .task-card, .not-task, .roadmap-node {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-    }
-
-    .topic-card {
-      display: grid;
-      gap: 10px;
-      padding: 12px;
-    }
-
-    .topic-title-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      gap: 10px;
-    }
-
-    .entry-card {
-      overflow: hidden;
-    }
-
-    .entry-card textarea {
-      border: 0;
-      border-radius: 0;
-      min-height: 260px;
-      font-size: 14px;
-    }
-
-    .entry-foot {
-      display: flex;
-      justify-content: space-between;
       align-items: center;
       gap: 8px;
-      padding: 8px 10px;
-      border-top: 1px solid var(--line);
-    }
-
-    .page-nav {
-      justify-content: center;
-      padding: 10px;
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      background: #fbfcfd;
-    }
-
-    .task-filter-nav {
-      justify-content: flex-start;
-    }
-
-    .dot {
-      min-width: 28px;
-      height: 28px;
-      display: inline-grid;
-      place-items: center;
+      width: max-content;
+      max-width: calc(100% - 28px);
       border: 1px solid var(--line);
       border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 8px 20px rgba(19, 37, 48, 0.08);
       color: var(--muted);
-      background: #fff;
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 800;
     }
-
-    .dot.active {
-      color: #fff;
-      background: var(--teal-dark);
-      border-color: var(--teal-dark);
-    }
-
-    .pill {
-      display: inline-flex;
-      width: fit-content;
-      border-radius: 999px;
-      padding: 3px 8px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .pill.answer { color: var(--blue); background: var(--blue-soft); }
-    .pill.research { color: var(--amber); background: var(--amber-soft); }
-    .pill.experiment { color: var(--red); background: var(--red-soft); }
-    .pill.decision { color: var(--teal-dark); background: var(--teal-soft); }
-    .pill.filter { color: var(--gray); background: var(--gray-soft); }
-
-    .roadmap-shell {
-      display: grid;
-      gap: 12px;
-      min-width: 0;
-    }
-
-    .roadmap-scroll {
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding-bottom: 5px;
-    }
-
-    .roadmap-board {
+    .roadmap {
       position: relative;
-      width: 940px;
-      height: 345px;
-      border: 1px solid #c7d5e2;
-      border-radius: 8px;
-      background: #fff;
-      overflow: hidden;
+      min-width: 980px;
+      min-height: 560px;
     }
-
-    .roadmap-lines {
+    .root-lines {
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
       pointer-events: none;
+      overflow: visible;
     }
-
-    .roadmap-lines line,
-    .roadmap-lines path {
-      stroke: #1f6d8c;
-      stroke-width: 2;
+    .root-line {
       fill: none;
-      marker-end: url(#roadmap-arrow);
+      stroke: var(--line-strong);
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+    .impact-line {
+      fill: none;
+      stroke: var(--red);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 8 8;
     }
 
-    .flow-node {
+    .topic-node {
       position: absolute;
-      display: grid;
-      align-content: center;
-      gap: 7px;
-      min-height: 76px;
-      padding: 12px;
-      border: 2px solid #123244;
-      border-radius: 2px;
-      background: #1f6d8c;
-      color: #fff;
-      box-shadow: 0 4px 10px rgba(23, 32, 42, 0.08);
-    }
-
-    .flow-node.topic-node { left: 22px; top: 132px; width: 148px; }
-    .flow-node.generate-node { left: 220px; top: 115px; width: 150px; }
-    .flow-node.branch-top { left: 430px; top: 44px; width: 170px; min-height: 72px; }
-    .flow-node.branch-main { left: 430px; top: 132px; width: 170px; min-height: 88px; }
-    .flow-node.branch-bottom { left: 430px; top: 242px; width: 170px; min-height: 72px; }
-    .flow-node.strengthen-node { left: 660px; top: 132px; width: 150px; }
-    .flow-node.task-node { left: 815px; top: 44px; width: 105px; min-height: 88px; }
-
-    .flow-node.selected {
-      outline: 4px solid rgba(15, 118, 110, 0.2);
-      background: #115e59;
-    }
-
-    .flow-node.dimmed {
-      opacity: 0.62;
-    }
-
-    .flow-node small {
-      display: block;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 11px;
-      font-weight: 700;
-      line-height: 1.35;
-    }
-
-    .flow-node strong {
-      font-size: 15px;
-      line-height: 1.35;
-      word-break: keep-all;
-    }
-
-    .flow-node button {
-      justify-self: start;
-      border-color: rgba(255, 255, 255, 0.7);
-      background: rgba(255, 255, 255, 0.12);
-      color: #fff;
-      padding: 6px 8px;
-    }
-
-    .roadmap-detail {
-      display: grid;
-      gap: 10px;
-      padding: 12px;
+      width: 220px;
+      min-height: 144px;
       border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fbfcfd;
-    }
-
-    .roadmap-detail-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .roadmap-detail h3 {
-      margin-bottom: 0;
-      font-size: 15px;
-    }
-
-    .roadmap-detail p {
-      margin-bottom: 0;
-      color: #334155;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .roadmap-empty {
-      padding: 14px;
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      background: #fbfcfd;
-    }
-
-    .rewrite-note {
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.4;
-    }
-
-    .ai-card {
-      display: grid;
-      gap: 9px;
-      padding: 12px;
-    }
-
-    .ai-card.answer { border-left: 5px solid var(--blue); }
-    .ai-card.research { border-left: 5px solid var(--amber); }
-    .ai-card.experiment { border-left: 5px solid var(--red); }
-    .ai-card.filter { border-left: 5px solid var(--gray); }
-
-    .decision-card {
-      display: grid;
-      gap: 11px;
-      padding: 12px;
       border-left: 5px solid var(--teal);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 12px 24px rgba(19, 37, 48, 0.12);
+      padding: 12px;
+      text-align: left;
+      transition: transform 160ms ease, opacity 160ms ease, filter 160ms ease, box-shadow 160ms ease;
     }
-
-    .ai-card p, .ai-card ul, .decision-card p, .decision-card ul {
-      margin-bottom: 0;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .ai-card ul, .decision-card ul {
-      padding-left: 18px;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .info-box {
-      display: grid;
-      gap: 5px;
-      padding: 9px;
-      border: 1px solid var(--line);
-      border-radius: 7px;
-      background: #fff;
-    }
-
-    .info-box strong { font-size: 12px; }
-    .info-box span {
+    .topic-node:hover { transform: translateY(-1px); box-shadow: 0 18px 30px rgba(19, 37, 48, 0.16); }
+    .topic-node.active { outline: 3px solid rgba(11, 119, 105, 0.18); box-shadow: 0 20px 38px rgba(11, 119, 105, 0.2); }
+    .topic-node.fixed { border-left-color: var(--blue); }
+    .topic-node.conflict { border-color: #efbdc2; border-left-color: var(--red); background: #fffafa; }
+    .roadmap.card-layer-on .topic-node:not(.active) { opacity: 0.52; filter: grayscale(0.18); }
+    .topic-node small {
+      display: block;
+      margin-bottom: 8px;
       color: var(--muted);
       font-size: 11px;
-      line-height: 1.4;
+      font-weight: 900;
+      text-transform: uppercase;
     }
-
-    .apply-preview {
-      display: grid;
-      gap: 8px;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 7px;
-      background: #f8fafb;
-    }
-
-    .apply-preview textarea {
-      min-height: 76px;
-      background: #fff;
-    }
-
-    .choice-card {
-      flex: 1 1 180px;
-      display: grid;
-      gap: 8px;
-      min-width: 0;
-      padding: 11px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-    }
-
-    .choice-card.selected {
-      border-color: var(--teal);
-      background: var(--teal-soft);
-    }
-
-    .choice-card strong { font-size: 13px; }
-    .choice-card p {
-      margin-bottom: 0;
+    .topic-node strong { display: block; margin-bottom: 8px; font-size: 16px; line-height: 1.35; }
+    .topic-node span {
+      display: block;
       color: var(--muted);
       font-size: 12px;
+      font-weight: 500;
       line-height: 1.45;
     }
+    .topic-meta { margin-top: 10px; }
 
-    .not-task {
-      display: grid;
-      gap: 8px;
-      padding: 12px;
-      border-color: #c7dcf3;
-      background: var(--blue-soft);
-    }
-
-    .not-task h3 { color: var(--blue); }
-    .not-task ul {
-      margin: 0;
-      padding-left: 18px;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .update-card {
-      display: grid;
-      gap: 10px;
-      padding: 12px;
+    .empty-roadmap {
+      position: absolute;
+      left: 56px;
+      top: 90px;
+      width: 360px;
       border: 1px solid var(--line);
-      border-left: 5px solid var(--amber);
       border-radius: 8px;
-      background: #fffdf8;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 14px;
     }
 
-    .split-update {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .update-part {
-      display: grid;
-      gap: 7px;
-      padding: 10px;
+    .card-popover {
+      position: absolute;
+      z-index: 12;
+      width: 460px;
+      max-height: calc(100vh - 190px);
+      overflow: auto;
       border: 1px solid var(--line);
-      border-radius: 7px;
-      background: #fff;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 24px 48px rgba(19, 37, 48, 0.2);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity 160ms ease, transform 160ms ease;
     }
-
-    .update-part strong { font-size: 12px; }
-    .update-part p {
-      margin-bottom: 0;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .task-card {
-      display: grid;
-      gap: 10px;
-      padding: 12px;
-    }
-
-    .task-card header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      gap: 10px;
-      padding: 0;
-      border: 0;
-      background: transparent;
-    }
-
-    .task-card h3 { margin-bottom: 0; }
-
-    .task-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .record-drawer {
-      position: fixed;
-      top: 0;
-      right: 0;
-      z-index: 20;
-      width: min(560px, 100vw);
-      height: 100vh;
-      display: grid;
-      grid-template-rows: auto 1fr;
-      background: var(--surface);
-      border-left: 1px solid var(--line);
-      box-shadow: -18px 0 32px rgba(23, 32, 42, 0.18);
-      transform: translateX(105%);
-      transition: transform 180ms ease;
-    }
-
-    .record-drawer.open { transform: translateX(0); }
-
-    .drawer-head {
+    .card-popover.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .popover-head {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 12px;
-      padding: 16px;
+      padding: 13px;
       border-bottom: 1px solid var(--line);
-      background: var(--panel);
+      background: #fbfcfd;
+      border-radius: 10px 10px 0 0;
     }
-
-    .drawer-body {
-      display: grid;
-      gap: 12px;
-      min-height: 0;
-      padding: 16px;
-      overflow-y: auto;
-    }
-
-    .record-preview {
-      min-height: 360px;
-      padding: 12px;
+    .popover-head p { margin-bottom: 0; }
+    .topic-editor, .ai-card { display: grid; gap: 10px; padding: 12px; }
+    .topic-editor { border-bottom: 1px solid var(--line); background: #fbfdff; }
+    .ai-card { border-left: 4px solid var(--teal); }
+    .ai-card.conflict { border-left-color: var(--red); }
+    .ai-card.split { border-left-color: var(--violet); }
+    .ai-card.research, .ai-card.experiment { border-left-color: var(--amber); }
+    .ai-card.answer { border-left-color: var(--blue); }
+    .ai-card p { margin-bottom: 0; }
+    .hint, .impact, .quiet-box, .task-reason, .error-log {
       border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-      white-space: pre-wrap;
-      line-height: 1.52;
-      font-size: 13px;
-    }
-
-    .error-log {
-      padding: 8px 10px;
-      border: 1px solid #efcaca;
       border-radius: 7px;
-      background: #fff7f7;
-      color: var(--red);
+      background: #f8fbfc;
+      color: var(--muted);
+      padding: 9px;
       font-size: 12px;
       line-height: 1.45;
     }
+    .error-log { border-color: #efbdc2; background: #fff8f8; color: var(--red); }
+    .impact strong { color: var(--text); }
+    .child-preview { display: grid; gap: 8px; max-height: 190px; overflow: auto; }
+    .child-preview div { border: 1px solid var(--line); border-radius: 7px; padding: 9px; background: #fff; }
+    .child-preview strong { display: block; margin-bottom: 5px; }
+    .child-preview p { margin-bottom: 0; font-size: 12px; }
+    .pending-count { align-self: center; color: var(--muted); font-size: 12px; font-weight: 800; }
 
-    @media (max-width: 1160px) {
-      main { grid-template-columns: 1fr; }
-      section { height: auto; min-height: 520px; }
-      .info-grid { grid-template-columns: 1fr; }
+    .tasks {
+      display: grid;
+      gap: 12px;
+      max-height: calc(100vh - 230px);
+      min-height: 560px;
+      overflow: auto;
+      padding: 14px;
+    }
+    .task-card, .update-card, .not-task-card {
+      display: grid;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+    }
+    .task-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .task-card p, .update-card p, .not-task-card p { margin-bottom: 0; }
+    .criteria, .task-grid, .split-update { display: grid; gap: 8px; }
+    .task-grid { grid-template-columns: 1fr 1fr; }
+    .criteria textarea { min-height: 72px; }
+    .split-update { grid-template-columns: 1fr 1fr; }
+    .update-part { border: 1px solid var(--line); border-radius: 7px; padding: 9px; background: #fbfcfd; }
+    .task-filter { display: flex; flex-wrap: wrap; gap: 7px; }
+    .task-filter button.active { border-color: var(--teal); background: var(--teal-soft); color: var(--teal); }
+
+    .meeting-panel { margin: 0 22px 22px; }
+    .record {
+      margin: 14px;
+      padding: 12px;
+      min-height: 190px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      white-space: pre-wrap;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    dialog {
+      width: min(620px, calc(100vw - 40px));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0;
+    }
+    dialog form { display: grid; gap: 12px; padding: 16px; }
+    dialog textarea { min-height: 180px; }
+
+    @media (max-width: 1120px) {
+      header, .panel-head { flex-direction: column; }
+      .app-shell { grid-template-columns: 1fr; }
+      .roadmap-panel, .task-panel { min-height: auto; }
+      .roadmap-shell, .tasks { max-height: none; }
     }
   </style>
 </head>
@@ -605,313 +362,212 @@ export function renderIdeaCruisePage() {
   <header>
     <div>
       <h1>IDEA CRUISE Roadmap Desk</h1>
-      <div class="subtitle">주제를 던지고, 중요한 선택을 먼저 고른 뒤, 시간이 필요한 일만 Subjector task로 넘깁니다.</div>
+      <p>1층은 topic/root 지도, 2층은 선택한 topic에 붙는 AI 카드입니다. 고정한 기준과 충돌할 때만 AI가 강하게 개입합니다.</p>
     </div>
-    <div class="top-actions">
-      <button class="ghost" id="open-record" type="button">회의록 열기</button>
+    <div class="status">
+      <span>카드 생성: GPT-5.4</span>
+      <span>회의록 생성: Gemini 2.5 Flash-Lite</span>
+      <span>Task 최종 정제: Gemini 2.5 Flash-Lite</span>
     </div>
   </header>
 
-  <main>
-    <section>
-      <div class="section-head">
-        <div class="head-row">
-          <div>
-            <h2>1. Topic Page</h2>
-            <p class="hint">왼쪽 한 페이지는 하나의 주제를 담당합니다<br>다음 페이지로 가면 가운데 카드도 새 주제 전용으로 바뀝니다.</p>
-          </div>
-          <div class="actions">
-            <button id="add-topic" type="button">다음 주제 추가</button>
-            <button class="secondary" id="remove-topic" type="button">제거</button>
-          </div>
+  <main class="app-shell">
+    <section class="panel roadmap-panel">
+      <div class="panel-head">
+        <div>
+          <h2>1F Topic Root Layer</h2>
+          <p>topic을 클릭하면 2층 AI 카드 팝오버가 열립니다. 같은 topic을 다시 누르면 닫힙니다.</p>
         </div>
-      </div>
-      <div class="section-body">
-        <article class="topic-card">
-          <div class="topic-title-row">
-            <div>
-              <h3 id="topic-title"></h3>
-              <div class="meta" id="topic-meta">이 페이지의 가운데 카드는 현재 주제에만 연결됩니다.</div>
-            </div>
-            <span class="pill answer" id="topic-state">active</span>
-          </div>
-        </article>
-
-        <article class="entry-card">
-          <textarea id="topic-text"></textarea>
-          <div class="entry-foot">
-            <span class="meta">원문과 보강이 한 카드에 누적됨</span>
-            <div class="actions">
-              <button class="secondary" id="analyze-topic" type="button">AI Analysis</button>
-              <button id="complete-topic" type="button">완료</button>
-            </div>
-          </div>
-        </article>
-
-        <div class="page-nav" id="page-nav"></div>
-        <div class="meta">새 궁금증이 생기면 다음 주제 추가를 눌러 전용 페이지에서 분석합니다.</div>
-      </div>
-    </section>
-
-    <section>
-      <div class="section-head">
-        <h2>2. Roadmap Intervention</h2>
-        <p class="hint">카드 생성: GPT-5.4. 가장 중요한 결정 1개를 크게 띄우고, 나머지는 branch 후보로 좁혀 둡니다.</p>
-      </div>
-      <div class="section-body" id="card-list"></div>
-    </section>
-
-    <section>
-      <div class="section-head">
-        <h2>3. Outcome Tasks</h2>
-        <p class="hint">Task 최종 정제: Gemini 2.5 Flash-Lite. 결정 자체가 아니라 자료조사, 검증, 구현처럼 시간이 필요한 일만 남깁니다.</p>
-      </div>
-      <div class="section-body">
-        <div class="page-nav task-filter-nav" id="task-filter-nav"></div>
         <div class="actions">
-          <button class="secondary" id="generate-record" type="button">회의록 생성</button>
+          <button id="add-topic" class="primary" type="button">Topic 추가</button>
+          <button id="generate-record" type="button">회의록 생성</button>
         </div>
-        <div class="status">회의록 생성: Gemini 2.5 Flash-Lite</div>
-        <article class="not-task" id="not-task"></article>
-        <div id="task-update-list"></div>
+      </div>
+      <div class="roadmap-shell">
+        <div class="layer-label">
+          <span class="tag strong">1층</span>
+          <span id="layer-state">topic을 추가하거나 클릭하세요.</span>
+        </div>
+        <div id="roadmap" class="roadmap">
+          <svg id="root-lines" class="root-lines" aria-hidden="true"></svg>
+          <div id="topic-nodes"></div>
+          <section id="card-popover" class="card-popover" aria-live="polite"></section>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel task-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Task Candidates</h2>
+          <p>자료조사, 검증, 구현처럼 시간을 써야 해결되는 일만 남깁니다. 각 task에는 생성 맥락을 표시합니다.</p>
+        </div>
+        <button id="refresh-tasks" class="primary" type="button">갱신</button>
+      </div>
+      <div class="tasks">
+        <div id="task-filter" class="task-filter"></div>
         <div id="task-generation-error"></div>
         <div id="task-list"></div>
+        <div id="task-update-list"></div>
+        <div id="not-task-list"></div>
       </div>
-    </section>
+    </aside>
   </main>
 
-  <aside class="record-drawer" id="record-drawer" aria-label="meeting record drawer">
-    <div class="drawer-head">
+  <section class="panel meeting-panel">
+    <div class="panel-head">
       <div>
         <h2>Meeting Record</h2>
-        <p class="hint">#project-log에 올릴 판단 기록 초안입니다.</p>
+        <p>task 나열이 아니라 로드맵이 왜 이렇게 바뀌었는지 판단을 남기는 기록입니다.</p>
       </div>
+      <button id="copy-record" type="button">결과록 복사</button>
+    </div>
+    <pre id="meeting-record" class="record">회의록 생성 버튼을 누르면 판단 기록 초안이 여기에 표시됩니다.</pre>
+  </section>
+
+  <dialog id="topic-dialog">
+    <form id="topic-form" method="dialog">
+      <h2>Topic 추가</h2>
+      <p>새 topic은 선택한 topic 밑에 자동 root로 연결됩니다. 선택 topic이 없으면 최상위 topic으로 생성됩니다.</p>
+      <label>Parent topic
+        <select id="parent-topic"></select>
+      </label>
+      <label>Topic 제목
+        <input id="topic-title-input" placeholder="예: 전술 헤드셋">
+      </label>
+      <label>Topic 내용
+        <textarea id="topic-text-input" placeholder="회의에서 다룰 생각, 기준, 질문을 적으세요."></textarea>
+      </label>
       <div class="actions">
-        <button id="copy-record" type="button">결과록 복사</button>
-        <button class="secondary" id="close-record" type="button">닫기</button>
+        <button id="close-topic-dialog" type="button">닫기</button>
+        <button class="primary" type="submit">추가</button>
       </div>
-    </div>
-    <div class="drawer-body">
-      <div class="record-preview" id="meeting-record"></div>
-      <div class="meta">회의록은 task 목록이 아니라, 어떤 판단을 했는지 남기는 글입니다.</div>
-    </div>
-  </aside>
+    </form>
+  </dialog>
 
   <script>
-    const storageKey = 'ideaCruiseTopicPagesDraft';
-    const defaultTopicText = '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?\\n\\n[알게 된 것]\\n- 아직 정리 전\\n\\n[조사할 것]\\n- \\n\\n[해볼 것]\\n- \\n\\n[정한 것]\\n- ';
-    const state = loadState() || {
-      pages: [
-        {
-          id: 'page-1',
-          number: 1,
-          title: '폭음 데이터',
-          text: defaultTopicText,
-          cards: seedCards(),
-          selectedCardIndex: 2,
-          completed: false
-        }
-      ],
-      activePageId: 'page-1',
-      taskFilter: 'all',
-      tasks: [],
-      existingTaskUpdates: [],
-      notTasks: [],
-      taskGenerationError: '',
-      record: '',
-      recordDrawerOpen: false
-    };
+    const STORAGE_KEY = 'idea-cruise-roadmap-v2';
+    const state = loadState();
+    let layoutCache = new Map();
 
-    normalizeState();
+    const roadmapEl = document.getElementById('roadmap');
+    const rootLinesEl = document.getElementById('root-lines');
+    const topicNodesEl = document.getElementById('topic-nodes');
+    const cardPopoverEl = document.getElementById('card-popover');
+    const layerStateEl = document.getElementById('layer-state');
+    const taskListEl = document.getElementById('task-list');
+    const taskUpdateListEl = document.getElementById('task-update-list');
+    const notTaskListEl = document.getElementById('not-task-list');
+    const taskFilterEl = document.getElementById('task-filter');
+    const recordEl = document.getElementById('meeting-record');
+    const topicDialog = document.getElementById('topic-dialog');
+    const parentTopicEl = document.getElementById('parent-topic');
 
-    function normalizeState() {
-      const shouldResetRoadmapSelection = state.roadmapUiVersion !== 'arrow-roadmap-v1';
-      if (!Array.isArray(state.pages) || state.pages.length === 0) {
-        state.pages = [{ id: 'page-1', number: 1, title: '새 주제', text: defaultTopicText, cards: seedCards(), completed: false }];
-      }
-      state.pages.forEach(function(page, index) {
-        page.id = page.id || 'page-' + (index + 1);
-        page.number = page.number || index + 1;
-        page.title = page.title || titleFromText(page.text) || '새 주제';
-        page.text = page.text || '';
-        page.cards = Array.isArray(page.cards) ? page.cards : [];
-        if (shouldResetRoadmapSelection || !Number.isInteger(page.selectedCardIndex)) {
-          const decisionIndex = page.cards.findIndex(function(card) { return normalizeKind(card.kind) === 'decision'; });
-          page.selectedCardIndex = decisionIndex >= 0 ? decisionIndex : 0;
-        }
-        page.completed = Boolean(page.completed);
-      });
-      state.roadmapUiVersion = 'arrow-roadmap-v1';
-      if (!state.pages.some(function(page) { return page.id === state.activePageId; })) {
-        state.activePageId = state.pages[0].id;
-      }
-      state.taskFilter = state.taskFilter || 'all';
-      state.tasks = Array.isArray(state.tasks) ? state.tasks : [];
-      state.existingTaskUpdates = Array.isArray(state.existingTaskUpdates) ? state.existingTaskUpdates : [];
-      state.notTasks = Array.isArray(state.notTasks) ? state.notTasks : [];
-      state.taskGenerationError = state.taskGenerationError || '';
-      state.record = state.record || '';
-      state.recordDrawerOpen = Boolean(state.recordDrawerOpen);
-    }
-
-    function seedCards() {
-      return [
-        {
-          id: 'card-answer-1',
-          kind: 'answer',
-          type: '즉시 답변 · 펼쳐보기',
-          title: '데이터셋 후보가 왜 언급되는지 먼저 설명',
-          body: '자료조사 task를 만들기 전에 AI가 알고 있는 기본 설명을 펼쳐서 보여줍니다. 이 설명은 task가 아니라 이해 보조입니다.',
-          details: [
-            { title: 'AudioSet', body: '구글이 만든 대규모 오디오 이벤트 데이터셋입니다. 범위가 넓어서 후보 탐색 출발점으로 좋지만 라벨이 거칠 수 있습니다.' },
-            { title: 'ESC-50', body: '환경음 50종 분류 데이터셋입니다. 작고 구조가 단순해 빠른 실험에 좋지만 전장 폭음 특화는 아닙니다.' },
-            { title: 'UrbanSound8K', body: '도시 소음 중심 데이터셋입니다. 사이렌, 드릴 같은 생활/공사장 소음 검토에는 유용하지만 총성/폭발음은 별도 확인이 필요합니다.' }
-          ],
-          suggestion: '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?\\n\\n[알게 된 것]\\n- AudioSet은 넓은 오디오 이벤트 후보 탐색용, ESC-50은 빠른 환경음 실험용, UrbanSound8K는 도시/공사장 소음 검토용으로 볼 수 있습니다.\\n\\n[조사할 것]\\n- \\n\\n[해볼 것]\\n- \\n\\n[정한 것]\\n- '
-        },
-        {
-          id: 'card-research-1',
-          kind: 'research',
-          type: '확인 필요 · task 후보 가능',
-          title: '라이선스와 라벨 구조는 직접 확인해야 합니다',
-          body: '후보의 이름을 아는 것과 프로젝트에 쓸 수 있는 것은 다릅니다. 그래서 이 항목은 자료조사 task 후보가 됩니다.',
-          suggestion: '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터는 무엇인가?\\n\\n[알게 된 것]\\n- 후보 데이터셋 이름을 아는 것과 실제 프로젝트에 쓸 수 있는 것은 다릅니다.\\n\\n[조사할 것]\\n- AudioSet, ESC-50, UrbanSound8K의 라이선스, 라벨 구조, 폭음/위험음 관련성, MVP 실험 적합성을 비교합니다.\\n\\n[해볼 것]\\n- \\n\\n[정한 것]\\n- '
-        },
-        {
-          id: 'card-decision-1',
-          kind: 'decision',
-          type: '결정 필요 · 지금 회의에서 선택',
-          title: '전장용 vs 공사현장용 중 하나로 좁히기',
-          body: '이건 task로 넘기기보다 지금 회의에서 선택해야 하는 기준입니다. 선택하면 왼쪽에 정한 것으로 기록됩니다.',
-          choices: [
-            { label: '전장용', body: '발표 임팩트는 크지만 데이터 수집과 안전성 설명이 어려울 수 있습니다. 총성/폭발음 계열 데이터가 더 중요합니다.', suggestion: '전장용 폭음 감지를 MVP 방향으로 좁힙니다.\\n\\n[알게 된 것]\\n- 총성/폭발음 계열 데이터가 중요합니다.\\n\\n[조사할 것]\\n- 전장 폭음 데이터셋 후보, 라이선스, 라벨 구조를 확인합니다.\\n\\n[해볼 것]\\n- 실제 모델 학습과 latency 측정은 후보 데이터셋 확인 뒤 진행합니다.\\n\\n[정한 것]\\n- 공사현장용은 이번 topic에서 제외합니다.' },
-            { label: '공사현장용', body: '시연과 설득이 쉽고 도시/공사장 소음 데이터와 연결하기 좋습니다. 졸업작품 MVP 범위로 더 안정적입니다.', suggestion: '공사현장용 청력 보호/위험음 감지를 MVP 방향으로 좁힙니다.\\n\\n[알게 된 것]\\n- 도시/공사장 소음 데이터와 연결하기 쉽고 시연 가능성이 높습니다.\\n\\n[조사할 것]\\n- 공사현장 소음 데이터셋과 위험음 라벨 구조를 확인합니다.\\n\\n[해볼 것]\\n- 현장 소음 샘플로 감지 latency를 측정합니다.\\n\\n[정한 것]\\n- 전장용 폭음 감지는 이번 topic에서 제외합니다.' }
-          ],
-          suggestion: '전장용과 공사현장용 중 하나로 MVP 범위를 좁혀야 합니다.\\n\\n[알게 된 것]\\n- 두 방향은 데이터셋, 시연 방식, 안전성 설명이 다릅니다.\\n\\n[조사할 것]\\n- \\n\\n[해볼 것]\\n- \\n\\n[정한 것]\\n- 아직 선택 전입니다.'
-        },
-        {
-          id: 'card-experiment-1',
-          kind: 'experiment',
-          type: '실험 필요 · task 후보 가능',
-          title: '실시간 감지는 직접 돌려봐야 압니다',
-          body: '모델이 라즈베리 파이에서 돌아가는지, latency가 시연 가능한 수준인지는 설명만으로 끝나지 않습니다.',
-          suggestion: '전장 상황에서 폭음을 막아주는 역할이라면 학습해야 할 데이터와 실시간 처리 가능성을 함께 확인합니다.\\n\\n[알게 된 것]\\n- 라즈베리 파이에서 돌아가는지와 latency는 설명만으로 확정할 수 없습니다.\\n\\n[조사할 것]\\n- 사용할 sound event model 후보를 정합니다.\\n\\n[해볼 것]\\n- 라즈베리 파이에서 샘플 sound event model의 평균 latency를 측정합니다.\\n- 마이크 입력 조건과 추론 시간을 함께 기록합니다.\\n\\n[정한 것]\\n- '
-        }
-      ];
+    function defaultState() {
+      return {
+        topics: [],
+        activeTopicId: null,
+        tasks: [],
+        existingTaskUpdates: [],
+        notTasks: [],
+        taskFilter: 'all',
+        taskGenerationError: '',
+        record: ''
+      };
     }
 
     function loadState() {
       try {
-        const saved = localStorage.getItem(storageKey);
-        return saved ? JSON.parse(saved) : null;
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        return Object.assign(defaultState(), JSON.parse(raw));
       } catch (error) {
-        return null;
+        return defaultState();
       }
     }
 
     function saveState() {
-      localStorage.setItem(storageKey, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
-    function activePage() {
-      return state.pages.find(function(page) { return page.id === state.activePageId; }) || state.pages[0];
+    function createId(prefix) {
+      return prefix + '-' + Date.now() + '-' + Math.random().toString(16).slice(2);
     }
 
-    function completedPages() {
-      return state.pages.filter(function(page) { return page.completed; });
+    function activeTopic() {
+      return state.topics.find(function(topic) { return topic.id === state.activeTopicId; }) || null;
+    }
+
+    function completedTopics() {
+      return state.topics.filter(function(topic) { return topic.completed; });
+    }
+
+    function compactText(text, length) {
+      return String(text || '').replace(/\\s+/g, ' ').trim().slice(0, length || 160);
     }
 
     function titleFromText(text) {
-      const firstLine = String(text || '').split('\\n').map(function(line) { return line.trim(); }).find(Boolean);
-      return firstLine ? firstLine.slice(0, 28) : '';
+      const first = compactText(text, 80).split(/[.?!]/)[0].trim();
+      return first.length > 28 ? first.slice(0, 28) + '...' : first;
     }
 
-    function addTopicPage() {
-      const number = state.pages.length + 1;
-      const page = {
-        id: 'page-' + Date.now(),
-        number: number,
-        title: '새 주제 ' + number,
-        text: '',
-        cards: [],
-        completed: false
-      };
-      state.pages.push(page);
-      state.activePageId = page.id;
-      render();
+    function includesAny(text, terms) {
+      return terms.some(function(term) { return text.indexOf(term) >= 0; });
     }
 
-    function createEmptyTopicPage() {
+    function broadTopicScore(text) {
+      return [
+        ['마이크', '환경음', '주변음', '음성', '무전'],
+        ['스피커', '출력', '안내'],
+        ['데이터', '데이터셋', '학습', '라벨'],
+        ['하드웨어', '보드', '라즈베리', 'ESP32', 'Seeed'],
+        ['검증', '실험', '테스트', '성능']
+      ].filter(function(terms) { return includesAny(text, terms); }).length;
+    }
+
+    function localSplitCard(topic) {
       return {
-        id: 'page-' + Date.now(),
-        number: 1,
-        title: '새 주제',
-        text: '',
-        cards: [],
-        completed: false
+        id: 'split-' + topic.id,
+        kind: 'split',
+        type: 'topic 분리 제안',
+        title: '기능별 topic 분리 제안',
+        body: '이 topic에는 입력, 출력, 데이터, 검증이 섞여 있습니다. 먼저 기능별 초안으로 나누면 회의 중 어떤 부분이 고정됐고 어떤 부분이 아직 열려 있는지 더 잘 보입니다.',
+        suggestion: topic.text,
+        impact: '현재 topic은 parent로 유지하고, child topic들이 root로 연결됩니다. 각 child topic에는 AI 초안 내용만 들어갑니다.',
+        childTopics: [
+          { title: '마이크 (환경음)', text: '총성, 폭발음, 장비 충격음처럼 줄이거나 감지해야 하는 외부 위험 소리를 다룬다. 첫 MVP에서는 총성/폭발음 중심으로 좁힌다.' },
+          { title: '마이크 (주변음)', text: '팀원 목소리, 무전, 경고음처럼 사용자가 놓치면 안 되는 주변 정보를 다룬다. 환경음 차단과 충돌하지 않도록 보존 기준을 정한다.' },
+          { title: '내부 스피커', text: '차단되거나 줄어든 위험 정보를 사용자에게 어떤 방식으로 다시 전달할지 정한다. 안내음이 주변음 인지를 방해하지 않아야 한다.' },
+          { title: '학습 데이터', text: '환경음 감지와 분류에 필요한 공개 데이터셋 후보, 라벨 구조, 라이선스를 확인한다.' },
+          { title: '검증 실험', text: '소음 감소, 위험 인지 유지, 음성 보존, 지연 시간을 확인할 최소 실험 기준을 정한다.' }
+        ]
       };
     }
 
-    function removeActiveTopicPage() {
-      const removedPageId = state.activePageId;
-      const removedIndex = state.pages.findIndex(function(page) { return page.id === removedPageId; });
-      state.pages = state.pages.filter(function(page) { return page.id !== removedPageId; });
-      if (state.pages.length === 0) {
-        state.pages = [createEmptyTopicPage()];
-      }
-      state.pages.forEach(function(page, index) {
-        page.number = index + 1;
+    function localConflictCard(topic) {
+      const fixedTopic = state.topics.find(function(item) {
+        return item.id !== topic.id && item.fixed && includesAny(item.text, ['전장', '전술', '군용', '폭음', '총성', '폭발음']);
       });
-      const nextIndex = Math.min(Math.max(removedIndex, 0), state.pages.length - 1);
-      state.activePageId = state.pages[nextIndex].id;
-      state.tasks = state.tasks.filter(function(task) { return task.pageId !== removedPageId; });
-      state.tasks.forEach(function(task) {
-        const page = state.pages.find(function(item) { return item.id === task.pageId; });
-        if (page) {
-          task.pageNumber = page.number;
-        }
-      });
-      if (state.taskFilter === removedPageId) {
-        state.taskFilter = 'all';
-      }
-      state.existingTaskUpdates = [];
-      state.notTasks = [];
-      state.taskGenerationError = '';
-      render();
+      if (!fixedTopic || !includesAny(topic.text, ['공사현장', '건설', '장비 소음', '산업'])) return null;
+      return {
+        id: 'conflict-' + topic.id,
+        kind: 'conflict',
+        type: '충돌 경고',
+        title: '고정 topic과 충돌',
+        body: '고정된 "' + fixedTopic.title + '"은 전장용 폭음 차단을 기준으로 삼고 있는데, 현재 topic에는 공사현장/산업 소음 기준이 섞여 있습니다.',
+        suggestion: topic.text,
+        impact: '영향 topic: ' + fixedTopic.title,
+        affectedTopicIds: [fixedTopic.id]
+      };
     }
 
-    function setActivePage(pageId) {
-      state.activePageId = pageId;
-      render();
-    }
-
-    function setTaskFilter(filter) {
-      state.taskFilter = filter;
-      render();
-    }
-
-    function rewriteActivePage(content) {
-      const page = activePage();
-      if (!content || !content.trim()) {
-        throw new Error('적용할 내용이 비어 있습니다.');
-      }
-      page.text = content.trim();
-      page.title = titleFromText(page.text) || page.title;
-    }
-
-    async function completeActivePage() {
-      const page = activePage();
-      page.completed = true;
-      page.title = titleFromText(page.text) || page.title;
-      await requestTaskCandidates();
-      render();
+    function normalizeKind(kind) {
+      if (['answer', 'research', 'experiment', 'decision', 'filter', 'split', 'conflict'].includes(kind)) return kind;
+      return 'research';
     }
 
     function mapApiCard(card, index) {
-      const kindMap = {
-        info: 'answer',
-        warn: 'research'
-      };
+      const kindMap = { info: 'answer', warn: 'research' };
       return {
         id: 'api-card-' + Date.now() + '-' + index,
         kind: card.kind || kindMap[card.tag] || 'research',
@@ -920,46 +576,55 @@ export function renderIdeaCruisePage() {
         body: card.body || '',
         suggestion: card.suggestion || '',
         details: Array.isArray(card.details) ? card.details : [],
-        choices: Array.isArray(card.choices) ? card.choices : []
+        choices: Array.isArray(card.choices) ? card.choices : [],
+        impact: card.impact || card.reason || ''
       };
     }
 
-    async function requestCardsForActivePage() {
-      const page = activePage();
+    function ensurePriorityCards(topic) {
+      const conflict = localConflictCard(topic);
+      if (conflict) {
+        topic.cards = [conflict].concat((topic.cards || []).filter(function(card) { return card.kind !== 'conflict'; }));
+        return;
+      }
+      if (broadTopicScore(topic.text) >= 3 && !(topic.cards || []).some(function(card) { return card.kind === 'split'; })) {
+        topic.cards = [localSplitCard(topic)].concat(topic.cards || []);
+      }
+    }
+
+    async function requestCardsForTopic(topic) {
+      ensurePriorityCards(topic);
+      if (topic.cards && topic.cards[0] && (topic.cards[0].kind === 'conflict' || topic.cards[0].kind === 'split')) {
+        return;
+      }
       const response = await fetch('/idea-cruise/cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entryText: page.text,
-          completedEntries: completedPages().map(function(item) { return item.text; })
+          entryText: topic.text,
+          completedEntries: completedTopics().map(function(item) { return item.text; })
         })
       });
       const result = await response.json().catch(function() { return {}; });
       if (!response.ok) {
         throw new Error(result.error || 'AI Analysis 연결에 실패했습니다.');
       }
-      page.cards = (result.cards || []).map(mapApiCard);
-      page.selectedCardIndex = Math.max(0, page.cards.findIndex(function(card) { return normalizeKind(card.kind) === 'decision'; }));
+      topic.cards = (result.cards || []).map(mapApiCard);
+      ensurePriorityCards(topic);
     }
 
     async function requestTaskCandidates() {
-      const pages = completedPages();
-      if (pages.length === 0) {
-        state.taskGenerationError = '완료된 topic page가 없습니다.';
+      const completed = completedTopics();
+      if (completed.length === 0) {
+        state.taskGenerationError = '완료된 topic이 없습니다. topic 팝오버에서 완료를 누른 뒤 갱신하세요.';
         return;
       }
-
       const response = await fetch('/idea-cruise/task-candidates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          completedPages: completedPages().map(function(page) {
-            return {
-              id: page.id,
-              number: page.number,
-              title: page.title,
-              text: page.text
-            };
+          completedPages: completed.map(function(topic, index) {
+            return { id: topic.id, number: index + 1, title: topic.title, text: topic.text };
           })
         })
       });
@@ -968,7 +633,6 @@ export function renderIdeaCruisePage() {
         state.taskGenerationError = result.error || 'Task 후보를 만들지 못했습니다.';
         return;
       }
-
       state.tasks = Array.isArray(result.tasks) ? result.tasks.map(function(task, index) {
         return {
           id: task.id || 'task-' + Date.now() + '-' + index,
@@ -977,7 +641,7 @@ export function renderIdeaCruisePage() {
           title: task.title || '',
           neededInfo: task.neededInfo || '',
           doneCriteria: task.doneCriteria || '',
-          reason: task.reason || '',
+          reason: task.reason || task.sourceReason || '',
           assignee: task.assignee || '미배정',
           importance: task.importance || '보통',
           kind: task.kind || 'research',
@@ -996,48 +660,228 @@ export function renderIdeaCruisePage() {
         };
       }) : [];
       state.notTasks = Array.isArray(result.notTasks) ? result.notTasks.map(function(item, index) {
-        if (typeof item === 'string') {
-          return { id: 'not-task-' + Date.now() + '-' + index, content: item, reason: '' };
-        }
-        return {
-          id: item.id || 'not-task-' + Date.now() + '-' + index,
-          content: item.content || '',
-          reason: item.reason || ''
-        };
+        if (typeof item === 'string') return { id: 'not-task-' + Date.now() + '-' + index, content: item, reason: '' };
+        return { id: item.id || 'not-task-' + Date.now() + '-' + index, content: item.content || '', reason: item.reason || '' };
       }) : [];
       state.taskGenerationError = '';
+      if (state.taskFilter !== 'all' && !state.tasks.some(function(task) { return task.pageId === state.taskFilter; })) {
+        state.taskFilter = 'all';
+      }
     }
 
-    function renderTopicPage() {
-      const page = activePage();
-      document.getElementById('topic-title').textContent = 'Page ' + page.number + ' · ' + (page.title || '새 주제');
-      document.getElementById('topic-state').textContent = page.completed ? 'completed' : 'active';
-      document.getElementById('topic-text').value = page.text;
-      document.getElementById('page-nav').innerHTML = state.pages.map(function(item) {
-        return '<button class="dot ' + (item.id === state.activePageId ? 'active' : '') + '" data-page-id="' + item.id + '" type="button">' + item.number + '</button>';
-      }).join('');
-      document.querySelectorAll('[data-page-id]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-          setActivePage(event.target.dataset.pageId);
+    function addTopic({ title, text, parentId }) {
+      const topic = {
+        id: createId('topic'),
+        title: title || titleFromText(text) || '새 topic',
+        text: text || title || '새 topic',
+        parentId: parentId || null,
+        fixed: false,
+        completed: false,
+        cards: []
+      };
+      ensurePriorityCards(topic);
+      state.topics.push(topic);
+      state.activeTopicId = topic.id;
+    }
+
+    function removeActiveTopic() {
+      const topic = activeTopic();
+      if (!topic) return;
+      const removeIds = new Set([topic.id]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        state.topics.forEach(function(item) {
+          if (item.parentId && removeIds.has(item.parentId) && !removeIds.has(item.id)) {
+            removeIds.add(item.id);
+            changed = true;
+          }
         });
+      }
+      state.topics = state.topics.filter(function(item) { return !removeIds.has(item.id); });
+      state.tasks = state.tasks.filter(function(task) { return !removeIds.has(task.pageId); });
+      state.existingTaskUpdates = [];
+      state.notTasks = [];
+      state.activeTopicId = state.topics[0]?.id || null;
+    }
+
+    function applyCard(topic, card, content) {
+      if (topic.fixed && card.kind !== 'conflict') {
+        throw new Error('고정된 topic은 고정 해제 후 수정할 수 있습니다.');
+      }
+      if (card.kind === 'split') {
+        const existing = new Set(state.topics.filter(function(item) { return item.parentId === topic.id; }).map(function(item) { return item.title; }));
+        (card.childTopics || []).forEach(function(child) {
+          if (!existing.has(child.title)) {
+            addTopic({ title: child.title, text: child.text, parentId: topic.id });
+          }
+        });
+        state.activeTopicId = topic.id;
+      } else if (content && content.trim()) {
+        topic.text = content.trim();
+        topic.title = titleFromText(topic.text) || topic.title;
+      }
+      topic.cards = (topic.cards || []).filter(function(item) { return item.id !== card.id; });
+      ensurePriorityCards(topic);
+    }
+
+    function completeTopic(topic) {
+      topic.completed = true;
+      topic.title = titleFromText(topic.text) || topic.title;
+      return requestTaskCandidates();
+    }
+
+    function computeLayout() {
+      const childrenByParent = new Map();
+      state.topics.forEach(function(topic) {
+        const parent = topic.parentId || 'root';
+        if (!childrenByParent.has(parent)) childrenByParent.set(parent, []);
+        childrenByParent.get(parent).push(topic);
       });
+      const positioned = [];
+      const roots = childrenByParent.get('root') || [];
+      function place(topic, depth, rowHint) {
+        const row = positioned.length + rowHint;
+        positioned.push({ topic: topic, depth: depth, row: row });
+        (childrenByParent.get(topic.id) || []).forEach(function(child, index) { place(child, depth + 1, index); });
+      }
+      roots.forEach(function(topic, index) { place(topic, 0, index); });
+      const positions = new Map();
+      positioned.forEach(function(item) {
+        positions.set(item.topic.id, { x: 56 + item.depth * 310, y: 82 + item.row * 172 });
+      });
+      const maxDepth = Math.max(0, ...positioned.map(function(item) { return item.depth; }));
+      const maxRow = Math.max(0, ...positioned.map(function(item) { return item.row; }));
+      return {
+        positions: positions,
+        width: Math.max(980, 56 + (maxDepth + 1) * 310 + 260),
+        height: Math.max(560, 82 + (maxRow + 1) * 172 + 190)
+      };
     }
 
-    function selectedCardIndex(page) {
-      if (!page.cards.length) return -1;
-      if (!Number.isInteger(page.selectedCardIndex)) {
-        const decisionIndex = page.cards.findIndex(function(card) { return normalizeKind(card.kind) === 'decision'; });
-        page.selectedCardIndex = decisionIndex >= 0 ? decisionIndex : 0;
+    function renderRoadmap() {
+      state.topics.forEach(ensurePriorityCards);
+      const layout = computeLayout();
+      layoutCache = layout.positions;
+      roadmapEl.style.width = layout.width + 'px';
+      roadmapEl.style.height = layout.height + 'px';
+      rootLinesEl.setAttribute('viewBox', '0 0 ' + layout.width + ' ' + layout.height);
+      rootLinesEl.setAttribute('width', layout.width);
+      rootLinesEl.setAttribute('height', layout.height);
+      rootLinesEl.innerHTML = renderRootLines(layout.positions);
+
+      if (!state.topics.length) {
+        topicNodesEl.innerHTML = '<article class="empty-roadmap"><strong>아직 topic이 없습니다.</strong><p>먼저 "전술 헤드셋" 같은 큰 topic을 추가하세요.</p></article>';
+        layerStateEl.textContent = '첫 topic을 추가하세요.';
+        roadmapEl.classList.remove('card-layer-on');
+        return;
       }
-      if (page.selectedCardIndex < 0 || page.selectedCardIndex >= page.cards.length) {
-        page.selectedCardIndex = 0;
-      }
-      return page.selectedCardIndex;
+
+      roadmapEl.classList.toggle('card-layer-on', Boolean(state.activeTopicId));
+      layerStateEl.textContent = state.activeTopicId
+        ? (activeTopic()?.title || '선택 topic') + ' topic의 2층 AI 카드가 켜져 있습니다.'
+        : 'topic을 클릭하면 2층 AI 카드가 켜집니다.';
+
+      topicNodesEl.innerHTML = state.topics.map(function(topic) {
+        const position = layout.positions.get(topic.id);
+        const cardCount = (topic.cards || []).length;
+        const currentCard = topic.cards && topic.cards[0];
+        const conflict = currentCard && currentCard.kind === 'conflict';
+        return '<button class="topic-node ' + (topic.fixed ? 'fixed ' : '') + (conflict ? 'conflict ' : '') + (topic.id === state.activeTopicId ? 'active' : '') + '" style="left:' + position.x + 'px;top:' + position.y + 'px" data-topic="' + topic.id + '" type="button">' +
+          '<small>' + (topic.parentId ? 'Topic' : 'Project Topic') + '</small>' +
+          '<strong>' + escapeHtml(topic.title) + '</strong>' +
+          '<span>' + escapeHtml(compactText(topic.text, 112)) + '</span>' +
+          '<span class="topic-meta">' +
+            tag(topic.fixed ? '고정' : '초안', topic.fixed ? 'blue' : '') +
+            tag(topic.completed ? '완료' : '진행') +
+            tag('대기 카드 ' + Math.max(cardCount - 1, 0)) +
+            (conflict ? tag('충돌', 'rose') : '') +
+          '</span>' +
+        '</button>';
+      }).join('');
     }
 
-    function nodeTitle(text, fallback) {
-      const value = compactText(text || fallback || '');
-      return value.length > 42 ? value.slice(0, 42) + '...' : value;
+    function renderRootLines(positions) {
+      const lines = [];
+      state.topics.forEach(function(topic) {
+        if (!topic.parentId || !positions.has(topic.parentId) || !positions.has(topic.id)) return;
+        const from = positions.get(topic.parentId);
+        const to = positions.get(topic.id);
+        const startX = from.x + 220;
+        const startY = from.y + 72;
+        const endX = to.x;
+        const endY = to.y + 72;
+        const midX = (startX + endX) / 2;
+        lines.push('<path class="root-line" d="M ' + startX + ' ' + startY + ' C ' + midX + ' ' + startY + ', ' + midX + ' ' + endY + ', ' + endX + ' ' + endY + '" />');
+      });
+      const topic = activeTopic();
+      const card = topic && topic.cards && topic.cards[0];
+      (card?.affectedTopicIds || []).forEach(function(id) {
+        if (!positions.has(topic.id) || !positions.has(id)) return;
+        const from = positions.get(topic.id);
+        const to = positions.get(id);
+        const startX = from.x + 110;
+        const startY = from.y + 144;
+        const endX = to.x + 110;
+        const endY = to.y;
+        const midY = (startY + endY) / 2;
+        lines.push('<path class="impact-line" d="M ' + startX + ' ' + startY + ' C ' + startX + ' ' + midY + ', ' + endX + ' ' + midY + ', ' + endX + ' ' + endY + '" />');
+      });
+      return lines.join('');
+    }
+
+    function renderCardPopover() {
+      const topic = activeTopic();
+      if (!topic) {
+        cardPopoverEl.classList.remove('open');
+        cardPopoverEl.innerHTML = '';
+        return;
+      }
+      const position = layoutCache.get(topic.id) || { x: 60, y: 80 };
+      const left = Math.max(24, Math.min(position.x + 250, Number.parseInt(roadmapEl.style.width, 10) - 480));
+      const top = Math.max(64, position.y - 18);
+      const card = topic.cards && topic.cards[0];
+      const pendingCount = Math.max((topic.cards || []).length - 1, 0);
+      cardPopoverEl.style.left = left + 'px';
+      cardPopoverEl.style.top = top + 'px';
+      cardPopoverEl.classList.add('open');
+      cardPopoverEl.innerHTML =
+        '<div class="popover-head"><div><h2>2F AI Card: ' + escapeHtml(topic.title) + '</h2><p>' + (topic.fixed ? '고정된 topic입니다. 수정하려면 먼저 고정 해제하세요.' : 'topic 내용을 수정하거나 AI 분석으로 카드 1개를 갱신할 수 있습니다.') + '</p></div><button data-close-popover type="button">닫기</button></div>' +
+        '<div class="topic-editor">' +
+          '<label>Topic 제목<input data-topic-title value="' + escapeHtml(topic.title) + '" ' + (topic.fixed ? 'disabled' : '') + '></label>' +
+          '<label>Topic 내용<textarea data-topic-text ' + (topic.fixed ? 'disabled' : '') + '>' + escapeHtml(topic.text) + '</textarea></label>' +
+          '<div class="actions"><button class="primary" data-save-topic ' + (topic.fixed ? 'disabled' : '') + ' type="button">저장</button><button data-toggle-fixed type="button">' + (topic.fixed ? '고정 해제' : '고정') + '</button><button data-analyze-topic type="button">AI 분석</button><button data-complete-topic type="button">완료</button><button class="danger" data-remove-topic type="button">제거</button></div>' +
+        '</div>' +
+        (card ? renderPrimaryCard(topic, card, pendingCount) : '<article class="ai-card"><span class="tag">카드 없음</span><h3>현재 표시할 AI 카드가 없습니다</h3><p>필요할 때 AI 분석을 누르세요. 고정 topic과 충돌이 생기면 충돌 카드가 우선 표시됩니다.</p></article>');
+    }
+
+    function renderPrimaryCard(topic, card, pendingCount) {
+      const kind = normalizeKind(card.kind);
+      const fixedBlocked = topic.fixed && kind !== 'conflict';
+      const childPreview = card.childTopics && card.childTopics.length
+        ? '<div class="child-preview">' + card.childTopics.map(function(child) {
+            return '<div><strong>' + escapeHtml(child.title) + '</strong><p>' + escapeHtml(child.text) + '</p></div>';
+          }).join('') + '</div>'
+        : '';
+      const details = card.details && card.details.length
+        ? '<div class="child-preview">' + card.details.map(function(item) {
+            return '<div><strong>' + escapeHtml(item.title) + '</strong><p>' + escapeHtml(item.body) + '</p></div>';
+          }).join('') + '</div>'
+        : '';
+      const suggestion = kind !== 'split' && kind !== 'conflict' && card.suggestion
+        ? '<label>적용 후 topic 내용<textarea data-card-suggestion ' + (fixedBlocked ? 'disabled' : '') + '>' + escapeHtml(card.suggestion) + '</textarea></label>'
+        : '';
+      return '<article class="ai-card ' + kind + '" data-card-id="' + card.id + '">' +
+        '<div class="card-head"><span class="tag strong">' + escapeHtml(card.type || kindLabel(kind)) + '</span><span class="tag">대기 카드 ' + pendingCount + '</span></div>' +
+        '<h3>' + escapeHtml(card.title) + '</h3>' +
+        '<p>' + escapeHtml(card.body) + '</p>' +
+        (card.impact ? '<div class="impact"><strong>로드맵 영향</strong><br>' + escapeHtml(card.impact) + '</div>' : '') +
+        details +
+        childPreview +
+        suggestion +
+        '<div class="actions"><button class="primary" data-apply-card="' + card.id + '" ' + (fixedBlocked ? 'disabled' : '') + ' type="button">' + (fixedBlocked ? '고정 해제 후 적용' : applyLabel(kind)) + '</button><button data-dismiss-card="' + card.id + '" type="button">제거</button><span class="pending-count">대기 카드 ' + pendingCount + '</span></div>' +
+        (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
+      '</article>';
     }
 
     function kindLabel(kind) {
@@ -1046,121 +890,84 @@ export function renderIdeaCruisePage() {
         research: '확인 필요',
         experiment: '실험 필요',
         decision: '지금 결정',
-        filter: '제외/보류'
-      }[normalizeKind(kind)] || 'card';
+        filter: '제외/보류',
+        split: 'topic 분리 제안',
+        conflict: '충돌 경고'
+      }[kind] || 'card';
     }
 
-    function outcomeLabel(card) {
-      const kind = normalizeKind(card.kind);
-      if (kind === 'research' || kind === 'experiment') return 'Task 채택';
-      if (kind === 'decision') return '결정 반영';
-      if (kind === 'filter') return '범위 제외';
-      return '지식 반영';
+    function applyLabel(kind) {
+      if (kind === 'split') return '기능별 topic 생성';
+      if (kind === 'conflict') return '충돌 확인';
+      return 'topic에 반영';
     }
 
-    function renderFlowNode(slotClass, label, title, index, selectedIndex) {
-      const selectable = Number.isInteger(index);
-      return '<div class="flow-node ' + slotClass + (index === selectedIndex ? ' selected' : '') + (!selectable ? ' dimmed' : '') + '">' +
-        '<small>' + escapeHtml(label) + '</small>' +
-        '<strong>' + escapeHtml(title) + '</strong>' +
-        (selectable ? '<button data-select-roadmap-card="' + index + '" type="button">보기</button>' : '') +
-      '</div>';
+    function renderTaskFilters() {
+      const completed = completedTopics();
+      taskFilterEl.innerHTML = '<button class="' + (state.taskFilter === 'all' ? 'active' : '') + '" data-task-filter="all" type="button">전체</button>' +
+        completed.map(function(topic, index) {
+          return '<button class="' + (state.taskFilter === topic.id ? 'active' : '') + '" data-task-filter="' + topic.id + '" type="button">' + (index + 1) + '</button>';
+        }).join('');
     }
 
-    function renderRoadmapDetail(card, index) {
-      const kind = normalizeKind(card.kind);
-      const details = Array.isArray(card.details) && card.details.length
-        ? '<div class="info-grid">' + card.details.map(function(item) {
-            return '<div class="info-box"><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(item.body) + '</span></div>';
-          }).join('') + '</div>'
-        : '';
-      const choices = kind === 'decision'
-        ? '<div class="choice-row">' + (Array.isArray(card.choices) && card.choices.length ? card.choices : [{ label: '선택 A', body: card.body, suggestion: card.suggestion }]).map(function(choice, choiceIndex) {
-            return '<div class="choice-card">' +
-              '<strong>' + escapeHtml(choice.label) + '</strong>' +
-              '<p>' + escapeHtml(choice.body) + '</p>' +
-              '<button class="secondary" data-choice-card="' + index + '" data-choice-index="' + choiceIndex + '" type="button">' + escapeHtml(choice.label) + ' 선택</button>' +
-            '</div>';
-          }).join('') + '</div>'
-        : '';
-      let applyPreview = '<div class="actions"><button class="secondary" data-dismiss-card="' + index + '" type="button">확인</button></div>';
-      if (card.suggestion) {
-        applyPreview = '<div class="apply-preview">' +
-          '<label>선택하면 왼쪽 topic이 이렇게 바뀝니다</label>' +
-          '<textarea data-suggestion>' + escapeHtml(card.suggestion) + '</textarea>' +
-          '<div class="rewrite-note">기존 topic에 붙이는 것이 아니라 이 내용으로 재작성됩니다.</div>' +
-          '<div class="actions"><button data-apply-card="' + index + '" type="button">선택하고 주제 재작성</button><button class="secondary" data-dismiss-card="' + index + '" type="button">보류</button></div>' +
-        '</div>';
-      }
-      return '<article class="roadmap-detail ' + kind + '" data-card-index="' + index + '">' +
-        '<div class="roadmap-detail-head"><div><span class="pill ' + kind + '">' + escapeHtml(card.type || kindLabel(kind)) + '</span><h3>' + escapeHtml(card.title) + '</h3></div><button class="ghost" data-dismiss-card="' + index + '" type="button">제거</button></div>' +
-        '<p>' + escapeHtml(card.body) + '</p>' +
-        details +
-        choices +
-        applyPreview +
-        (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
-      '</article>';
+    function visibleTasks() {
+      if (state.taskFilter === 'all') return state.tasks;
+      return state.tasks.filter(function(task) { return task.pageId === state.taskFilter; });
     }
 
-    function renderCards() {
-      const page = activePage();
-      const list = document.getElementById('card-list');
-      if (!page.cards.length) {
-        list.innerHTML = '<div class="roadmap-empty">AI Analysis를 누르면 현재 page 전용 로드맵이 여기에 표시됩니다.</div>';
-        return;
-      }
+    function renderTasks() {
+      const tasks = visibleTasks();
+      taskListEl.innerHTML = tasks.length ? tasks.map(function(task) {
+        return '<article class="task-card" data-task-id="' + task.id + '">' +
+          '<div class="task-head"><div><h3>' + escapeHtml(task.title) + '</h3><p>Page ' + (task.pageNumber || '-') + ' · 실제 확인 필요</p></div><span class="tag amber">task</span></div>' +
+          '<label>Task 제목<input data-field="title" value="' + escapeHtml(task.title) + '"></label>' +
+          '<label>필요 정보<textarea data-field="neededInfo">' + escapeHtml(task.neededInfo) + '</textarea></label>' +
+          '<label>완료기준<textarea data-field="doneCriteria">' + escapeHtml(task.doneCriteria) + '</textarea></label>' +
+          '<div class="task-reason"><strong>생성 맥락</strong><br>' + escapeHtml(task.reason || '이 topic에서 시간을 써야 확인할 일이 생겼습니다.') + '</div>' +
+          '<div class="task-grid"><label>담당자<select data-field="assignee"><option>미배정</option><option>조수현</option><option>김조은</option><option>배민성</option></select></label><label>중요도<select data-field="importance"><option>높음</option><option>보통</option><option>낮음</option></select></label></div>' +
+          '<div class="actions"><button class="primary" data-apply-task="' + task.id + '" type="button">Subjector in-process에 적용</button><button class="danger" data-remove-task="' + task.id + '" type="button">제거</button></div>' +
+          (task.error ? '<div class="error-log">반영 실패: ' + escapeHtml(task.error) + '</div>' : '') +
+        '</article>';
+      }).join('') : '<div class="quiet-box">완료된 topic에서 시간이 필요한 항목만 task 후보로 생성됩니다.</div>';
 
-      const selectedIndex = selectedCardIndex(page);
-      const selectedCard = page.cards[selectedIndex];
-      const branches = page.cards
-        .map(function(card, index) { return { card: card, index: index }; })
-        .filter(function(item) { return item.index !== selectedIndex; });
-      const topBranch = branches[0];
-      const bottomBranch = branches[1];
-      const extraCount = Math.max(0, branches.length - 2);
-
-      list.innerHTML = '<div class="roadmap-shell">' +
-        '<div class="roadmap-scroll">' +
-          '<div class="roadmap-board">' +
-            '<svg class="roadmap-lines" viewBox="0 0 940 345" preserveAspectRatio="none" aria-hidden="true">' +
-              '<defs><marker id="roadmap-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1f6d8c"></path></marker></defs>' +
-              '<line x1="170" y1="170" x2="220" y2="154"></line>' +
-              '<path d="M370 154 L430 80"></path>' +
-              '<line x1="370" y1="154" x2="430" y2="176"></line>' +
-              '<path d="M370 174 L430 278"></path>' +
-              '<line x1="600" y1="176" x2="660" y2="176"></line>' +
-              '<path d="M810 176 L815 88"></path>' +
-            '</svg>' +
-            renderFlowNode('topic-node', '주제 던지기', nodeTitle(page.text, '현재 주제'), null, selectedIndex) +
-            renderFlowNode('generate-node', '카드 생성', 'AI가 선택지를 만든다', null, selectedIndex) +
-            (topBranch ? renderFlowNode('branch-top', kindLabel(topBranch.card.kind), nodeTitle(topBranch.card.title, topBranch.card.body), topBranch.index, selectedIndex) : renderFlowNode('branch-top', '보조 branch', '대기', null, selectedIndex)) +
-            renderFlowNode('branch-main', kindLabel(selectedCard.kind), nodeTitle(selectedCard.title, selectedCard.body), selectedIndex, selectedIndex) +
-            (bottomBranch ? renderFlowNode('branch-bottom', kindLabel(bottomBranch.card.kind), nodeTitle(bottomBranch.card.title, bottomBranch.card.body) + (extraCount ? ' +' + extraCount : ''), bottomBranch.index, selectedIndex) : renderFlowNode('branch-bottom', '보조 branch', '대기', null, selectedIndex)) +
-            renderFlowNode('strengthen-node', '주제 강화', '선택한 방향으로 심화', null, selectedIndex) +
-            renderFlowNode('task-node', '최종 후보', outcomeLabel(selectedCard), null, selectedIndex) +
-          '</div>' +
-        '</div>' +
-        renderRoadmapDetail(selectedCard, selectedIndex) +
-      '</div>';
+      taskListEl.querySelectorAll('.task-card').forEach(function(card) {
+        const task = state.tasks.find(function(item) { return item.id === card.dataset.taskId; });
+        if (!task) return;
+        card.querySelector('[data-field="assignee"]').value = task.assignee;
+        card.querySelector('[data-field="importance"]').value = task.importance;
+      });
     }
 
-    function normalizeKind(kind) {
-      return ['answer', 'research', 'experiment', 'decision', 'filter'].includes(kind) ? kind : 'research';
+    function renderTaskUpdates() {
+      taskUpdateListEl.innerHTML = state.existingTaskUpdates.map(function(update) {
+        return '<article class="update-card" data-task-update-id="' + update.id + '">' +
+          '<div class="task-head"><div><span class="tag amber">기존 task 보강</span><h3>' + escapeHtml(update.existingTaskTitle || update.taskId) + '</h3></div><button class="danger" data-remove-task-update="' + update.id + '" type="button">제거</button></div>' +
+          '<p>' + escapeHtml(update.reason || '새 task가 아니라 기존 task를 더 선명하게 만드는 내용입니다.') + '</p>' +
+          '<div class="split-update"><div class="update-part"><strong>확인할 것에 추가</strong><p>' + escapeHtml(update.addNeededInfo || '추가할 확인 항목 없음') + '</p></div><div class="update-part"><strong>완료 기준 변경 제안</strong><p>' + escapeHtml(update.doneCriteriaChange || '완료 기준 변경 없음') + '</p></div></div>' +
+          '<div class="actions"><button data-apply-task-update="' + update.id + '" data-include-done="false" type="button">확인할 것만 보강</button><button class="primary" data-apply-task-update="' + update.id + '" data-include-done="true" type="button">완료 기준 변경 포함</button></div>' +
+          (update.error ? '<div class="error-log">보강 실패: ' + escapeHtml(update.error) + '</div>' : '') +
+        '</article>';
+      }).join('');
+    }
+
+    function renderNotTasks() {
+      notTaskListEl.innerHTML = state.notTasks.map(function(item) {
+        return '<article class="not-task-card" data-not-task-id="' + item.id + '"><div class="task-head"><div><span class="tag">task 아님</span><h3>' + escapeHtml(item.content) + '</h3></div><button class="danger" data-remove-not-task="' + item.id + '" type="button">제거</button></div>' + (item.reason ? '<p>' + escapeHtml(item.reason) + '</p>' : '') + '</article>';
+      }).join('');
+      document.getElementById('task-generation-error').innerHTML = state.taskGenerationError ? '<div class="error-log">' + escapeHtml(state.taskGenerationError) + '</div>' : '';
     }
 
     function buildMeetingRecord() {
-      const sources = completedPages().length ? completedPages() : state.pages;
-      const summaries = sources.map(function(page) {
-        return '- Page ' + page.number + ' ' + page.title + ': ' + compactText(page.text);
-      }).join('\\n');
+      const sources = completedTopics().length ? completedTopics() : state.topics;
+      const lines = sources.map(function(topic) { return '- ' + topic.title + ': ' + compactText(topic.text, 180); }).join('\\n');
       return [
         '# 회의 기록',
         '',
         '## 오늘 판단한 것',
-        summaries || '- 아직 정리된 주제가 없습니다.',
+        lines || '- 아직 정리된 topic이 없습니다.',
         '',
-        '## 알게 된 것',
-        '- 회의 중 바로 답할 수 있는 내용은 task로 넘기지 않고 topic page 안에 정리했습니다.',
+        '## 로드맵 변화',
+        '- 고정한 topic은 회의 기준으로 삼고, 충돌이 생기면 충돌 카드로 확인했습니다.',
         '',
         '## 제외한 선택지',
         '- 설명만으로 해결된 개념 정리와 지금 회의에서 바로 결정한 선택은 task 후보에서 제외했습니다.',
@@ -1170,124 +977,32 @@ export function renderIdeaCruisePage() {
       ].join('\\n');
     }
 
-    function visibleTasks() {
-      if (state.taskFilter === 'all') {
-        return state.tasks;
-      }
-      return state.tasks.filter(function(task) { return task.pageId === state.taskFilter; });
-    }
-
-    function renderTaskFilters() {
-      const pagesWithTasks = state.pages.filter(function(page) {
-        return state.tasks.some(function(task) { return task.pageId === page.id; });
-      });
-      document.getElementById('task-filter-nav').innerHTML =
-        '<button class="dot ' + (state.taskFilter === 'all' ? 'active' : '') + '" data-task-filter="all" type="button">전체</button>' +
-        pagesWithTasks.map(function(page) {
-          return '<button class="dot ' + (state.taskFilter === page.id ? 'active' : '') + '" data-task-filter="' + page.id + '" type="button">' + page.number + '</button>';
-        }).join('');
-      document.querySelectorAll('[data-task-filter]').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-          setTaskFilter(event.target.dataset.taskFilter);
-        });
-      });
-    }
-
-    function renderNotTask() {
-      const items = state.notTasks.length > 0 ? state.notTasks : [{ id: 'empty', content: '아직 제외 판단이 생성되지 않았습니다.', reason: '' }];
-      document.getElementById('not-task').innerHTML = '<h3>task로 만들지 않은 것</h3>' +
-        '<div>' + items.map(function(item) {
-          const removeButton = item.id === 'empty' ? '' : '<button class="ghost" data-remove-not-task="' + item.id + '" type="button">제거</button>';
-          return '<div class="head-row" data-not-task-id="' + escapeHtml(item.id) + '"><div><strong>' + escapeHtml(item.content) + '</strong>' +
-            (item.reason ? '<div class="meta">' + escapeHtml(item.reason) + '</div>' : '') +
-            '</div>' + removeButton + '</div>';
-        }).join('') + '</div>';
-      document.getElementById('task-generation-error').innerHTML = state.taskGenerationError
-        ? '<div class="error-log">' + escapeHtml(state.taskGenerationError) + '</div>'
-        : '';
-    }
-
-    function renderTaskUpdates() {
-      const list = document.getElementById('task-update-list');
-      if (!state.existingTaskUpdates.length) {
-        list.innerHTML = '';
-        return;
-      }
-      list.innerHTML = state.existingTaskUpdates.map(function(update) {
-        return '<article class="update-card" data-task-update-id="' + update.id + '">' +
-          '<div class="head-row"><div><span class="pill research">기존 task 보강</span><h3>' + escapeHtml(update.existingTaskTitle || update.taskId) + '</h3></div>' +
-          '<button class="ghost" data-remove-task-update="' + update.id + '" type="button">제거</button></div>' +
-          '<p class="small">' + escapeHtml(update.reason || '새 task가 아니라 기존 task를 더 선명하게 만드는 내용입니다.') + '</p>' +
-          '<div class="split-update">' +
-            '<div class="update-part"><strong>확인할 것에 추가</strong><p>' + escapeHtml(update.addNeededInfo || '추가할 확인 항목 없음') + '</p></div>' +
-            '<div class="update-part"><strong>완료 기준 변경 제안</strong><p>' + escapeHtml(update.doneCriteriaChange || '완료 기준 변경 없음') + '</p></div>' +
-          '</div>' +
-          '<div class="actions">' +
-            '<button class="secondary" data-apply-task-update="' + update.id + '" data-include-done="false" type="button">확인할 것만 보강</button>' +
-            '<button data-apply-task-update="' + update.id + '" data-include-done="true" type="button">완료 기준 변경 포함</button>' +
-          '</div>' +
-          (update.error ? '<div class="error-log">보강 실패: ' + escapeHtml(update.error) + '</div>' : '') +
-        '</article>';
-      }).join('');
-    }
-
-    function renderTasks() {
-      const list = document.getElementById('task-list');
-      const tasks = visibleTasks();
-      if (!tasks.length) {
-        list.innerHTML = '<div class="hint">완료된 topic page에서 시간이 필요한 항목만 task 후보로 생성됩니다.</div>';
-        return;
-      }
-      list.innerHTML = tasks.map(function(task) {
-        const kind = normalizeKind(task.kind);
-        return '<article class="task-card" data-task-id="' + task.id + '">' +
-          '<header><div><h3>' + escapeHtml(task.title) + '</h3><div class="meta">Page ' + task.pageNumber + ' · 실제 확인 필요</div></div><span class="pill ' + kind + '">task</span></header>' +
-          '<label>Task 제목<input data-field="title" value="' + escapeHtml(task.title) + '"></label>' +
-          '<label>필요 정보<textarea data-field="neededInfo">' + escapeHtml(task.neededInfo) + '</textarea></label>' +
-          '<label>완료기준<textarea data-field="doneCriteria">' + escapeHtml(task.doneCriteria) + '</textarea></label>' +
-          (task.reason ? '<div class="meta">겹치지 않는 이유: ' + escapeHtml(task.reason) + '</div>' : '') +
-          '<div class="task-grid">' +
-            '<label>담당자<select data-field="assignee"><option>미배정</option><option>조수현</option><option>김조은</option><option>배민성</option></select></label>' +
-            '<label>중요도<select data-field="importance"><option>높음</option><option>보통</option><option>낮음</option></select></label>' +
-          '</div>' +
-          '<div class="actions"><button data-apply-task="' + task.id + '" type="button">Subjector in-process에 적용</button><button class="ghost" data-remove-task="' + task.id + '" type="button">제거</button></div>' +
-          (task.error ? '<div class="error-log">반영 실패: ' + escapeHtml(task.error) + '</div>' : '') +
-        '</article>';
-      }).join('');
-
-      list.querySelectorAll('.task-card').forEach(function(card) {
-        const task = state.tasks.find(function(item) { return item.id === card.dataset.taskId; });
-        if (!task) return;
-        card.querySelector('[data-field="assignee"]').value = task.assignee;
-        card.querySelector('[data-field="importance"]').value = task.importance;
-        card.querySelectorAll('input, textarea, select').forEach(function(input) {
-          input.addEventListener('input', function(event) {
-            task[event.target.dataset.field] = event.target.value;
-            task.error = '';
-            saveState();
-          });
-        });
-      });
-    }
-
     function renderRecord() {
-      document.getElementById('meeting-record').textContent = state.record || '회의록 생성 버튼을 누르면 판단 기록 초안이 여기에 표시됩니다.';
-      document.getElementById('record-drawer').classList.toggle('open', state.recordDrawerOpen);
+      recordEl.textContent = state.record || '회의록 생성 버튼을 누르면 판단 기록 초안이 여기에 표시됩니다.';
     }
 
     function render() {
-      renderTopicPage();
-      renderCards();
+      renderRoadmap();
+      renderCardPopover();
       renderTaskFilters();
-      renderNotTask();
-      renderTaskUpdates();
       renderTasks();
+      renderTaskUpdates();
+      renderNotTasks();
       renderRecord();
       saveState();
     }
 
-    function compactText(text) {
-      return String(text || '').replace(/\\s+/g, ' ').trim().slice(0, 160);
+    function openTopicDialog() {
+      parentTopicEl.innerHTML = '<option value="">최상위 topic</option>' + state.topics.map(function(topic) {
+        return '<option value="' + topic.id + '" ' + (state.activeTopicId === topic.id ? 'selected' : '') + '>' + escapeHtml(topic.title) + '</option>';
+      }).join('');
+      document.getElementById('topic-title-input').value = '';
+      document.getElementById('topic-text-input').value = '';
+      topicDialog.showModal();
+    }
+
+    function tag(text, tone) {
+      return '<span class="tag ' + (tone || '') + '">' + escapeHtml(text) + '</span>';
     }
 
     function escapeHtml(value) {
@@ -1298,77 +1013,100 @@ export function renderIdeaCruisePage() {
         .replace(/"/g, '&quot;');
     }
 
-    document.getElementById('topic-text').addEventListener('input', function(event) {
-      const page = activePage();
-      page.text = event.target.value;
-      page.title = titleFromText(page.text) || page.title;
-      saveState();
-      renderTopicPage();
+    document.getElementById('add-topic').addEventListener('click', openTopicDialog);
+    document.getElementById('close-topic-dialog').addEventListener('click', function() { topicDialog.close(); });
+    document.getElementById('topic-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const title = document.getElementById('topic-title-input').value.trim();
+      const text = document.getElementById('topic-text-input').value.trim();
+      if (!title && !text) return;
+      addTopic({ title: title, text: text || title, parentId: parentTopicEl.value || null });
+      topicDialog.close();
+      render();
     });
 
-    document.getElementById('add-topic').addEventListener('click', addTopicPage);
-    document.getElementById('remove-topic').addEventListener('click', removeActiveTopicPage);
-    document.getElementById('complete-topic').addEventListener('click', function() {
-      completeActivePage().catch(function(error) {
-        state.taskGenerationError = error.message;
-        render();
-      });
-    });
-
-    document.getElementById('analyze-topic').addEventListener('click', async function(event) {
-      const button = event.target;
-      button.disabled = true;
-      try {
-        await requestCardsForActivePage();
-      } catch (error) {
-        activePage().cards = [{
-          id: 'analysis-error-' + Date.now(),
-          kind: 'filter',
-          type: 'AI 연결 오류',
-          title: 'AI Analysis를 실행하지 못했습니다',
-          body: error.message,
-          suggestion: '',
-          error: error.message
-        }];
-      } finally {
-        button.disabled = false;
-        render();
-      }
-    });
-
-    document.getElementById('card-list').addEventListener('click', function(event) {
-      const selectButton = event.target.closest('[data-select-roadmap-card]');
-      if (selectButton) {
-        activePage().selectedCardIndex = Number(selectButton.dataset.selectRoadmapCard);
+    roadmapEl.addEventListener('click', async function(event) {
+      const closeButton = event.target.closest('[data-close-popover]');
+      if (closeButton) {
+        state.activeTopicId = null;
         render();
         return;
       }
 
-      const choiceButton = event.target.closest('[data-choice-card]');
-      if (choiceButton) {
-        const page = activePage();
-        const card = page.cards[Number(choiceButton.dataset.choiceCard)];
-        const choice = card?.choices?.[Number(choiceButton.dataset.choiceIndex)];
-        if (choice) {
-          page.selectedCardIndex = Number(choiceButton.dataset.choiceCard);
-          card.suggestion = choice.suggestion;
-          card.body = '선택 결과: ' + choice.label + ' 방향으로 정리합니다.';
-          renderCards();
+      const topicButton = event.target.closest('[data-topic]');
+      if (topicButton) {
+        const topicId = topicButton.dataset.topic;
+        state.activeTopicId = state.activeTopicId === topicId ? null : topicId;
+        render();
+        return;
+      }
+
+      const topic = activeTopic();
+      if (!topic) return;
+
+      const saveButton = event.target.closest('[data-save-topic]');
+      if (saveButton) {
+        if (topic.fixed) return;
+        topic.title = document.querySelector('[data-topic-title]').value.trim() || topic.title;
+        topic.text = document.querySelector('[data-topic-text]').value.trim() || topic.text;
+        ensurePriorityCards(topic);
+        render();
+        return;
+      }
+
+      const fixedButton = event.target.closest('[data-toggle-fixed]');
+      if (fixedButton) {
+        topic.fixed = !topic.fixed;
+        render();
+        return;
+      }
+
+      const completeButton = event.target.closest('[data-complete-topic]');
+      if (completeButton) {
+        completeButton.disabled = true;
+        try {
+          await completeTopic(topic);
+        } catch (error) {
+          state.taskGenerationError = error.message;
         }
+        render();
+        return;
+      }
+
+      const removeButton = event.target.closest('[data-remove-topic]');
+      if (removeButton) {
+        removeActiveTopic();
+        render();
+        return;
+      }
+
+      const analyzeButton = event.target.closest('[data-analyze-topic]');
+      if (analyzeButton) {
+        analyzeButton.disabled = true;
+        try {
+          await requestCardsForTopic(topic);
+        } catch (error) {
+          topic.cards = [{
+            id: 'analysis-error-' + Date.now(),
+            kind: 'filter',
+            type: 'AI 연결 오류',
+            title: 'AI Analysis를 실행하지 못했습니다',
+            body: error.message,
+            suggestion: '',
+            error: error.message
+          }];
+        }
+        render();
         return;
       }
 
       const applyButton = event.target.closest('[data-apply-card]');
       if (applyButton) {
-        const page = activePage();
-        const cardIndex = Number(applyButton.dataset.applyCard);
-        const card = page.cards[cardIndex];
+        const card = (topic.cards || []).find(function(item) { return item.id === applyButton.dataset.applyCard; });
+        if (!card) return;
         try {
-          const container = applyButton.closest('[data-card-index]');
-          const content = container.querySelector('[data-suggestion]')?.value || card.suggestion || '';
-          rewriteActivePage(content);
-          page.cards.splice(cardIndex, 1);
-          page.selectedCardIndex = Math.max(0, Math.min(cardIndex, page.cards.length - 1));
+          const content = event.target.closest('[data-card-id]')?.querySelector('[data-card-suggestion]')?.value || card.suggestion || '';
+          applyCard(topic, card, content);
         } catch (error) {
           card.error = error.message;
         }
@@ -1378,28 +1116,46 @@ export function renderIdeaCruisePage() {
 
       const dismissButton = event.target.closest('[data-dismiss-card]');
       if (dismissButton) {
-        const page = activePage();
-        const removedIndex = Number(dismissButton.dataset.dismissCard);
-        page.cards.splice(removedIndex, 1);
-        page.selectedCardIndex = Math.max(0, Math.min(removedIndex, page.cards.length - 1));
+        topic.cards = (topic.cards || []).filter(function(card) { return card.id !== dismissButton.dataset.dismissCard; });
         render();
       }
     });
 
-    document.getElementById('generate-record').addEventListener('click', function() {
-      state.record = buildMeetingRecord();
-      state.recordDrawerOpen = true;
+    taskFilterEl.addEventListener('click', function(event) {
+      const button = event.target.closest('[data-task-filter]');
+      if (!button) return;
+      state.taskFilter = button.dataset.taskFilter;
       render();
     });
 
-    document.getElementById('task-list').addEventListener('click', async function(event) {
+    document.getElementById('refresh-tasks').addEventListener('click', async function(event) {
+      event.target.disabled = true;
+      try {
+        await requestTaskCandidates();
+      } catch (error) {
+        state.taskGenerationError = error.message;
+      }
+      event.target.disabled = false;
+      render();
+    });
+
+    taskListEl.addEventListener('input', function(event) {
+      const card = event.target.closest('[data-task-id]');
+      if (!card) return;
+      const task = state.tasks.find(function(item) { return item.id === card.dataset.taskId; });
+      if (!task) return;
+      task[event.target.dataset.field] = event.target.value;
+      task.error = '';
+      saveState();
+    });
+
+    taskListEl.addEventListener('click', async function(event) {
       const removeButton = event.target.closest('[data-remove-task]');
       if (removeButton) {
         state.tasks = state.tasks.filter(function(item) { return item.id !== removeButton.dataset.removeTask; });
         render();
         return;
       }
-
       const button = event.target.closest('[data-apply-task]');
       if (!button) return;
       const task = state.tasks.find(function(item) { return item.id === button.dataset.applyTask; });
@@ -1425,9 +1181,7 @@ export function renderIdeaCruisePage() {
           })
         });
         const result = await response.json().catch(function() { return {}; });
-        if (!response.ok) {
-          throw new Error(result.error || 'Subjector 반영에 실패했습니다.');
-        }
+        if (!response.ok) throw new Error(result.error || 'Subjector 반영에 실패했습니다.');
         state.tasks = state.tasks.filter(function(item) { return item.id !== task.id; });
       } catch (error) {
         task.error = error.message;
@@ -1435,21 +1189,13 @@ export function renderIdeaCruisePage() {
       render();
     });
 
-    document.getElementById('not-task').addEventListener('click', function(event) {
-      const button = event.target.closest('[data-remove-not-task]');
-      if (!button) return;
-      state.notTasks = state.notTasks.filter(function(item) { return item.id !== button.dataset.removeNotTask; });
-      render();
-    });
-
-    document.getElementById('task-update-list').addEventListener('click', async function(event) {
+    taskUpdateListEl.addEventListener('click', async function(event) {
       const removeButton = event.target.closest('[data-remove-task-update]');
       if (removeButton) {
         state.existingTaskUpdates = state.existingTaskUpdates.filter(function(item) { return item.id !== removeButton.dataset.removeTaskUpdate; });
         render();
         return;
       }
-
       const applyButton = event.target.closest('[data-apply-task-update]');
       if (!applyButton) return;
       const update = state.existingTaskUpdates.find(function(item) { return item.id === applyButton.dataset.applyTaskUpdate; });
@@ -1468,9 +1214,7 @@ export function renderIdeaCruisePage() {
           })
         });
         const result = await response.json().catch(function() { return {}; });
-        if (!response.ok) {
-          throw new Error(result.error || '기존 task 보강에 실패했습니다.');
-        }
+        if (!response.ok) throw new Error(result.error || '기존 task 보강에 실패했습니다.');
         state.existingTaskUpdates = state.existingTaskUpdates.filter(function(item) { return item.id !== update.id; });
       } catch (error) {
         update.error = error.message;
@@ -1478,21 +1222,21 @@ export function renderIdeaCruisePage() {
       render();
     });
 
-    document.getElementById('open-record').addEventListener('click', function() {
-      state.recordDrawerOpen = true;
+    notTaskListEl.addEventListener('click', function(event) {
+      const button = event.target.closest('[data-remove-not-task]');
+      if (!button) return;
+      state.notTasks = state.notTasks.filter(function(item) { return item.id !== button.dataset.removeNotTask; });
       render();
     });
 
-    document.getElementById('close-record').addEventListener('click', function() {
-      state.recordDrawerOpen = false;
+    document.getElementById('generate-record').addEventListener('click', function() {
+      state.record = buildMeetingRecord();
       render();
     });
 
     document.getElementById('copy-record').addEventListener('click', async function() {
       const text = state.record || buildMeetingRecord();
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-      }
+      if (navigator.clipboard) await navigator.clipboard.writeText(text);
     });
 
     render();
