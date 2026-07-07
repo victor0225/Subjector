@@ -157,3 +157,17 @@ test('renderIdeaCruisePage keeps meeting record as decision narrative, not task 
   assert.match(html, /다음 회의로 넘길 맥락/);
   assert.doesNotMatch(html, /task를 줄줄이 나열/);
 });
+
+
+test('renderIdeaCruisePage prioritizes decision and exclusion lanes in the roadmap', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /priority-roadmap-v2/);
+  assert.match(html, /먼저 판단: 지금 결정해야 다음으로 감/);
+  assert.match(html, /보류\/제외: 지금은 다른 생각 먼저/);
+  assert.match(html, /function priorityScore\(card\)/);
+  assert.match(html, /function prioritizedCards\(cards, selectedIndex\)/);
+  assert.match(html, /branch-now/);
+  assert.match(html, /branch-later/);
+  assert.match(html, /선택하면 이쪽으로 심화/);
+});

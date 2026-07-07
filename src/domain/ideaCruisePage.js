@@ -26,6 +26,9 @@ export function renderIdeaCruisePage() {
       --red-soft: #fae9e9;
       --gray-soft: #eef1f4;
       --shadow: 0 10px 24px rgba(23, 32, 42, 0.08);
+      --priority: #fff7ed;
+      --priority-line: #f59e0b;
+      --exclude: #f8fafc;
     }
 
     * { box-sizing: border-box; }
@@ -258,13 +261,32 @@ export function renderIdeaCruisePage() {
 
     .roadmap-board {
       position: relative;
-      width: 940px;
-      height: 345px;
+      width: 1040px;
+      height: 430px;
       border: 1px solid #c7d5e2;
       border-radius: 8px;
-      background: #fff;
+      background: linear-gradient(90deg, #ffffff 0 18%, #f8fbfc 18% 54%, #ffffff 54% 100%);
       overflow: hidden;
     }
+
+    .roadmap-lane-label {
+      position: absolute;
+      left: 408px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      color: #334155;
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 800;
+      z-index: 1;
+    }
+
+    .roadmap-lane-label.now { top: 16px; color: #92400e; background: var(--priority); border-color: #fed7aa; }
+    .roadmap-lane-label.later { top: 355px; color: #475569; background: var(--exclude); }
 
     .roadmap-lines {
       position: absolute;
@@ -282,6 +304,9 @@ export function renderIdeaCruisePage() {
       marker-end: url(#roadmap-arrow);
     }
 
+    .roadmap-lines .priority-line { stroke: var(--priority-line); stroke-width: 3; }
+    .roadmap-lines .muted-line { stroke: #94a3b8; stroke-dasharray: 5 5; }
+
     .flow-node {
       position: absolute;
       display: grid;
@@ -296,17 +321,22 @@ export function renderIdeaCruisePage() {
       box-shadow: 0 4px 10px rgba(23, 32, 42, 0.08);
     }
 
-    .flow-node.topic-node { left: 22px; top: 132px; width: 148px; }
-    .flow-node.generate-node { left: 220px; top: 115px; width: 150px; }
-    .flow-node.branch-top { left: 430px; top: 44px; width: 170px; min-height: 72px; }
-    .flow-node.branch-main { left: 430px; top: 132px; width: 170px; min-height: 88px; }
-    .flow-node.branch-bottom { left: 430px; top: 242px; width: 170px; min-height: 72px; }
-    .flow-node.strengthen-node { left: 660px; top: 132px; width: 150px; }
-    .flow-node.task-node { left: 815px; top: 44px; width: 105px; min-height: 88px; }
+    .flow-node.topic-node { left: 22px; top: 176px; width: 148px; }
+    .flow-node.generate-node { left: 218px; top: 154px; width: 150px; }
+    .flow-node.branch-now { left: 420px; top: 54px; width: 210px; min-height: 98px; background: #b45309; border-color: #78350f; }
+    .flow-node.branch-main { left: 420px; top: 172px; width: 210px; min-height: 98px; }
+    .flow-node.branch-later { left: 420px; top: 294px; width: 210px; min-height: 82px; background: #64748b; border-color: #334155; }
+    .flow-node.strengthen-node { left: 700px; top: 172px; width: 160px; }
+    .flow-node.task-node { left: 900px; top: 68px; width: 112px; min-height: 94px; }
 
     .flow-node.selected {
-      outline: 4px solid rgba(15, 118, 110, 0.2);
+      outline: 4px solid rgba(245, 158, 11, 0.24);
       background: #115e59;
+    }
+
+    .flow-node.branch-now.selected {
+      outline-color: rgba(245, 158, 11, 0.34);
+      background: #92400e;
     }
 
     .flow-node.dimmed {
@@ -656,7 +686,7 @@ export function renderIdeaCruisePage() {
     <section>
       <div class="section-head">
         <h2>2. Roadmap Intervention</h2>
-        <p class="hint">카드 생성: GPT-5.4. 가장 중요한 결정 1개를 크게 띄우고, 나머지는 branch 후보로 좁혀 둡니다.</p>
+        <p class="hint">카드 생성: GPT-5.4. 먼저 결정해야 할 것과 지금 제외할 것을 위로 띄우고, 선택한 방향만 다음 로드맵으로 심화합니다.</p>
       </div>
       <div class="section-body" id="card-list"></div>
     </section>
@@ -725,7 +755,7 @@ export function renderIdeaCruisePage() {
     normalizeState();
 
     function normalizeState() {
-      const shouldResetRoadmapSelection = state.roadmapUiVersion !== 'arrow-roadmap-v1';
+      const shouldResetRoadmapSelection = state.roadmapUiVersion !== 'priority-roadmap-v2';
       if (!Array.isArray(state.pages) || state.pages.length === 0) {
         state.pages = [{ id: 'page-1', number: 1, title: '새 주제', text: defaultTopicText, cards: seedCards(), completed: false }];
       }
@@ -741,7 +771,7 @@ export function renderIdeaCruisePage() {
         }
         page.completed = Boolean(page.completed);
       });
-      state.roadmapUiVersion = 'arrow-roadmap-v1';
+      state.roadmapUiVersion = 'priority-roadmap-v2';
       if (!state.pages.some(function(page) { return page.id === state.activePageId; })) {
         state.activePageId = state.pages[0].id;
       }
@@ -1050,6 +1080,21 @@ export function renderIdeaCruisePage() {
       }[normalizeKind(kind)] || 'card';
     }
 
+    function priorityScore(card) {
+      const kind = normalizeKind(card.kind);
+      return { decision: 0, filter: 1, research: 2, experiment: 3, answer: 4 }[kind] ?? 5;
+    }
+
+    function prioritizedCards(cards, selectedIndex) {
+      return cards
+        .map(function(card, index) { return { card: card, index: index }; })
+        .sort(function(a, b) {
+          if (a.index === selectedIndex) return -1;
+          if (b.index === selectedIndex) return 1;
+          return priorityScore(a.card) - priorityScore(b.card);
+        });
+    }
+
     function outcomeLabel(card) {
       const kind = normalizeKind(card.kind);
       if (kind === 'research' || kind === 'experiment') return 'Task 채택';
@@ -1112,32 +1157,34 @@ export function renderIdeaCruisePage() {
 
       const selectedIndex = selectedCardIndex(page);
       const selectedCard = page.cards[selectedIndex];
-      const branches = page.cards
-        .map(function(card, index) { return { card: card, index: index }; })
-        .filter(function(item) { return item.index !== selectedIndex; });
-      const topBranch = branches[0];
-      const bottomBranch = branches[1];
-      const extraCount = Math.max(0, branches.length - 2);
+      const ordered = prioritizedCards(page.cards, selectedIndex);
+      const nowBranch = ordered.find(function(item) { return normalizeKind(item.card.kind) === 'decision'; }) || ordered[0];
+      const selectedBranch = ordered.find(function(item) { return item.index === selectedIndex; }) || ordered[0];
+      const mainBranch = selectedBranch.index !== nowBranch.index ? selectedBranch : ordered.find(function(item) { return item.index !== nowBranch.index; }) || selectedBranch;
+      const laterBranch = ordered.find(function(item) { return item.index !== mainBranch.index && item.index !== nowBranch.index && normalizeKind(item.card.kind) === 'filter'; }) || ordered.find(function(item) { return item.index !== mainBranch.index && item.index !== nowBranch.index; });
+      const hiddenCount = Math.max(0, page.cards.length - [nowBranch, mainBranch, laterBranch].filter(Boolean).map(function(item) { return item.index; }).filter(function(value, index, list) { return list.indexOf(value) === index; }).length);
 
       list.innerHTML = '<div class="roadmap-shell">' +
         '<div class="roadmap-scroll">' +
           '<div class="roadmap-board">' +
-            '<svg class="roadmap-lines" viewBox="0 0 940 345" preserveAspectRatio="none" aria-hidden="true">' +
+            '<div class="roadmap-lane-label now">먼저 판단: 지금 결정해야 다음으로 감</div>' +
+            '<div class="roadmap-lane-label later">보류/제외: 지금은 다른 생각 먼저</div>' +
+            '<svg class="roadmap-lines" viewBox="0 0 1040 430" preserveAspectRatio="none" aria-hidden="true">' +
               '<defs><marker id="roadmap-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1f6d8c"></path></marker></defs>' +
-              '<line x1="170" y1="170" x2="220" y2="154"></line>' +
-              '<path d="M370 154 L430 80"></path>' +
-              '<line x1="370" y1="154" x2="430" y2="176"></line>' +
-              '<path d="M370 174 L430 278"></path>' +
-              '<line x1="600" y1="176" x2="660" y2="176"></line>' +
-              '<path d="M810 176 L815 88"></path>' +
+              '<line x1="170" y1="214" x2="218" y2="192"></line>' +
+              '<path class="priority-line" d="M368 192 C390 130, 392 104, 420 103"></path>' +
+              '<line x1="368" y1="192" x2="420" y2="221"></line>' +
+              '<path class="muted-line" d="M368 212 C390 270, 392 334, 420 335"></path>' +
+              '<line x1="630" y1="221" x2="700" y2="221"></line>' +
+              '<path d="M860 221 C890 190, 880 124, 900 115"></path>' +
             '</svg>' +
             renderFlowNode('topic-node', '주제 던지기', nodeTitle(page.text, '현재 주제'), null, selectedIndex) +
             renderFlowNode('generate-node', '카드 생성', 'AI가 선택지를 만든다', null, selectedIndex) +
-            (topBranch ? renderFlowNode('branch-top', kindLabel(topBranch.card.kind), nodeTitle(topBranch.card.title, topBranch.card.body), topBranch.index, selectedIndex) : renderFlowNode('branch-top', '보조 branch', '대기', null, selectedIndex)) +
-            renderFlowNode('branch-main', kindLabel(selectedCard.kind), nodeTitle(selectedCard.title, selectedCard.body), selectedIndex, selectedIndex) +
-            (bottomBranch ? renderFlowNode('branch-bottom', kindLabel(bottomBranch.card.kind), nodeTitle(bottomBranch.card.title, bottomBranch.card.body) + (extraCount ? ' +' + extraCount : ''), bottomBranch.index, selectedIndex) : renderFlowNode('branch-bottom', '보조 branch', '대기', null, selectedIndex)) +
-            renderFlowNode('strengthen-node', '주제 강화', '선택한 방향으로 심화', null, selectedIndex) +
-            renderFlowNode('task-node', '최종 후보', outcomeLabel(selectedCard), null, selectedIndex) +
+            (nowBranch ? renderFlowNode('branch-now', kindLabel(nowBranch.card.kind), nodeTitle(nowBranch.card.title, nowBranch.card.body), nowBranch.index, selectedIndex) : renderFlowNode('branch-now', '먼저 판단', '대기', null, selectedIndex)) +
+            renderFlowNode('branch-main', kindLabel(mainBranch.card.kind), nodeTitle(mainBranch.card.title, mainBranch.card.body), mainBranch.index, selectedIndex) +
+            (laterBranch ? renderFlowNode('branch-later', kindLabel(laterBranch.card.kind), nodeTitle(laterBranch.card.title, laterBranch.card.body) + (hiddenCount ? ' +' + hiddenCount : ''), laterBranch.index, selectedIndex) : renderFlowNode('branch-later', '보류/제외', '대기', null, selectedIndex)) +
+            renderFlowNode('strengthen-node', '선택 방향', '선택하면 이쪽으로 심화', null, selectedIndex) +
+            renderFlowNode('task-node', '최종 결과', outcomeLabel(selectedCard), null, selectedIndex) +
           '</div>' +
         '</div>' +
         renderRoadmapDetail(selectedCard, selectedIndex) +
