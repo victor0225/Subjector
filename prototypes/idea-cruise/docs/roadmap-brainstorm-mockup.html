@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IDEA CRUISE Two Layer Roadmap Mockup</title>
+  <style>
+    :root {
+      --bg: #edf3f5;
+      --surface: #ffffff;
+      --panel: #f8fbfc;
+      --ink: #132530;
+      --muted: #617484;
+      --line: #d3e0e7;
+      --line-strong: #a9bfca;
+      --teal: #0b7769;
+      --blue: #285fc6;
+      --amber: #a96512;
+      --rose: #b8424a;
+      --violet: #6a51b8;
+      --green-soft: #e6f6f0;
+      --blue-soft: #eaf1ff;
+      --amber-soft: #fff3dd;
+      --rose-soft: #fff0f1;
+      --violet-soft: #f2efff;
+      --shadow: 0 16px 34px rgba(19, 37, 48, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    button,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 8px 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--teal);
+      background: var(--teal);
+      color: #fff;
+    }
+
+    button.danger {
+      border-color: #efbdc2;
+      background: #fff8f8;
+      color: var(--rose);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 4px;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.48;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 22px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      width: max-content;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .pill.teal {
+      border-color: #a6d9d1;
+      background: var(--green-soft);
+      color: var(--teal);
+    }
+
+    .pill.blue {
+      border-color: #b7c9f6;
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .pill.amber {
+      border-color: #efca8a;
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .pill.rose {
+      border-color: #efbdc2;
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+
+    .pill.violet {
+      border-color: #c9c0f4;
+      background: var(--violet-soft);
+      color: var(--violet);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-rows: minmax(430px, calc(100vh - 360px)) auto;
+      gap: 16px;
+      padding: 18px 22px 22px;
+    }
+
+    .panel {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      min-height: 78px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: #f9fbfc;
+    }
+
+    .panel-head p {
+      margin-bottom: 0;
+    }
+
+    .head-actions,
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .roadmap-shell {
+      position: relative;
+      height: 100%;
+      min-height: 420px;
+      overflow: auto;
+      background:
+        linear-gradient(#dfe8ee 1px, transparent 1px),
+        linear-gradient(90deg, #dfe8ee 1px, transparent 1px);
+      background-size: 34px 34px;
+    }
+
+    .layer-label {
+      position: sticky;
+      left: 14px;
+      top: 14px;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: max-content;
+      max-width: calc(100% - 28px);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 8px 20px rgba(19, 37, 48, 0.08);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .roadmap {
+      position: relative;
+      min-width: 1120px;
+      min-height: 620px;
+      padding: 20px;
+    }
+
+    .root-lines {
+      position: absolute;
+      inset: 0;
+      width: 1120px;
+      height: 620px;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .root-lines path {
+      fill: none;
+      stroke: var(--line-strong);
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+
+    .root-lines path.weak {
+      stroke-dasharray: 8 8;
+      opacity: 0.7;
+    }
+
+    .topic {
+      position: absolute;
+      width: 220px;
+      min-height: 138px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--teal);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 12px 24px rgba(19, 37, 48, 0.12);
+      padding: 12px;
+      text-align: left;
+      transition: transform 160ms ease, opacity 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+    }
+
+    .topic:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 30px rgba(19, 37, 48, 0.16);
+    }
+
+    .topic small {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .topic strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    .topic span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    .topic .topic-meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .topic.project {
+      width: 250px;
+      min-height: 168px;
+      border-left-color: var(--blue);
+      background: #f7fbff;
+    }
+
+    .topic.environment { border-left-color: var(--teal); }
+    .topic.ambient { border-left-color: var(--amber); }
+    .topic.speaker { border-left-color: var(--violet); }
+    .topic.data { border-left-color: var(--rose); }
+    .topic.prototype { border-left-color: var(--blue); }
+
+    .topic.active {
+      outline: 3px solid rgba(11, 119, 105, 0.18);
+      box-shadow: 0 20px 38px rgba(11, 119, 105, 0.2);
+    }
+
+    .roadmap.card-layer-on .topic:not(.active) {
+      opacity: 0.46;
+      filter: grayscale(0.2);
+    }
+
+    .topic.project { left: 56px; top: 236px; }
+    .topic.environment { left: 380px; top: 66px; }
+    .topic.ambient { left: 380px; top: 250px; }
+    .topic.speaker { left: 380px; top: 438px; }
+    .topic.data { left: 710px; top: 70px; }
+    .topic.prototype { left: 710px; top: 302px; }
+
+    .card-layer {
+      position: absolute;
+      left: 650px;
+      top: 150px;
+      z-index: 10;
+      width: 430px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 24px 48px rgba(19, 37, 48, 0.2);
+      transform: translateY(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .card-layer.open {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .card-layer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 13px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .card-layer-head h2 {
+      margin-bottom: 3px;
+    }
+
+    .card-layer-body {
+      display: grid;
+      gap: 10px;
+      max-height: 410px;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .ai-card {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--teal);
+      border-radius: 8px;
+      background: #fff;
+      padding: 11px;
+    }
+
+    .ai-card.answer { border-left-color: var(--blue); }
+    .ai-card.research { border-left-color: var(--amber); }
+    .ai-card.conflict { border-left-color: var(--rose); }
+    .ai-card.change { border-left-color: var(--violet); }
+
+    .ai-card h3 {
+      margin-top: 8px;
+    }
+
+    .ai-card p {
+      margin-bottom: 10px;
+    }
+
+    .impact-box {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px;
+      background: #f8fbfc;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .impact-box strong {
+      color: var(--ink);
+    }
+
+    .decision-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .decision-options button {
+      min-height: 74px;
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .lower-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.8fr) minmax(480px, 1.2fr);
+      gap: 16px;
+    }
+
+    .panel-body {
+      padding: 14px;
+      max-height: 270px;
+      overflow: auto;
+    }
+
+    .note,
+    .task {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .note + .note,
+    .task + .task {
+      margin-top: 10px;
+    }
+
+    .task {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .task strong,
+    .note strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .task p,
+    .note p {
+      margin-bottom: 0;
+    }
+
+    .task-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-width: 100px;
+    }
+
+    @media (max-width: 1100px) {
+      header,
+      .panel-head {
+        flex-direction: column;
+      }
+
+      .layout {
+        grid-template-rows: auto auto;
+      }
+
+      .roadmap-shell {
+        min-height: 580px;
+      }
+
+      .lower-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>IDEA CRUISE Two Layer Roadmap</h1>
+      <p>1층은 topic root 지도, 2층은 선택한 topic에 붙는 AI 카드층입니다. topic을 다시 누르면 카드층이 꺼집니다.</p>
+    </div>
+    <div class="status">
+      <span class="pill blue">1F Topic Root Layer</span>
+      <span class="pill teal">2F AI Card Layer</span>
+      <span class="pill amber">Cards can affect other topics</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>1F Topic Root Layer</h2>
+          <p>회의 계획은 topic 카드와 root로 표현됩니다. root는 바뀔 수 있고, AI가 초안을 그리되 사람이 수정합니다.</p>
+        </div>
+        <div class="head-actions">
+          <button class="primary">Topic 추가</button>
+          <button>Root 직접 수정</button>
+          <button class="danger">선택 topic 제거</button>
+        </div>
+      </div>
+
+      <div class="roadmap-shell">
+        <div class="layer-label">
+          <span class="pill blue">1층</span>
+          <span id="layerState">topic을 클릭하면 2층 AI 카드가 켜집니다.</span>
+        </div>
+
+        <div id="roadmap" class="roadmap">
+          <svg class="root-lines" viewBox="0 0 1120 620" aria-hidden="true">
+            <path d="M306 318 C352 186, 354 140, 380 136" />
+            <path d="M306 318 C352 318, 354 320, 380 320" />
+            <path d="M306 318 C352 452, 354 506, 380 508" />
+            <path d="M600 136 C650 128, 664 128, 710 138" class="weak" />
+            <path d="M600 320 C650 304, 664 316, 710 370" class="weak" />
+            <path d="M600 508 C650 464, 664 430, 710 404" class="weak" />
+          </svg>
+
+          <button class="topic project" data-topic="project">
+            <small>Project Topic</small>
+            <strong>전술 헤드셋</strong>
+            <span>회의의 시작점. 하드웨어, 소리 입력, 출력, 데이터, 검증 계획이 여기서 뻗어집니다.</span>
+            <span class="topic-meta">
+              <span class="pill blue">root</span>
+              <span class="pill teal">5 cards</span>
+            </span>
+          </button>
+
+          <button class="topic environment" data-topic="environment">
+            <small>Topic</small>
+            <strong>마이크 (환경음)</strong>
+            <span>총성, 폭발음, 장비 소음처럼 외부 위험 소리를 감지하는 입력.</span>
+            <span class="topic-meta">
+              <span class="pill teal">감지</span>
+              <span class="pill amber">4 cards</span>
+            </span>
+          </button>
+
+          <button class="topic ambient" data-topic="ambient">
+            <small>Topic</small>
+            <strong>마이크 (주변음)</strong>
+            <span>사람 목소리, 팀원 호출, 무전 등 놓치면 안 되는 주변 정보를 다룹니다.</span>
+            <span class="topic-meta">
+              <span class="pill amber">판단 필요</span>
+              <span class="pill teal">3 cards</span>
+            </span>
+          </button>
+
+          <button class="topic speaker" data-topic="speaker">
+            <small>Topic</small>
+            <strong>내부 스피커</strong>
+            <span>차단된 소리 대신 사용자에게 어떤 정보를 어떤 방식으로 들려줄지 결정합니다.</span>
+            <span class="topic-meta">
+              <span class="pill violet">출력</span>
+              <span class="pill teal">3 cards</span>
+            </span>
+          </button>
+
+          <button class="topic data" data-topic="data">
+            <small>Derived Topic</small>
+            <strong>학습 데이터</strong>
+            <span>환경음/주변음 topic에서 파생된 데이터셋, 라벨, 라이선스 조사 branch.</span>
+            <span class="topic-meta">
+              <span class="pill rose">충돌 가능</span>
+              <span class="pill amber">task 후보</span>
+            </span>
+          </button>
+
+          <button class="topic prototype" data-topic="prototype">
+            <small>Derived Topic</small>
+            <strong>검증 실험</strong>
+            <span>마이크와 스피커 선택이 실제로 목표를 만족하는지 확인하는 실험 branch.</span>
+            <span class="topic-meta">
+              <span class="pill blue">task 후보</span>
+            </span>
+          </button>
+
+          <section id="cardLayer" class="card-layer" aria-live="polite">
+            <div class="card-layer-head">
+              <div>
+                <h2 id="cardLayerTitle">2F AI Card Layer</h2>
+                <p id="cardLayerSubtitle">선택한 topic의 AI 카드만 표시됩니다.</p>
+              </div>
+              <button id="closeLayer">닫기</button>
+            </div>
+            <div id="cardLayerBody" class="card-layer-body"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="lower-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Meeting Record</h2>
+            <p>task 나열이 아니라, 로드맵이 왜 이렇게 바뀌었는지 판단을 남깁니다.</p>
+          </div>
+          <button>회의록 생성</button>
+        </div>
+        <div class="panel-body">
+          <article class="note">
+            <strong>오늘의 계획 변화</strong>
+            <p>전술 헤드셋을 마이크 환경음, 마이크 주변음, 내부 스피커로 나누고, 데이터와 검증 실험은 파생 branch로 분리했다.</p>
+          </article>
+          <article class="note">
+            <strong>변경 가능성</strong>
+            <p>topic card에 붙은 AI 카드가 다른 topic과 충돌하면 root와 topic 내용은 회의 중 언제든지 바뀔 수 있다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Task Candidates From Roadmap</h2>
+            <p>1층 topic과 2층 AI 카드가 정리된 뒤, 시간이 필요한 일만 task 후보가 됩니다.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <article class="task">
+            <div>
+              <strong>신규 task</strong>
+              <p>환경음 감지용 공개 데이터셋 후보와 라이선스/라벨 구조 조사</p>
+            </div>
+            <div>
+              <strong>완료 기준</strong>
+              <p>후보 3개 이상 비교표와 전술 헤드셋에 적합한 추천 후보 1개</p>
+            </div>
+            <div class="task-actions">
+              <button class="primary">반영</button>
+              <button class="danger">제거</button>
+            </div>
+          </article>
+          <article class="task">
+            <div>
+              <strong>기존 task 보강</strong>
+              <p>스피커 출력 방식 task에 “주변음 보존 여부” 확인 항목 추가</p>
+            </div>
+            <div>
+              <strong>완료 기준 변경 제안</strong>
+              <p>음성 안내가 위험 소리를 덮지 않는지 확인하는 기준 포함</p>
+            </div>
+            <div class="task-actions">
+              <button>확인할 것만</button>
+              <button class="primary">기준 포함</button>
+              <button class="danger">제거</button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const topicData = {
+      project: {
+        title: '전술 헤드셋',
+        subtitle: 'Project topic에 직접 붙은 AI 카드입니다. 전체 계획의 root와 branch를 바꿀 수 있습니다.',
+        tone: 'blue',
+        cards: [
+          {
+            type: 'change',
+            pill: '계획 구조',
+            title: 'topic을 3개 줄기로 먼저 나누기',
+            body: '마이크 (환경음), 마이크 (주변음), 내부 스피커를 1차 topic으로 분리하면 회의가 입력/판단/출력 흐름으로 보입니다.',
+            impact: '영향: project root에서 3개 topic으로 branch가 유지됩니다. 데이터와 검증 실험은 파생 topic으로 둡니다.'
+          },
+          {
+            type: 'conflict',
+            pill: '충돌 감지',
+            title: '환경음 차단과 주변음 보존은 충돌할 수 있음',
+            body: '총성/폭발음은 줄이고 팀원 목소리는 살려야 한다면, 단순 소음 차단이 아니라 분류와 선택적 출력 문제가 됩니다.',
+            impact: '영향: 마이크 (환경음), 마이크 (주변음), 내부 스피커 topic 모두에 조건이 추가됩니다.'
+          },
+          {
+            type: 'research',
+            pill: 'task 후보',
+            title: '최소 검증 시나리오가 필요',
+            body: '실제로 어떤 소리를 줄이고 어떤 소리를 남길지 샘플 시나리오가 있어야 하드웨어와 데이터 task가 명확해집니다.',
+            impact: '영향: 검증 실험 topic에 신규 task 후보가 생깁니다.'
+          }
+        ]
+      },
+      environment: {
+        title: '마이크 (환경음)',
+        subtitle: '외부 위험 소리 감지 topic의 AI 카드입니다.',
+        tone: 'teal',
+        cards: [
+          {
+            type: 'answer',
+            pill: '즉시 답변',
+            title: '환경음은 무엇을 들어야 하나',
+            body: '전장 맥락에서는 총성, 폭발음, 차량/항공기 소음, 장비 충격음이 후보입니다. 처음에는 총성/폭발음처럼 라벨이 뚜렷한 소리부터 좁히는 편이 좋습니다.',
+            impact: '영향: 학습 데이터 topic에 총성/폭발음 라벨 조건이 추가됩니다.'
+          },
+          {
+            type: 'research',
+            pill: '자료조사',
+            title: '데이터셋 후보 확인',
+            body: 'AudioSet은 범위가 넓고, ESC-50/UrbanSound8K는 일반 환경음 중심입니다. 총성/폭발음 특화 공개 데이터셋은 라이선스와 라벨 품질 확인이 필요합니다.',
+            impact: '영향: 신규 task 후보로 전환할 수 있습니다.'
+          },
+          {
+            type: 'conflict',
+            pill: '충돌',
+            title: '차단 기준과 감지 기준이 다름',
+            body: '감지는 “소리를 알아차리는 것”이고 차단은 “사용자에게 덜 들리게 하는 것”입니다. 두 기준을 같은 task로 만들면 완료 기준이 흐려집니다.',
+            impact: '영향: 환경음 topic과 내부 스피커 topic의 완료 기준을 분리합니다.'
+          }
+        ]
+      },
+      ambient: {
+        title: '마이크 (주변음)',
+        subtitle: '보존해야 하는 주변 정보 topic의 AI 카드입니다.',
+        tone: 'amber',
+        cards: [
+          {
+            type: 'answer',
+            pill: '결정 필요',
+            title: '주변음은 제거 대상이 아닐 수 있음',
+            body: '팀원 목소리, 경고음, 무전은 위험 소리와 달리 보존해야 할 수 있습니다. 회의에서 “살릴 소리” 목록을 먼저 정해야 합니다.',
+            impact: '영향: 내부 스피커 topic에 음성 보존/재생 방식 조건이 추가됩니다.'
+          },
+          {
+            type: 'change',
+            pill: 'root 보정',
+            title: '환경음 topic의 child가 아니라 sibling일 가능성',
+            body: '주변음은 환경음의 하위가 아니라 별도 입력 목적입니다. 같은 마이크를 써도 판단 목적이 다르면 독립 topic이 더 직관적입니다.',
+            impact: '영향: project root에서 마이크 (환경음)과 마이크 (주변음)을 같은 깊이로 유지합니다.'
+          }
+        ]
+      },
+      speaker: {
+        title: '내부 스피커',
+        subtitle: '사용자에게 다시 전달하는 출력 topic의 AI 카드입니다.',
+        tone: 'violet',
+        cards: [
+          {
+            type: 'answer',
+            pill: '출력 방식',
+            title: '차단한 소리를 어떻게 대체할까',
+            body: '위험 소리를 완전히 없애면 사용자가 상황을 놓칠 수 있습니다. 차단 대신 작게 들려주거나, 방향/위험도만 음성 또는 톤으로 알려주는 방식을 비교해야 합니다.',
+            impact: '영향: 검증 실험 topic에 “위험 인지 유지” 기준이 추가됩니다.'
+          },
+          {
+            type: 'conflict',
+            pill: '충돌',
+            title: '스피커 안내가 주변음을 덮을 수 있음',
+            body: '내부 스피커의 안내음이 팀원 목소리나 무전을 가리면 목표와 충돌합니다.',
+            impact: '영향: 마이크 (주변음) topic과 내부 스피커 topic이 서로 조건을 주고받습니다.'
+          }
+        ]
+      },
+      data: {
+        title: '학습 데이터',
+        subtitle: '여러 topic에서 영향을 받는 파생 topic입니다.',
+        tone: 'rose',
+        cards: [
+          {
+            type: 'research',
+            pill: 'task 후보',
+            title: '데이터셋 조사는 회의에서 끝나지 않음',
+            body: '라이선스, 라벨 구조, 다운로드 가능성, 상업/연구 사용 범위는 실제 확인이 필요합니다.',
+            impact: '영향: Subjector in-process로 보낼 신규 task 후보입니다.'
+          },
+          {
+            type: 'conflict',
+            pill: '기존 task 보강',
+            title: '기존 하드웨어 비교 task와 연결 필요',
+            body: '데이터가 크거나 실시간 처리가 필요하면 하드웨어 선택 기준에도 영향을 줍니다.',
+            impact: '영향: 기존 하드웨어 task의 확인할 것에 “데이터 처리량”을 보강합니다.'
+          }
+        ]
+      },
+      prototype: {
+        title: '검증 실험',
+        subtitle: '계획이 실제로 맞는지 확인하는 파생 topic입니다.',
+        tone: 'blue',
+        cards: [
+          {
+            type: 'research',
+            pill: '직접 검증',
+            title: '실험 없이는 완료할 수 없음',
+            body: '소리 감소량, 음성 보존, 지연 시간은 회의에서 판단할 수 없고 직접 측정해야 합니다.',
+            impact: '영향: 신규 task 후보로 남깁니다.'
+          },
+          {
+            type: 'change',
+            pill: '완료 기준',
+            title: '성공 기준을 먼저 작게 잡기',
+            body: '첫 MVP에서는 “샘플 5개에서 위험 소리와 사람 목소리를 구분해 표시” 정도로 좁힐 수 있습니다.',
+            impact: '영향: 전술 헤드셋 project topic의 MVP 기준이 작아집니다.'
+          }
+        ]
+      }
+    };
+
+    const roadmap = document.querySelector('#roadmap');
+    const cardLayer = document.querySelector('#cardLayer');
+    const cardLayerTitle = document.querySelector('#cardLayerTitle');
+    const cardLayerSubtitle = document.querySelector('#cardLayerSubtitle');
+    const cardLayerBody = document.querySelector('#cardLayerBody');
+    const layerState = document.querySelector('#layerState');
+    const closeLayer = document.querySelector('#closeLayer');
+    let activeTopic = null;
+
+    function pillClass(tone) {
+      return `pill ${tone}`;
+    }
+
+    function renderCards(topicId) {
+      const topic = topicData[topicId];
+      cardLayerTitle.textContent = `2F AI Card Layer: ${topic.title}`;
+      cardLayerSubtitle.textContent = topic.subtitle;
+      cardLayerBody.innerHTML = topic.cards.map((card) => `
+        <article class="ai-card ${card.type}">
+          <span class="${pillClass(topic.tone)}">${card.pill}</span>
+          <h3>${card.title}</h3>
+          <p>${card.body}</p>
+          <div class="impact-box"><strong>로드맵 영향</strong><br>${card.impact}</div>
+          ${card.pill === '결정 필요' ? `
+            <div class="decision-options">
+              <button>살릴 소리로 지정</button>
+              <button>제거 대상에 포함</button>
+            </div>
+          ` : ''}
+          <div class="actions">
+            <button class="primary">topic에 반영</button>
+            <button>다른 topic에도 영향 표시</button>
+            <button class="danger">제거</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function openTopic(topicId) {
+      activeTopic = topicId;
+      document.querySelectorAll('.topic').forEach((topic) => {
+        topic.classList.toggle('active', topic.dataset.topic === topicId);
+      });
+      roadmap.classList.add('card-layer-on');
+      renderCards(topicId);
+      cardLayer.classList.add('open');
+      layerState.textContent = `${topicData[topicId].title} topic의 2층 AI 카드가 켜져 있습니다. 같은 topic을 다시 누르면 꺼집니다.`;
+    }
+
+    function closeCards() {
+      activeTopic = null;
+      document.querySelectorAll('.topic').forEach((topic) => topic.classList.remove('active'));
+      roadmap.classList.remove('card-layer-on');
+      cardLayer.classList.remove('open');
+      layerState.textContent = 'topic을 클릭하면 2층 AI 카드가 켜집니다.';
+    }
+
+    roadmap.addEventListener('click', (event) => {
+      const topic = event.target.closest('.topic');
+      if (!topic) return;
+      const topicId = topic.dataset.topic;
+      if (activeTopic === topicId) {
+        closeCards();
+        return;
+      }
+      openTopic(topicId);
+    });
+
+    closeLayer.addEventListener('click', closeCards);
+  </script>
+</body>
+</html>

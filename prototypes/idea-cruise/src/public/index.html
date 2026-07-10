@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IDEA CRUISE</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div>
+      <h1>IDEA CRUISE Roadmap Desk</h1>
+      <p>1층은 topic/root 지도, 2층은 선택한 topic에 붙는 AI 카드입니다. 고정한 기준과 충돌할 때만 AI가 강하게 개입합니다.</p>
+    </div>
+    <div class="status">
+      <span>1F Topic Root</span>
+      <span>2F AI Card Popover</span>
+      <span>Tasks: Roadmap Context</span>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="panel roadmap-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Roadmap</h2>
+          <p>topic을 클릭하면 AI 카드층이 열립니다. 같은 topic을 다시 누르면 닫힙니다.</p>
+        </div>
+        <div class="actions">
+          <button id="addTopicButton" class="primary">Topic 추가</button>
+          <button id="recordButton">회의록 생성</button>
+        </div>
+      </div>
+
+      <div class="roadmap-shell">
+        <div class="layer-label">
+          <span class="tag strong">1층</span>
+          <span id="layerState">topic을 추가하거나 클릭하세요.</span>
+        </div>
+        <div id="roadmap" class="roadmap">
+          <svg id="rootLines" class="root-lines" aria-hidden="true"></svg>
+          <div id="topicNodes"></div>
+          <section id="cardPopover" class="card-popover" aria-live="polite"></section>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel task-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Task Candidates</h2>
+          <p>시간을 써야 해결되는 일만 남깁니다. 각 task에는 왜 생겼는지 짧은 맥락을 표시합니다.</p>
+        </div>
+        <button id="taskButton" class="primary">갱신</button>
+      </div>
+      <div id="tasks" class="tasks"></div>
+    </aside>
+  </main>
+
+  <section class="panel meeting-panel">
+    <div class="panel-head">
+      <div>
+        <h2>Meeting Record</h2>
+        <p>task 나열이 아니라 로드맵이 왜 이렇게 바뀌었는지 판단을 남기는 기록입니다.</p>
+      </div>
+    </div>
+    <pre id="meetingRecord" class="record">회의록 생성 전입니다.</pre>
+  </section>
+
+  <dialog id="topicDialog">
+    <form id="topicForm" method="dialog">
+      <h2>Topic 추가</h2>
+      <p>새 topic은 선택한 topic 밑에 자동 root로 연결됩니다. 선택 topic이 없으면 최상위 topic으로 생성됩니다.</p>
+      <label>Parent topic
+        <select id="parentTopic"></select>
+      </label>
+      <label>Topic 제목
+        <input id="topicTitle" placeholder="예: 전술 헤드셋" />
+      </label>
+      <label>Topic 내용
+        <textarea id="topicText" placeholder="회의에서 다룰 생각, 기준, 질문을 적으세요."></textarea>
+      </label>
+      <div class="actions">
+        <button type="button" id="closeTopicDialog">닫기</button>
+        <button class="primary" type="submit">추가</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
