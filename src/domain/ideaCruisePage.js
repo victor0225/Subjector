@@ -142,6 +142,45 @@ export function renderIdeaCruisePage() {
     }
     .panel-head p { margin-bottom: 0; }
 
+    .meeting-flow {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdfe;
+    }
+    .meeting-flow ol {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .meeting-flow li, .exception-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+    .meeting-flow li span {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .exception-box {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+      background: #fffaf2;
+      border-color: #f1d2a0;
+    }
+
     .roadmap-panel, .task-panel { min-height: calc(100vh - 150px); }
     .roadmap-shell {
       position: relative;
@@ -412,6 +451,7 @@ export function renderIdeaCruisePage() {
       .app-shell { grid-template-columns: 1fr; }
       .roadmap-panel, .task-panel { min-height: auto; }
       .roadmap-shell, .tasks { max-height: none; }
+      .meeting-flow ol { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -437,9 +477,25 @@ export function renderIdeaCruisePage() {
         </div>
         <div class="actions">
           <button id="add-topic" class="primary" type="button">Topic 추가</button>
-          <button id="refresh-roadmap" type="button">최신화</button>
+          <button id="refresh-roadmap" type="button">로드맵 반영</button>
           <button id="generate-record" type="button">회의록 생성</button>
         </div>
+      </div>
+      <div class="meeting-flow">
+        <div>
+          <span class="tag strong">회의 전 로드맵 반영</span>
+          <p>회의 전에 누르는 수동 체크포인트입니다. 전 반영 이후 #회의-결과록에 올라온 자료, 회의 녹음본, 수기 회의록, 회의 중이 아니어도 짧게 논의한 메모를 참고해 기존 로드맵을 유지한 채 Layer 2에 애매함 감지 카드를 띄웁니다.</p>
+          <p data-priority-lanes="branch-now branch-later">먼저 판단: 지금 결정해야 다음으로 감 · 보류/제외: 지금은 다른 생각 먼저 · 선택하면 이쪽으로 심화</p>
+        </div>
+        <ol>
+          <li><span>1</span>기존 로드맵 보며 회의·녹음</li>
+          <li><span>2</span>회의 녹음본 업로드</li>
+          <li><span>3</span>다음 회의 전 로드맵 반영</li>
+          <li><span>4</span>애매한 부분 팀 논의 후 수정</li>
+          <li><span>5</span>Task 생성</li>
+          <li><span>6</span>수정된 로드맵 기반 회의록 생성 및 #회의-결과록 게시</li>
+          <li><span>7</span>AI 전체 요약 생성 후 #finals 게시</li>
+        </ol>
       </div>
       <div class="roadmap-shell">
         <div class="layer-label">
@@ -465,6 +521,13 @@ export function renderIdeaCruisePage() {
       <div class="tasks">
         <div id="task-filter" class="task-filter"></div>
         <div id="task-generation-error"></div>
+        <div class="exception-box">
+          <span class="tag amber">이번 회의만 예외</span>
+          <strong>이번 회의록으로 바로 task 생성</strong>
+          <p>수기 회의록과 task 분배안이 이미 정리된 경우, AI가 결정을 새로 만들지 않고 사람이 적은 분배안을 Subjector task 필드로 정규화해 미리보기로 보여줍니다.</p>
+          <label>수기 회의록과 task 분배안<textarea id="direct-meeting-text" placeholder="#회의-결과록에 올릴 회의록과 이미 정한 담당자별 분배안을 붙여넣으세요."></textarea></label>
+          <button id="generate-direct-tasks" type="button">수기 회의록과 task 분배안으로 생성</button>
+        </div>
         <div id="task-list"></div>
         <div id="task-update-list"></div>
         <div id="not-task-list"></div>
@@ -505,6 +568,7 @@ export function renderIdeaCruisePage() {
 
   <script>
     const STORAGE_KEY = 'idea-cruise-roadmap-v2';
+    const ROADMAP_UI_VERSION = 'priority-roadmap-v2';
     const state = loadState();
     let layoutCache = new Map();
 
@@ -520,6 +584,7 @@ export function renderIdeaCruisePage() {
     const recordEl = document.getElementById('meeting-record');
     const topicDialog = document.getElementById('topic-dialog');
     const parentTopicEl = document.getElementById('parent-topic');
+    const directMeetingTextEl = document.getElementById('direct-meeting-text');
 
     function defaultState() {
       return {
@@ -532,6 +597,7 @@ export function renderIdeaCruisePage() {
         taskGenerationError: '',
         record: '',
         refreshMessage: '',
+        roadmapUiVersion: ROADMAP_UI_VERSION,
         expandedPendingTopicId: null
       };
     }
@@ -638,6 +704,22 @@ export function renderIdeaCruisePage() {
       return 'research';
     }
 
+    function priorityScore(card) {
+      const kind = normalizeKind(card.kind);
+      return { decision: 0, filter: 1, research: 2, experiment: 3, answer: 4, split: 5, conflict: 6 }[kind] ?? 7;
+    }
+
+    function prioritizedCards(cards, selectedIndex) {
+      return (cards || [])
+        .map(function(card, index) { return { card: card, index: index }; })
+        .sort(function(a, b) {
+          if (a.index === selectedIndex) return -1;
+          if (b.index === selectedIndex) return 1;
+          return priorityScore(a.card) - priorityScore(b.card);
+        })
+        .map(function(item) { return item.card; });
+    }
+
     function mapApiCard(card, index) {
       const kindMap = { info: 'answer', warn: 'research' };
       return {
@@ -662,6 +744,7 @@ export function renderIdeaCruisePage() {
       if (broadTopicScore(topic.text) >= 3 && !topic.splitApplied && !topic.splitDismissed && !(topic.cards || []).some(function(card) { return card.kind === 'split'; })) {
         topic.cards = [localSplitCard(topic)].concat(topic.cards || []);
       }
+      topic.cards = prioritizedCards(topic.cards, 0);
     }
 
     async function requestCardsForTopic(topic) {
@@ -685,10 +768,15 @@ export function renderIdeaCruisePage() {
       ensurePriorityCards(topic);
     }
 
-    async function requestTaskCandidates() {
-      const completed = completedTopics();
+    async function requestTaskCandidates(options = {}) {
+      const directMeetingText = String(options.directMeetingText || '').trim();
+      const completed = directMeetingText
+        ? [{ id: 'direct-meeting-exception', title: '이번 회의 수기 회의록', text: directMeetingText }]
+        : completedTopics();
       if (completed.length === 0) {
-        state.taskGenerationError = 'Task 후보 대상으로 표시된 topic이 없습니다. topic 팝오버에서 "Task 후보로 보냄"을 누른 뒤 갱신하세요.';
+        state.taskGenerationError = options.directMeetingText !== undefined
+          ? '수기 회의록과 task 분배안을 먼저 붙여넣어 주세요.'
+          : 'Task 후보 대상으로 표시된 topic이 없습니다. topic 팝오버에서 "Task 후보로 보냄"을 누른 뒤 갱신하세요.';
         return;
       }
       const response = await fetch('/idea-cruise/task-candidates', {
@@ -826,7 +914,7 @@ export function renderIdeaCruisePage() {
     async function refreshRoadmapContext() {
       let pin = localStorage.getItem('idea-cruise-refresh-pin') || '';
       if (!pin) {
-        pin = window.prompt('IDEA CRUISE 최신화 PIN을 입력하세요.');
+        pin = window.prompt('IDEA CRUISE 로드맵 반영 PIN을 입력하세요.');
         if (!pin) return;
         localStorage.setItem('idea-cruise-refresh-pin', pin);
       }
@@ -837,7 +925,7 @@ export function renderIdeaCruisePage() {
         if (response.status === 403) {
           localStorage.removeItem('idea-cruise-refresh-pin');
         }
-        throw new Error(result.error || '로드맵 최신화에 실패했습니다.');
+        throw new Error(result.error || '로드맵 반영에 실패했습니다.');
       }
       mergeRoadmapContext(result.topics || []);
     }
@@ -1039,9 +1127,11 @@ export function renderIdeaCruisePage() {
             return '<div><strong>' + escapeHtml(item.title) + '</strong><p>' + escapeHtml(item.body) + '</p></div>';
           }).join('') + '</div>'
         : '';
-      const suggestion = kind !== 'split' && kind !== 'conflict' && card.suggestion
-        ? '<label>적용 후 topic 내용<textarea data-card-suggestion ' + (fixedBlocked ? 'disabled' : '') + '>' + escapeHtml(card.suggestion) + '</textarea></label>'
-        : '';
+      const aiDraft = card.suggestion || card.body || topic.text;
+      const suggestion = '<div class="decision-note">' +
+        '<label>AI 수정안 초안<textarea data-card-suggestion readonly>' + escapeHtml(aiDraft) + '</textarea></label>' +
+        '<label>우리가 하기로 한 것<textarea data-card-decision-note ' + (fixedBlocked ? 'disabled' : '') + ' placeholder="예: 소음 차단만 필터링 하기로 했음">' + escapeHtml(card.userDecision || '') + '</textarea></label>' +
+      '</div>';
       const pendingControl = pendingCount > 0
         ? '<button data-toggle-pending="' + topic.id + '" type="button">' + (state.expandedPendingTopicId === topic.id ? '대기 카드 접기' : '대기 카드 ' + pendingCount + ' 보기') + '</button>'
         : '<span class="pending-count">대기 카드 0</span>';
@@ -1053,7 +1143,7 @@ export function renderIdeaCruisePage() {
         details +
         childPreview +
         suggestion +
-        '<div class="actions"><button class="primary" data-apply-card="' + card.id + '" ' + (fixedBlocked ? 'disabled' : '') + ' type="button">' + (fixedBlocked ? '고정 해제 후 적용' : applyLabel(kind)) + '</button><button data-dismiss-card="' + card.id + '" type="button">제거</button>' + pendingControl + '</div>' +
+        '<div class="actions"><button class="primary" data-apply-card="' + card.id + '" ' + (fixedBlocked ? 'disabled' : '') + ' type="button">' + (fixedBlocked ? '고정 해제 후 적용' : applyLabel(kind)) + '</button><button data-dismiss-card="' + card.id + '" type="button">무시</button>' + pendingControl + '</div>' +
         renderPendingCards(topic) +
         (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
       '</article>';
@@ -1074,7 +1164,7 @@ export function renderIdeaCruisePage() {
     function applyLabel(kind) {
       if (kind === 'split') return '기능별 topic 생성';
       if (kind === 'conflict') return '충돌 확인';
-      return 'topic에 반영';
+      return '반영';
     }
 
     function renderTaskFilters() {
@@ -1309,7 +1399,10 @@ export function renderIdeaCruisePage() {
         const card = (topic.cards || []).find(function(item) { return item.id === applyButton.dataset.applyCard; });
         if (!card) return;
         try {
-          const content = event.target.closest('[data-card-id]')?.querySelector('[data-card-suggestion]')?.value || card.suggestion || '';
+          const cardEl = event.target.closest('[data-card-id]');
+          const decisionNote = cardEl?.querySelector('[data-card-decision-note]')?.value || '';
+          const aiDraft = cardEl?.querySelector('[data-card-suggestion]')?.value || '';
+          const content = decisionNote.trim() || aiDraft.trim() || card.suggestion || '';
           applyCard(topic, card, content);
         } catch (error) {
           card.error = error.message;
@@ -1340,6 +1433,18 @@ export function renderIdeaCruisePage() {
       event.target.disabled = true;
       try {
         await requestTaskCandidates();
+      } catch (error) {
+        state.taskGenerationError = error.message;
+      }
+      event.target.disabled = false;
+      render();
+    });
+
+    document.getElementById('generate-direct-tasks').addEventListener('click', async function(event) {
+      const directText = directMeetingTextEl.value.trim();
+      event.target.disabled = true;
+      try {
+        await requestTaskCandidates({ directMeetingText: directText });
       } catch (error) {
         state.taskGenerationError = error.message;
       }
