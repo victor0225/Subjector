@@ -501,6 +501,24 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
     }
   }
 
+  if (response.reflectRoadmap && meetingService?.handleRoadmapReflectionRequest) {
+    try {
+      const result = await meetingService.handleRoadmapReflectionRequest({
+        submittedByUserKey: user.key
+      });
+      await say({
+        text: result.text,
+        blocks: buildTextMessageBlocks(result.text)
+      });
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, 로드맵 반영에 실패했습니다. Render 로그를 확인한 뒤 다시 '로드맵 반영'을 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
   if (response.createDailySummary && inProcessService) {
     try {
       const result = await inProcessService.handleEndWork({ user });

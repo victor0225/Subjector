@@ -806,6 +806,37 @@ test('handleDirectDmMessage records raw meeting text and sends participant input
   assert.match(postedMessages[1].text, /조은님/);
 });
 
+test('handleDirectDmMessage requests IDEA CRUISE roadmap reflection from the lead', async () => {
+  const replies = [];
+  const serviceCalls = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      channel: 'D_LEAD',
+      ts: '1710000000.000300',
+      user: 'U1',
+      text: '로드맵 반영'
+    },
+    say: async (payload) => replies.push(payload),
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    meetingService: {
+      async handleRoadmapReflectionRequest(input) {
+        serviceCalls.push(input);
+        return {
+          text: '로드맵 반영 요청을 확인했습니다. #회의-결과록의 일반 메시지 기준으로 반영합니다.'
+        };
+      }
+    }
+  });
+
+  assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].submittedByUserKey, 'suhyeon');
+  assert.match(replies[0].text, /로드맵 반영 요청/);
+  assert.match(replies[0].text, /#회의-결과록/);
+});
+
 test('handleDirectDmMessage reports finals preview failures to the lead', async () => {
   const replies = [];
   const errors = [];

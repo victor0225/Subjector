@@ -41,6 +41,30 @@ test('최신화 refreshes #in-process without starting work', () => {
   assert.match(result.text, /#in-process/);
 });
 
+test('로드맵 반영 requests IDEA CRUISE roadmap reflection for the lead', () => {
+  const result = handleDmCommand({
+    text: '로드맵 반영',
+    user: config.users[0],
+    config
+  });
+
+  assert.equal(result.type, 'roadmap_reflection');
+  assert.equal(result.reflectRoadmap, true);
+  assert.match(result.text, /로드맵 반영/);
+  assert.match(result.text, /#회의-결과록/);
+});
+
+test('로드맵 반영 is rejected for non-lead users', () => {
+  const result = handleDmCommand({
+    text: '로드맵 반영',
+    user: config.users[1],
+    config
+  });
+
+  assert.equal(result.type, 'not_allowed');
+  assert.match(result.text, /수현님만/);
+});
+
 test('퇴근 requests daily summary generation', () => {
   const result = handleDmCommand({
     text: '퇴근',
@@ -124,5 +148,6 @@ test('unknown command returns short help text', () => {
   assert.equal(result.type, 'help');
   assert.match(result.text, /출근/);
   assert.match(result.text, /최신화/);
+  assert.match(result.text, /로드맵 반영/);
   assert.match(result.text, /퇴근/);
 });

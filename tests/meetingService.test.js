@@ -144,6 +144,23 @@ test('handleRawMeetingText stores context only when meeting task flow is disable
   assert.equal(result.directMessages, undefined);
 });
 
+test('handleRoadmapReflectionRequest uses the meeting channel checkpoint message', async () => {
+  const service = createMeetingService({
+    config: teamConfig,
+    store: {}
+  });
+
+  const result = await service.handleRoadmapReflectionRequest({
+    submittedByUserKey: 'suhyeon'
+  });
+
+  assert.equal(result.submittedByUserKey, 'suhyeon');
+  assert.match(result.text, /로드맵 반영 요청/);
+  assert.match(result.text, /#회의-결과록/);
+  assert.match(result.text, /봇 일반 메시지 "로드맵 반영 완료" 이후 자료/);
+  assert.match(result.text, /그 메시지가 다음 반영 기준/);
+});
+
 test('processMeetingAudioUpload downloads, transcribes, stores, and asks for speaker mapping', async () => {
   const calls = [];
   const service = createMeetingService({

@@ -461,6 +461,17 @@ export function createMeetingService({
     };
   }
 
+  async function handleRoadmapReflectionRequest({ submittedByUserKey }) {
+    return {
+      text: [
+        '로드맵 반영 요청을 확인했습니다.',
+        '#회의-결과록에서 가장 최근의 봇 일반 메시지 "로드맵 반영 완료" 이후 자료를 기준으로 IDEA CRUISE에 반영합니다.',
+        '반영이 끝나면 Subjector가 일반 메시지 "로드맵 반영 완료"를 남기고, 그 메시지가 다음 반영 기준이 됩니다.'
+      ].join('\n'),
+      submittedByUserKey
+    };
+  }
+
   return {
     handleMeetingFileMessage,
     handleRawMeetingText,
@@ -470,6 +481,7 @@ export function createMeetingService({
     handleParticipantSkipWaiting,
     getMeetingTaskCandidate,
     handleCandidateReview,
-    handleTaskApproval
+    handleTaskApproval,
+    handleRoadmapReflectionRequest
   };
 }
