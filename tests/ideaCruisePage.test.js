@@ -181,7 +181,8 @@ test('renderIdeaCruisePage frames manual pre-meeting roadmap reflection', () => 
 
   assert.match(html, /회의 전 로드맵 반영/);
   assert.match(html, /회의 전에 누르는 수동 체크포인트/);
-  assert.match(html, /전 반영 이후 #회의-결과록에 올라온 자료/);
+  assert.match(html, /가장 최근의 봇 일반 메시지 "로드맵 반영 완료" 이후 자료/);
+  assert.match(html, /그 메시지가 다음 반영 기준/);
   assert.match(html, /회의 중이 아니어도 짧게 논의한 메모/);
   assert.match(html, /기존 로드맵 보며 회의·녹음/);
   assert.match(html, /회의 녹음본 업로드/);
