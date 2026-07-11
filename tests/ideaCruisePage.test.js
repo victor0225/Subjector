@@ -207,6 +207,14 @@ test('renderIdeaCruisePage keeps ambiguity cards editable with apply or ignore o
   assert.doesNotMatch(html, /활동창|활동 창/);
 });
 
+test('renderIdeaCruisePage imports reflected roadmap cards from context topics', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /incoming\.cards/);
+  assert.match(html, /mapApiCard\(card/);
+  assert.match(html, /sourceType === 'roadmap-reflection'/);
+});
+
 test('renderIdeaCruisePage supports the one-time direct task distribution exception', () => {
   const html = renderIdeaCruisePage();
 

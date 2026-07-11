@@ -164,11 +164,37 @@ test('handleRoadmapReflectionRequest uses the meeting channel checkpoint message
 test('handleRoadmapReflectionRequest reflects messages after the latest completion marker', async () => {
   const storedRawTexts = [];
   const postedMessages = [];
+  const analyzerCalls = [];
   const service = createMeetingService({
     config: teamConfig,
     store: {
       async createMeetingFromRawText(input) {
         storedRawTexts.push(input);
+      }
+    },
+    cardAnalyzer: {
+      async analyze(input) {
+        analyzerCalls.push(input);
+        return [
+          {
+            kind: 'decision',
+            type: 'AI 애매함 검토',
+            title: '소음 차단 범위 결정',
+            body: '회의록에는 소음 차단 범위가 넓게 남아 있어 지금 기준을 좁혀야 합니다.',
+            suggestion: '소음 차단은 우선 폭음/충격음 중심으로 좁히고 음성 보존은 별도 기준으로 검토한다.',
+            details: [],
+            choices: []
+          },
+          {
+            kind: 'filter',
+            type: 'AI 제외 제안',
+            title: '회의 중 제외한 선택지 확인',
+            body: '팀이 제외한 공사장 일반 소음까지 task로 만들지 확인이 필요합니다.',
+            suggestion: '공사장 일반 소음 대응은 이번 MVP 범위에서 제외한다.',
+            details: [],
+            choices: []
+          }
+        ];
       }
     },
     slackClient: {
@@ -201,12 +227,17 @@ test('handleRoadmapReflectionRequest reflects messages after the latest completi
   assert.equal(storedRawTexts[0].sourceChannelId, 'C_MEETING');
   assert.equal(storedRawTexts[0].sourceMessageTs, '1710000000.000400');
   assert.equal(storedRawTexts[0].rawText, '회의 중 말고 짧게 논의한 메모');
+  assert.equal(storedRawTexts[0].roadmapReflection.cards.length, 2);
+  assert.equal(storedRawTexts[0].roadmapReflection.cards[0].kind, 'decision');
+  assert.match(analyzerCalls[0].entryText, /회의 중 말고 짧게 논의한 메모/);
+  assert.match(analyzerCalls[0].entryText, /회의 자료를 기존 IDEA CRUISE 로드맵에 반영/);
   assert.equal(postedMessages.length, 1);
   assert.equal(postedMessages[0].channel, 'C_MEETING');
   assert.match(postedMessages[0].text, /^로드맵 반영 완료/);
   assert.match(postedMessages[0].text, /참고 자료: 1개/);
-  assert.match(postedMessages[0].text, /생성된 애매함 카드: 0개/);
+  assert.match(postedMessages[0].text, /생성된 애매함 카드: 2개/);
   assert.match(result.text, /로드맵 반영을 완료했습니다/);
+  assert.equal(result.ambiguityCardCount, 2);
 });
 
 test('handleRoadmapReflectionRequest reports no new meeting materials without posting a marker', async () => {

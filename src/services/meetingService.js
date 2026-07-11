@@ -79,6 +79,51 @@ function buildRoadmapReflectionCompletedText({ materialCount, ambiguityCardCount
   ].join('\n');
 }
 
+function buildRoadmapReflectionEntryText({ materials }) {
+  return [
+    '회의 자료를 기존 IDEA CRUISE 로드맵에 반영하고, 회의 때 바로 확인해야 할 애매함 카드를 생성하세요.',
+    '기존 로드맵 구조는 유지하고, 새로 결정해야 할 것/제외해야 할 것/나중에 확인할 것을 우선순위로 분리하세요.',
+    '',
+    '새 회의 자료:',
+    ...materials.map((material, index) => {
+      const text = String(material.text || '').trim();
+      return [
+        `## 자료 ${index + 1}`,
+        text || '[첨부 파일만 있는 자료]'
+      ].join('\n');
+    })
+  ].join('\n');
+}
+
+function normalizeRoadmapReflectionCards(cards) {
+  return (Array.isArray(cards) ? cards : []).slice(0, 5).map((card) => ({
+    kind: ['answer', 'research', 'experiment', 'decision', 'filter'].includes(card?.kind) ? card.kind : 'research',
+    type: String(card?.type || 'AI 애매함 검토'),
+    tag: ['info', 'warn', ''].includes(card?.tag) ? card.tag : '',
+    title: String(card?.title || '회의 후 확인할 애매함'),
+    body: String(card?.body || ''),
+    suggestion: String(card?.suggestion || ''),
+    details: Array.isArray(card?.details) ? card.details : [],
+    choices: Array.isArray(card?.choices) ? card.choices : []
+  })).filter((card) => card.body || card.suggestion);
+}
+
+async function analyzeRoadmapReflectionCards({ cardAnalyzer, materials }) {
+  if (!cardAnalyzer?.analyze) {
+    return [];
+  }
+
+  const entryText = buildRoadmapReflectionEntryText({ materials });
+  const cards = await cardAnalyzer.analyze({
+    entryText,
+    completedEntries: [],
+    meetingContexts: materials.map((material) => String(material.text || '').trim()).filter(Boolean),
+    githubOrganization: 'https://github.com/SAFIRA-ondevice'
+  });
+
+  return normalizeRoadmapReflectionCards(cards);
+}
+
 function candidateReviewMessages({ taskCandidates, sourceChannelId, sourceMessageTs, config }) {
   const grouped = new Map();
 
@@ -128,7 +173,8 @@ export function createMeetingService({
   slackClient = null,
   fileDownloader = null,
   audioTranscriber = null,
-  taskExtractor = null
+  taskExtractor = null,
+  cardAnalyzer = null
 }) {
   async function handleMeetingFileMessage({ message }) {
     if (!isMeetingUploadMessage({
@@ -508,7 +554,12 @@ export function createMeetingService({
         };
       }
 
-      for (const material of materials) {
+      const roadmapReflectionCards = await analyzeRoadmapReflectionCards({
+        cardAnalyzer,
+        materials
+      });
+
+      for (const [index, material] of materials.entries()) {
         const rawText = String(material.text || '').trim();
         if (!rawText) continue;
         await store.createMeetingFromRawText({
@@ -516,13 +567,20 @@ export function createMeetingService({
           sourceMessageTs: material.ts,
           uploaderUserKey: submittedByUserKey,
           rawText,
-          participantUserKeys: config.users.map((user) => user.key)
+          participantUserKeys: config.users.map((user) => user.key),
+          roadmapReflection: index === 0 && roadmapReflectionCards.length > 0
+            ? {
+              source: 'dm-roadmap-reflection',
+              materialCount: materials.length,
+              cards: roadmapReflectionCards
+            }
+            : null
         });
       }
 
       const completionText = buildRoadmapReflectionCompletedText({
         materialCount: materials.length,
-        ambiguityCardCount: 0
+        ambiguityCardCount: roadmapReflectionCards.length
       });
       await slackClient.chat.postMessage({
         channel: config.channels.meeting,
@@ -532,7 +590,7 @@ export function createMeetingService({
       return {
         text: `로드맵 반영을 완료했습니다. #회의-결과록에 "${ROADMAP_REFLECTION_MARKER}" 일반 메시지를 남겼습니다.`,
         materialCount: materials.length,
-        ambiguityCardCount: 0
+        ambiguityCardCount: roadmapReflectionCards.length
       };
     }
 

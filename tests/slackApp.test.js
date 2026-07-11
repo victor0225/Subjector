@@ -190,6 +190,26 @@ test('registerIdeaCruiseRoute protects roadmap refresh context with the health p
             createdAt: '2026-07-08T02:00:00.000Z'
           }
         ];
+      },
+      async listRecentRoadmapReflections() {
+        return [
+          {
+            externalId: 'roadmap-reflection-1710000000.000400',
+            parentExternalId: '',
+            sourceType: 'roadmap-reflection',
+            title: '회의 반영: 소음 차단 범위 결정',
+            text: '소음 차단은 우선 폭음/충격음 중심으로 좁힌다.',
+            cards: [
+              {
+                kind: 'decision',
+                type: 'AI 애매함 검토',
+                title: '소음 차단 범위 결정',
+                body: '회의록에서 차단 범위가 넓게 남아 있다.',
+                suggestion: '폭음/충격음 중심으로 좁힌다.'
+              }
+            ]
+          }
+        ];
       }
     },
     githubContextProvider: {
@@ -212,6 +232,9 @@ test('registerIdeaCruiseRoute protects roadmap refresh context with the health p
   assert.ok(accepted.body.topics.some((topic) => topic.title === 'Task: 하드웨어 후보 비교'));
   assert.ok(accepted.body.topics.some((topic) => topic.title === '변경 반영: 하드웨어 후보 비교'));
   assert.ok(accepted.body.topics.some((topic) => topic.title === 'GitHub 프로젝트 상태'));
+  const reflection = accepted.body.topics.find((topic) => topic.sourceType === 'roadmap-reflection');
+  assert.equal(reflection.title, '회의 반영: 소음 차단 범위 결정');
+  assert.equal(reflection.cards[0].kind, 'decision');
 });
 
 test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply with an unknown assignee', async () => {

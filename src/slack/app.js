@@ -149,7 +149,7 @@ function taskRoadmapText(task, config) {
   ].filter(Boolean).join('\n');
 }
 
-function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], githubContexts = [], config = {} }) {
+function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], githubContexts = [], roadmapReflections = [], config = {} }) {
   const topics = [];
 
   for (const task of tasks.filter((item) => IDEA_CRUISE_ROADMAP_TASK_STATUSES.has(item.status))) {
@@ -211,6 +211,17 @@ function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], github
     });
   }
 
+  for (const reflection of roadmapReflections.slice(0, 10)) {
+    topics.push({
+      externalId: reflection.externalId,
+      parentExternalId: reflection.parentExternalId || '',
+      sourceType: 'roadmap-reflection',
+      title: reflection.title || '회의 반영: 애매함 검토',
+      text: reflection.text || '',
+      cards: Array.isArray(reflection.cards) ? reflection.cards : []
+    });
+  }
+
   return topics;
 }
 
@@ -235,10 +246,11 @@ export function registerIdeaCruiseRoute(receiver, {
         });
       }
 
-      const [tasks, changeRequests, githubContexts] = await Promise.all([
+      const [tasks, changeRequests, githubContexts, roadmapReflections] = await Promise.all([
         store?.listAllTasks ? store.listAllTasks({ limit: 100 }) : [],
         store?.listAllChangeRequests ? store.listAllChangeRequests({ limit: 50 }) : [],
-        githubContextProvider?.listContext ? githubContextProvider.listContext({ repoLimit: 6, issueLimit: 4 }) : []
+        githubContextProvider?.listContext ? githubContextProvider.listContext({ repoLimit: 6, issueLimit: 4 }) : [],
+        store?.listRecentRoadmapReflections ? store.listRecentRoadmapReflections({ limit: 10 }) : []
       ]);
 
       return res.status(200).json({
@@ -248,6 +260,7 @@ export function registerIdeaCruiseRoute(receiver, {
           tasks,
           changeRequests,
           githubContexts,
+          roadmapReflections,
           config
         })
       });
@@ -1583,7 +1596,8 @@ export function createSlackApp({
         model: config.gemini.transcriptionModel
       })
       : null,
-    taskExtractor: createMeetingTaskExtractor({ config })
+    taskExtractor: createMeetingTaskExtractor({ config }),
+    cardAnalyzer: ideaCruiseCardAnalyzer
   });
 
   registerDmHandlers(app, config, logger, service, meetings);

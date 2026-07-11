@@ -232,7 +232,7 @@ export function createSupabaseStore(supabase) {
     throwIfError(result, 'Failed to create meeting from audio upload');
   }
 
-  async function createMeetingFromRawText({ sourceChannelId, sourceMessageTs, uploaderUserKey, rawText, participantUserKeys }) {
+  async function createMeetingFromRawText({ sourceChannelId, sourceMessageTs, uploaderUserKey, rawText, participantUserKeys, roadmapReflection = null }) {
     const result = await supabase
       .from('meetings')
       .insert({
@@ -244,6 +244,7 @@ export function createSupabaseStore(supabase) {
           rawText,
           participantUserKeys,
           participantTaskInputs: {},
+          ...(roadmapReflection ? { roadmapReflection } : {}),
           transcript: {
             meetingTitle: '수동 회의 기록',
             conciseSummary: rawText,
@@ -347,6 +348,32 @@ export function createSupabaseStore(supabase) {
         ].filter(Boolean);
 
         return pieces.join('\n');
+      })
+      .filter(Boolean);
+  }
+
+  async function listRecentRoadmapReflections({ limit = 10 } = {}) {
+    const result = await supabase
+      .from('meetings')
+      .select('source_message_ts,summary,created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    throwIfError(result, 'Failed to list recent roadmap reflections');
+    return result.data
+      .map((row) => {
+        const reflection = row.summary?.roadmapReflection;
+        const cards = Array.isArray(reflection?.cards) ? reflection.cards : [];
+        if (cards.length === 0) return null;
+        const primary = cards[0];
+        return {
+          externalId: `roadmap-reflection-${row.source_message_ts}`,
+          parentExternalId: '',
+          sourceType: 'roadmap-reflection',
+          title: `회의 반영: ${primary.title || '애매함 검토'}`,
+          text: primary.suggestion || primary.body || row.summary?.rawText || '',
+          cards
+        };
       })
       .filter(Boolean);
   }
@@ -1043,6 +1070,7 @@ export function createSupabaseStore(supabase) {
     endWorkSession,
     createMeetingFromAudioUpload,
     createMeetingFromRawText,
+    listRecentRoadmapReflections,
     markMeetingTranscribing,
     completeMeetingTranscription,
     failMeetingTranscription,

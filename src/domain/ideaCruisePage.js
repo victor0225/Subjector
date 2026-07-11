@@ -736,6 +736,12 @@ export function renderIdeaCruisePage() {
       };
     }
 
+    function mapIncomingCards(incoming) {
+      return Array.isArray(incoming.cards)
+        ? incoming.cards.map(function(card, index) { return mapApiCard(card, index); })
+        : [];
+    }
+
     function ensurePriorityCards(topic) {
       const conflict = localConflictCard(topic);
       if (conflict) {
@@ -858,10 +864,12 @@ export function renderIdeaCruisePage() {
       const created = [];
       const updated = [];
       const waiting = [];
+      let firstReflectedTopicId = null;
 
       (topics || []).forEach(function(incoming) {
         const existingId = externalIdToTopicId.get(incoming.externalId);
         const parentId = incoming.parentExternalId ? externalIdToTopicId.get(incoming.parentExternalId) || null : null;
+        const incomingCards = mapIncomingCards(incoming);
 
         if (existingId) {
           const existing = state.topics.find(function(topic) { return topic.id === existingId; });
@@ -877,6 +885,14 @@ export function renderIdeaCruisePage() {
           existing.text = incoming.text || existing.text;
           existing.parentId = parentId;
           existing.sourceType = incoming.sourceType || existing.sourceType;
+          if (incomingCards.length) {
+            existing.cards = incomingCards.concat((existing.cards || []).filter(function(card) {
+              return !card.id.startsWith('api-card-');
+            }));
+          }
+          if (incoming.sourceType === 'roadmap-reflection' && !firstReflectedTopicId) {
+            firstReflectedTopicId = existing.id;
+          }
           updated.push(existing.title);
           ensurePriorityCards(existing);
           return;
@@ -891,12 +907,15 @@ export function renderIdeaCruisePage() {
           completed: false,
           splitApplied: false,
           splitDismissed: false,
-          cards: [],
+          cards: incomingCards,
           sourceExternalId: incoming.externalId,
           sourceType: incoming.sourceType || 'external'
         };
         state.topics.push(topic);
         externalIdToTopicId.set(incoming.externalId, topic.id);
+        if (incoming.sourceType === 'roadmap-reflection' && !firstReflectedTopicId) {
+          firstReflectedTopicId = topic.id;
+        }
         created.push(topic.title);
         ensurePriorityCards(topic);
       });
@@ -907,7 +926,9 @@ export function renderIdeaCruisePage() {
         waiting.length ? '고정 topic 대기 ' + waiting.length + '개' : ''
       ].filter(Boolean).join(' · ') || '새로 반영할 항목이 없습니다.';
 
-      if (!state.activeTopicId && state.topics.length) {
+      if (firstReflectedTopicId) {
+        state.activeTopicId = firstReflectedTopicId;
+      } else if (!state.activeTopicId && state.topics.length) {
         state.activeTopicId = state.topics[0].id;
       }
     }
