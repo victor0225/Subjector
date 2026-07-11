@@ -1572,6 +1572,7 @@ export function createSlackApp({
     store,
     config,
     logger,
+    slackClient: app.client,
     fileDownloader: createSlackFileDownloader({
       botToken: config.slack.botToken,
       slackClient: app.client

@@ -54,6 +54,31 @@ function isMeetingTaskFlowEnabled(config) {
   return config?.features?.enableMeetingTaskFlow === true;
 }
 
+const ROADMAP_REFLECTION_MARKER = '로드맵 반영 완료';
+
+function slackTsNumber(value) {
+  return Number.parseFloat(String(value || '0'));
+}
+
+function isRoadmapReflectionMarker(message) {
+  return String(message?.text || '').includes(ROADMAP_REFLECTION_MARKER);
+}
+
+function isReflectableMeetingMaterial(message) {
+  if (isRoadmapReflectionMarker(message)) return false;
+  const text = String(message?.text || '').trim();
+  return Boolean(text) || (Array.isArray(message?.files) && message.files.length > 0);
+}
+
+function buildRoadmapReflectionCompletedText({ materialCount, ambiguityCardCount = 0 }) {
+  return [
+    ROADMAP_REFLECTION_MARKER,
+    `- 참고 자료: ${materialCount}개`,
+    `- 생성된 애매함 카드: ${ambiguityCardCount}개`,
+    '- 다음 반영 기준: 이 메시지 이후 자료'
+  ].join('\n');
+}
+
 function candidateReviewMessages({ taskCandidates, sourceChannelId, sourceMessageTs, config }) {
   const grouped = new Map();
 
@@ -100,6 +125,7 @@ function candidateReviewMessages({ taskCandidates, sourceChannelId, sourceMessag
 export function createMeetingService({
   store,
   config,
+  slackClient = null,
   fileDownloader = null,
   audioTranscriber = null,
   taskExtractor = null
@@ -462,6 +488,54 @@ export function createMeetingService({
   }
 
   async function handleRoadmapReflectionRequest({ submittedByUserKey }) {
+    if (slackClient?.conversations?.history && slackClient?.chat?.postMessage) {
+      const history = await slackClient.conversations.history({
+        channel: config.channels.meeting,
+        limit: 100
+      });
+      const messages = Array.isArray(history?.messages) ? history.messages : [];
+      const latestMarker = messages.find(isRoadmapReflectionMarker);
+      const markerTs = slackTsNumber(latestMarker?.ts);
+      const materials = messages
+        .filter((message) => slackTsNumber(message.ts) > markerTs)
+        .filter(isReflectableMeetingMaterial)
+        .sort((a, b) => slackTsNumber(a.ts) - slackTsNumber(b.ts));
+
+      if (materials.length === 0) {
+        return {
+          text: '#회의-결과록에서 새로 반영할 자료가 없습니다.',
+          materialCount: 0
+        };
+      }
+
+      for (const material of materials) {
+        const rawText = String(material.text || '').trim();
+        if (!rawText) continue;
+        await store.createMeetingFromRawText({
+          sourceChannelId: config.channels.meeting,
+          sourceMessageTs: material.ts,
+          uploaderUserKey: submittedByUserKey,
+          rawText,
+          participantUserKeys: config.users.map((user) => user.key)
+        });
+      }
+
+      const completionText = buildRoadmapReflectionCompletedText({
+        materialCount: materials.length,
+        ambiguityCardCount: 0
+      });
+      await slackClient.chat.postMessage({
+        channel: config.channels.meeting,
+        text: completionText
+      });
+
+      return {
+        text: `로드맵 반영을 완료했습니다. #회의-결과록에 "${ROADMAP_REFLECTION_MARKER}" 일반 메시지를 남겼습니다.`,
+        materialCount: materials.length,
+        ambiguityCardCount: 0
+      };
+    }
+
     return {
       text: [
         '로드맵 반영 요청을 확인했습니다.',

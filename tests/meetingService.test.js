@@ -161,6 +161,90 @@ test('handleRoadmapReflectionRequest uses the meeting channel checkpoint message
   assert.match(result.text, /그 메시지가 다음 반영 기준/);
 });
 
+test('handleRoadmapReflectionRequest reflects messages after the latest completion marker', async () => {
+  const storedRawTexts = [];
+  const postedMessages = [];
+  const service = createMeetingService({
+    config: teamConfig,
+    store: {
+      async createMeetingFromRawText(input) {
+        storedRawTexts.push(input);
+      }
+    },
+    slackClient: {
+      conversations: {
+        async history(input) {
+          assert.equal(input.channel, 'C_MEETING');
+          return {
+            messages: [
+              { ts: '1710000000.000400', text: '회의 중 말고 짧게 논의한 메모' },
+              { ts: '1710000000.000300', text: '로드맵 반영 완료\n- 참고 자료: 2개' },
+              { ts: '1710000000.000200', text: '이미 반영된 예전 회의록' }
+            ]
+          };
+        }
+      },
+      chat: {
+        async postMessage(input) {
+          postedMessages.push(input);
+          return { ts: '1710000000.000500' };
+        }
+      }
+    }
+  });
+
+  const result = await service.handleRoadmapReflectionRequest({
+    submittedByUserKey: 'suhyeon'
+  });
+
+  assert.equal(storedRawTexts.length, 1);
+  assert.equal(storedRawTexts[0].sourceChannelId, 'C_MEETING');
+  assert.equal(storedRawTexts[0].sourceMessageTs, '1710000000.000400');
+  assert.equal(storedRawTexts[0].rawText, '회의 중 말고 짧게 논의한 메모');
+  assert.equal(postedMessages.length, 1);
+  assert.equal(postedMessages[0].channel, 'C_MEETING');
+  assert.match(postedMessages[0].text, /^로드맵 반영 완료/);
+  assert.match(postedMessages[0].text, /참고 자료: 1개/);
+  assert.match(postedMessages[0].text, /생성된 애매함 카드: 0개/);
+  assert.match(result.text, /로드맵 반영을 완료했습니다/);
+});
+
+test('handleRoadmapReflectionRequest reports no new meeting materials without posting a marker', async () => {
+  const postedMessages = [];
+  const service = createMeetingService({
+    config: teamConfig,
+    store: {
+      async createMeetingFromRawText() {
+        throw new Error('should not store old materials');
+      }
+    },
+    slackClient: {
+      conversations: {
+        async history() {
+          return {
+            messages: [
+              { ts: '1710000000.000300', text: '로드맵 반영 완료\n- 참고 자료: 2개' },
+              { ts: '1710000000.000200', text: '이미 반영된 예전 회의록' }
+            ]
+          };
+        }
+      },
+      chat: {
+        async postMessage(input) {
+          postedMessages.push(input);
+        }
+      }
+    }
+  });
+
+  const result = await service.handleRoadmapReflectionRequest({
+    submittedByUserKey: 'suhyeon'
+  });
+
+  assert.equal(postedMessages.length, 0);
+  assert.equal(result.text, '#회의-결과록에서 새로 반영할 자료가 없습니다.');
+});
+
 test('processMeetingAudioUpload downloads, transcribes, stores, and asks for speaker mapping', async () => {
   const calls = [];
   const service = createMeetingService({
