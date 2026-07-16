@@ -11,6 +11,7 @@ test('renderIdeaCruisePage exposes the two-layer roadmap desk', () => {
   assert.match(html, /2층 AI 카드/);
   assert.match(html, /card-popover/);
   assert.match(html, /Task Candidates/);
+  assert.match(html, /Public Questions/);
   assert.match(html, /Meeting Record/);
   assert.match(html, /id="refresh-roadmap"/);
   assert.doesNotMatch(html, /간단 메모 붙여넣기/);
@@ -80,6 +81,8 @@ test('renderIdeaCruisePage clamps topic nodes and opens details from the fixed c
   assert.match(html, /overflow: hidden/);
   assert.match(html, /\.topic-summary/);
   assert.match(html, /<span class="topic-summary">/);
+  assert.match(html, /data-toggle-topic-detail/);
+  assert.match(html, /detail-focus/);
 });
 
 test('renderIdeaCruisePage consumes split cards after apply or dismiss', () => {
@@ -101,12 +104,14 @@ test('renderIdeaCruisePage labels topic completion as task candidate handoff', (
 test('renderIdeaCruisePage calls existing IDEA CRUISE APIs', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /fetch\('\/idea-cruise\/roadmap-context\?pin='/);
+  assert.match(html, /fetch\('\/idea-cruise\/roadmap-context'/);
   assert.match(html, /fetch\('\/idea-cruise\/cards'/);
+  assert.match(html, /fetch\('\/idea-cruise\/questions'/);
   assert.match(html, /fetch\('\/idea-cruise\/task-candidates'/);
   assert.match(html, /fetch\('\/idea-cruise\/tasks'/);
   assert.match(html, /fetch\('\/idea-cruise\/task-updates'/);
   assert.match(html, /completedTopics\(\)\.map/);
+  assert.doesNotMatch(html, /idea-cruise-refresh-pin|로드맵 반영 PIN/);
 });
 
 test('renderIdeaCruisePage merges refreshed Subjector context without overwriting fixed topics', () => {
@@ -116,7 +121,37 @@ test('renderIdeaCruisePage merges refreshed Subjector context without overwritin
   assert.match(html, /sourceExternalId/);
   assert.match(html, /externalUpdateCard\(existing, incoming\)/);
   assert.match(html, /고정 topic에 최신 변경이 도착했습니다/);
-  assert.match(html, /idea-cruise-refresh-pin/);
+  assert.match(html, /덮어쓰기보다 기존 구조 위에 얹어 반영/);
+  assert.match(html, /hasTeamOpinion/);
+});
+
+test('renderIdeaCruisePage supports fixed activity panels, anonymous questions, and roadmap controls', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /grid-template-columns: minmax\(720px, 2fr\) minmax\(340px, 1fr\)/);
+  assert.match(html, /\.roadmap-panel \{ height: calc\(100vh - 150px\)/);
+  assert.match(html, /\.ask-panel, \.task-panel \{ height:/);
+  assert.match(html, /id="question-log"/);
+  assert.match(html, /id="clear-questions"/);
+  assert.match(html, /질문 기록 지우기/);
+  assert.match(html, /감지 예민도 기본/);
+  assert.match(html, /id="zoom-in"/);
+  assert.match(html, /id="zoom-out"/);
+  assert.match(html, /data-move-topic/);
+  assert.doesNotMatch(html, /질문자|담당자 지정|질문에서 task/);
+});
+
+test('renderIdeaCruisePage color codes roadmap card states', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /\.topic-node\.existing-card/);
+  assert.match(html, /background: #effaf4/);
+  assert.match(html, /\.topic-node\.action-card/);
+  assert.match(html, /background: #fff8df/);
+  assert.match(html, /\.topic-node\.conflict/);
+  assert.match(html, /background: #fff0f1/);
+  assert.match(html, /function topicVisualState\(topic, currentCard\)/);
+  assert.match(html, /topic\.completed \|\| topic\.sourceExternalId \|\| topic\.hasTeamOpinion/);
 });
 
 test('renderIdeaCruisePage task candidates use the approved editable fields and source reason', () => {

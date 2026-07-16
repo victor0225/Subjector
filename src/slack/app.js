@@ -233,19 +233,14 @@ export function registerIdeaCruiseRoute(receiver, {
   taskCandidateGenerator = null,
   githubContextProvider = null
 } = {}) {
+  const publicQuestionMessages = [];
+
   receiver.router.get('/idea-cruise', (req, res) => {
     res.status(200).type('html').send(renderIdeaCruisePage());
   });
 
   receiver.router.get('/idea-cruise/roadmap-context', async (req, res) => {
     try {
-      if (!isValidIdeaCruisePin(req, config)) {
-        return res.status(403).json({
-          ok: false,
-          error: 'IDEA CRUISE 최신화 PIN이 필요합니다.'
-        });
-      }
-
       const [tasks, changeRequests, githubContexts, roadmapReflections] = await Promise.all([
         store?.listAllTasks ? store.listAllTasks({ limit: 100 }) : [],
         store?.listAllChangeRequests ? store.listAllChangeRequests({ limit: 50 }) : [],
@@ -311,6 +306,79 @@ export function registerIdeaCruiseRoute(receiver, {
         error: error.message
       });
     }
+  });
+
+  receiver.router.get('/idea-cruise/questions', (req, res) => {
+    return res.status(200).json({
+      ok: true,
+      messages: publicQuestionMessages
+    });
+  });
+
+  receiver.router.post('/idea-cruise/questions', async (req, res) => {
+    try {
+      const body = await readIdeaCruiseTaskBody(req);
+      const question = String(body.question ?? '').trim();
+      if (!question) {
+        return res.status(400).json({
+          ok: false,
+          error: '질문이 비어 있습니다.'
+        });
+      }
+
+      const roadmapSnapshot = Array.isArray(body.roadmapSnapshot) ? body.roadmapSnapshot : [];
+      const completedEntries = roadmapSnapshot
+        .map((topic) => `${topic.title || 'topic'}: ${trimForRoadmap(topic.text || '', 260)}`)
+        .filter((entry) => entry.trim() !== 'topic:');
+      const meetingContexts = store?.listRecentMeetingContexts
+        ? await store.listRecentMeetingContexts({ limit: 5 })
+        : [];
+
+      let answer = 'AI Analysis 연결이 아직 준비되지 않았습니다. 현재 로드맵과 회의록 기준으로 사람이 먼저 판단해 주세요.';
+      if (cardAnalyzer?.analyze) {
+        const cards = await cardAnalyzer.analyze({
+          entryText: question,
+          completedEntries,
+          meetingContexts,
+          githubOrganization: 'https://github.com/SAFIRA-ondevice'
+        });
+        const firstCard = Array.isArray(cards) ? cards[0] : null;
+        answer = firstCard
+          ? [firstCard.title, firstCard.body, firstCard.suggestion].filter(Boolean).join('\n\n')
+          : '현재 맥락에서는 별도 경고 없이 기존 로드맵 기준대로 진행해도 됩니다.';
+      }
+
+      publicQuestionMessages.push({
+        id: `question-${Date.now()}`,
+        role: 'question',
+        text: question,
+        createdAt: new Date().toISOString()
+      });
+      publicQuestionMessages.push({
+        id: `answer-${Date.now()}`,
+        role: 'answer',
+        text: answer,
+        createdAt: new Date().toISOString()
+      });
+
+      return res.status(200).json({
+        ok: true,
+        messages: publicQuestionMessages
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: error.message
+      });
+    }
+  });
+
+  receiver.router.delete?.('/idea-cruise/questions', (req, res) => {
+    publicQuestionMessages.length = 0;
+    return res.status(200).json({
+      ok: true,
+      messages: publicQuestionMessages
+    });
   });
 
   receiver.router.post('/idea-cruise/task-candidates', async (req, res) => {

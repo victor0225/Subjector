@@ -117,9 +117,16 @@ export function renderIdeaCruisePage() {
 
     .app-shell {
       display: grid;
-      grid-template-columns: minmax(720px, 1.45fr) minmax(370px, 0.55fr);
+      grid-template-columns: minmax(720px, 2fr) minmax(340px, 1fr);
       gap: 16px;
       padding: 18px 22px;
+    }
+    .side-stack {
+      display: grid;
+      grid-template-rows: minmax(260px, 0.72fr) minmax(360px, 1fr);
+      gap: 16px;
+      height: calc(100vh - 150px);
+      min-height: 720px;
     }
 
     .panel {
@@ -181,16 +188,35 @@ export function renderIdeaCruisePage() {
       border-color: #f1d2a0;
     }
 
-    .roadmap-panel, .task-panel { min-height: calc(100vh - 150px); }
+    .roadmap-panel { height: calc(100vh - 150px); min-height: 720px; }
+    .ask-panel, .task-panel { height: 100%; min-height: 0; }
     .roadmap-shell {
       position: relative;
-      height: calc(100vh - 230px);
-      min-height: 560px;
+      height: calc(100% - 272px);
+      min-height: 420px;
       overflow: auto;
       background:
         linear-gradient(#dfe8ee 1px, transparent 1px),
         linear-gradient(90deg, #dfe8ee 1px, transparent 1px);
       background-size: 34px 34px;
+      cursor: grab;
+    }
+    .roadmap-shell.dragging { cursor: grabbing; }
+    .zoom-tools {
+      position: sticky;
+      top: 14px;
+      right: 14px;
+      z-index: 8;
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin: 14px 14px -46px auto;
+      width: max-content;
+    }
+    .zoom-tools button {
+      width: 34px;
+      height: 34px;
+      padding: 0;
     }
     .layer-label {
       position: sticky;
@@ -215,6 +241,7 @@ export function renderIdeaCruisePage() {
       position: relative;
       min-width: 980px;
       min-height: 560px;
+      transform-origin: 0 0;
     }
     .root-lines {
       position: absolute;
@@ -252,9 +279,53 @@ export function renderIdeaCruisePage() {
     }
     .topic-node:hover { transform: translateY(-1px); box-shadow: 0 18px 30px rgba(19, 37, 48, 0.16); }
     .topic-node.active { outline: 3px solid rgba(11, 119, 105, 0.18); box-shadow: 0 20px 38px rgba(11, 119, 105, 0.2); }
+    .topic-node.focused-detail { z-index: 9; height: 254px; box-shadow: 0 30px 60px rgba(19, 37, 48, 0.22); }
+    .topic-node.existing-card {
+      border-color: #bfe2d1;
+      background: #effaf4;
+    }
+    .topic-node.action-card {
+      border-color: #eed79a;
+      border-left-color: var(--amber);
+      background: #fff8df;
+    }
     .topic-node.fixed { border-left-color: var(--blue); }
-    .topic-node.conflict { border-color: #efbdc2; border-left-color: var(--red); background: #fffafa; }
+    .topic-node.conflict { border-color: #efbdc2; border-left-color: var(--red); background: #fff0f1; }
     .roadmap.card-layer-on .topic-node:not(.active) { opacity: 0.52; filter: grayscale(0.18); }
+    .roadmap.detail-focus .topic-node:not(.focused-detail) { opacity: 0.22; filter: blur(1px) grayscale(0.22); }
+    .move-handle {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--muted) !important;
+      cursor: grab;
+      font-size: 11px !important;
+      font-weight: 900 !important;
+      line-height: 1 !important;
+    }
+    .team-opinion-badge {
+      position: absolute;
+      top: 9px;
+      right: 40px;
+      display: inline-flex !important;
+      width: auto !important;
+      border: 1px solid #efca8a;
+      border-radius: 999px;
+      padding: 3px 6px;
+      background: var(--amber-soft);
+      color: var(--amber) !important;
+      font-size: 10px !important;
+      font-weight: 900 !important;
+      line-height: 1.1 !important;
+    }
     .topic-node small {
       display: block;
       margin-bottom: 8px;
@@ -285,6 +356,37 @@ export function renderIdeaCruisePage() {
       overflow: hidden;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
+    }
+    .topic-reflection, .topic-detail-text {
+      display: -webkit-box;
+      overflow: hidden;
+      margin-top: 6px;
+      color: var(--amber) !important;
+      font-size: 11px !important;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .topic-detail-text {
+      max-height: 94px;
+      color: var(--text) !important;
+      -webkit-line-clamp: 5;
+    }
+    .topic-controls {
+      display: flex !important;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .topic-controls span {
+      display: inline-flex !important;
+      width: auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 7px;
+      background: #fff;
+      color: var(--muted) !important;
+      font-size: 11px !important;
+      font-weight: 800 !important;
+      line-height: 1.2 !important;
     }
     .topic-meta {
       position: absolute;
@@ -395,11 +497,50 @@ export function renderIdeaCruisePage() {
     .tasks {
       display: grid;
       gap: 12px;
-      max-height: calc(100vh - 230px);
-      min-height: 560px;
+      max-height: calc(100% - 78px);
+      min-height: 0;
       overflow: auto;
       padding: 14px;
     }
+    .question-area {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+      height: calc(100% - 78px);
+      min-height: 0;
+      padding: 14px;
+    }
+    .question-log {
+      display: grid;
+      align-content: start;
+      gap: 9px;
+      min-height: 0;
+      overflow: auto;
+    }
+    .question-message {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+    .question-message.answer { border-left: 4px solid var(--teal); background: #fbfffd; }
+    .question-message.question { border-left: 4px solid var(--blue); }
+    .question-message strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+      font-size: 12px;
+    }
+    .question-form {
+      display: grid;
+      gap: 8px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+    .question-form textarea { min-height: 74px; }
     .task-card, .update-card, .not-task-card {
       display: grid;
       gap: 10px;
@@ -449,7 +590,8 @@ export function renderIdeaCruisePage() {
     @media (max-width: 1120px) {
       header, .panel-head { flex-direction: column; }
       .app-shell { grid-template-columns: 1fr; }
-      .roadmap-panel, .task-panel { min-height: auto; }
+      .roadmap-panel, .side-stack { height: auto; min-height: auto; }
+      .ask-panel, .task-panel { min-height: 360px; }
       .roadmap-shell, .tasks { max-height: none; }
       .meeting-flow ol { grid-template-columns: 1fr; }
     }
@@ -465,6 +607,7 @@ export function renderIdeaCruisePage() {
       <span>카드 생성: GPT-5.4</span>
       <span>회의록 생성: Gemini 2.5 Flash-Lite</span>
       <span>Task 최종 정제: Gemini 2.5 Flash-Lite</span>
+      <span>감지 예민도 기본</span>
     </div>
   </header>
 
@@ -486,6 +629,7 @@ export function renderIdeaCruisePage() {
           <span class="tag strong">회의 전 로드맵 반영</span>
           <p>회의 전에 누르는 수동 체크포인트입니다. #회의-결과록에서 가장 최근의 봇 일반 메시지 "로드맵 반영 완료" 이후 자료, 회의 녹음본, 수기 회의록, 회의 중이 아니어도 짧게 논의한 메모를 참고해 기존 로드맵을 유지한 채 Layer 2에 애매함 감지 카드를 띄웁니다.</p>
           <p>반영이 끝나면 Subjector가 일반 메시지 "로드맵 반영 완료"를 남기고, 그 메시지가 다음 반영 기준이 됩니다.</p>
+          <p>로드맵 반영 원칙: 덮어쓰기보다 기존 구조 위에 얹어 반영하고, 사람이 옮긴 카드 위치는 유지합니다.</p>
           <p data-priority-lanes="branch-now branch-later">먼저 판단: 지금 결정해야 다음으로 감 · 보류/제외: 지금은 다른 생각 먼저 · 선택하면 이쪽으로 심화</p>
         </div>
         <ol>
@@ -499,6 +643,11 @@ export function renderIdeaCruisePage() {
         </ol>
       </div>
       <div class="roadmap-shell">
+        <div class="zoom-tools" aria-label="로드맵 확대 축소">
+          <button id="zoom-out" type="button" title="축소">-</button>
+          <button id="zoom-reset" type="button" title="원래 크기">1:1</button>
+          <button id="zoom-in" type="button" title="확대">+</button>
+        </div>
         <div class="layer-label">
           <span class="tag strong">1층</span>
           <span id="layer-state">topic을 추가하거나 클릭하세요.</span>
@@ -511,29 +660,51 @@ export function renderIdeaCruisePage() {
       </div>
     </section>
 
-    <aside class="panel task-panel">
-      <div class="panel-head">
-        <div>
-          <h2>Task Candidates</h2>
-          <p>자료조사, 검증, 구현처럼 시간을 써야 해결되는 일만 남깁니다. 각 task에는 생성 맥락을 표시합니다.</p>
+    <section class="side-stack">
+      <aside class="panel ask-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Public Questions</h2>
+            <p>로드맵, GitHub, 회의록 맥락으로 바로 묻고 답합니다. 질문과 답변은 팀 전체에게 같은 로그로 보입니다.</p>
+          </div>
+          <button id="clear-questions" type="button">질문 기록 지우기</button>
         </div>
-        <button id="refresh-tasks" class="primary" type="button">갱신</button>
-      </div>
-      <div class="tasks">
-        <div id="task-filter" class="task-filter"></div>
-        <div id="task-generation-error"></div>
-        <div class="exception-box">
-          <span class="tag amber">이번 회의만 예외</span>
-          <strong>이번 회의록으로 바로 task 생성</strong>
-          <p>수기 회의록과 task 분배안이 이미 정리된 경우, AI가 결정을 새로 만들지 않고 사람이 적은 분배안을 Subjector task 필드로 정규화해 미리보기로 보여줍니다.</p>
-          <label>수기 회의록과 task 분배안<textarea id="direct-meeting-text" placeholder="#회의-결과록에 올릴 회의록과 이미 정한 담당자별 분배안을 붙여넣으세요."></textarea></label>
-          <button id="generate-direct-tasks" type="button">수기 회의록과 task 분배안으로 생성</button>
+        <div class="question-area">
+          <div id="question-log" class="question-log" aria-live="polite"></div>
+          <form id="question-form" class="question-form">
+            <label>질문<textarea id="question-input" placeholder="예: 이번 MVP에서 주변음 보존까지 같이 봐야 하나?"></textarea></label>
+            <div class="actions">
+              <button id="submit-question" class="primary" type="submit">질문 보내기</button>
+              <span id="question-status" class="pending-count"></span>
+            </div>
+          </form>
         </div>
-        <div id="task-list"></div>
-        <div id="task-update-list"></div>
-        <div id="not-task-list"></div>
-      </div>
-    </aside>
+      </aside>
+
+      <aside class="panel task-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Task Candidates</h2>
+            <p>자료조사, 검증, 구현처럼 시간을 써야 해결되는 일만 남깁니다. 각 task에는 생성 맥락을 표시합니다.</p>
+          </div>
+          <button id="refresh-tasks" class="primary" type="button">갱신</button>
+        </div>
+        <div class="tasks">
+          <div id="task-filter" class="task-filter"></div>
+          <div id="task-generation-error"></div>
+          <div class="exception-box">
+            <span class="tag amber">이번 회의만 예외</span>
+            <strong>이번 회의록으로 바로 task 생성</strong>
+            <p>수기 회의록과 task 분배안이 이미 정리된 경우, AI가 결정을 새로 만들지 않고 사람이 적은 분배안을 Subjector task 필드로 정규화해 미리보기로 보여줍니다.</p>
+            <label>수기 회의록과 task 분배안<textarea id="direct-meeting-text" placeholder="#회의-결과록에 올릴 회의록과 이미 정한 담당자별 분배안을 붙여넣으세요."></textarea></label>
+            <button id="generate-direct-tasks" type="button">수기 회의록과 task 분배안으로 생성</button>
+          </div>
+          <div id="task-list"></div>
+          <div id="task-update-list"></div>
+          <div id="not-task-list"></div>
+        </div>
+      </aside>
+    </section>
   </main>
 
   <section class="panel meeting-panel">
@@ -572,7 +743,10 @@ export function renderIdeaCruisePage() {
     const ROADMAP_UI_VERSION = 'priority-roadmap-v2';
     const state = loadState();
     let layoutCache = new Map();
+    let questionMessages = [];
+    let dragState = null;
 
+    const roadmapShellEl = document.querySelector('.roadmap-shell');
     const roadmapEl = document.getElementById('roadmap');
     const rootLinesEl = document.getElementById('root-lines');
     const topicNodesEl = document.getElementById('topic-nodes');
@@ -586,6 +760,9 @@ export function renderIdeaCruisePage() {
     const topicDialog = document.getElementById('topic-dialog');
     const parentTopicEl = document.getElementById('parent-topic');
     const directMeetingTextEl = document.getElementById('direct-meeting-text');
+    const questionLogEl = document.getElementById('question-log');
+    const questionInputEl = document.getElementById('question-input');
+    const questionStatusEl = document.getElementById('question-status');
 
     function defaultState() {
       return {
@@ -599,7 +776,9 @@ export function renderIdeaCruisePage() {
         record: '',
         refreshMessage: '',
         roadmapUiVersion: ROADMAP_UI_VERSION,
-        expandedPendingTopicId: null
+        expandedPendingTopicId: null,
+        focusedDetailTopicId: null,
+        roadmapScale: 1
       };
     }
 
@@ -732,13 +911,18 @@ export function renderIdeaCruisePage() {
         suggestion: card.suggestion || '',
         details: Array.isArray(card.details) ? card.details : [],
         choices: Array.isArray(card.choices) ? card.choices : [],
-        impact: card.impact || card.reason || ''
+        impact: card.impact || card.reason || '',
+        fromTeamOpinion: Boolean(card.fromTeamOpinion)
       };
     }
 
     function mapIncomingCards(incoming) {
       return Array.isArray(incoming.cards)
-        ? incoming.cards.map(function(card, index) { return mapApiCard(card, index); })
+        ? incoming.cards.map(function(card, index) {
+            const mapped = mapApiCard(card, index);
+            mapped.fromTeamOpinion = mapped.fromTeamOpinion || incoming.sourceType === 'roadmap-reflection';
+            return mapped;
+          })
         : [];
     }
 
@@ -836,6 +1020,12 @@ export function renderIdeaCruisePage() {
       }
     }
 
+    function topicVisualState(topic, currentCard) {
+      if (currentCard && currentCard.kind === 'conflict') return 'conflict';
+      if (topic.completed || topic.sourceExternalId || topic.hasTeamOpinion) return 'action-card';
+      return 'existing-card';
+    }
+
     function addTopic({ title, text, parentId }) {
       const topic = {
         id: createId('topic'),
@@ -870,6 +1060,11 @@ export function renderIdeaCruisePage() {
         const existingId = externalIdToTopicId.get(incoming.externalId);
         const parentId = incoming.parentExternalId ? externalIdToTopicId.get(incoming.parentExternalId) || null : null;
         const incomingCards = mapIncomingCards(incoming);
+        const isTeamOpinion = incoming.sourceType === 'roadmap-reflection';
+        const reflectionSummary = compactText(
+          incomingCards[0]?.suggestion || incomingCards[0]?.body || incoming.text || '',
+          120
+        );
 
         if (existingId) {
           const existing = state.topics.find(function(topic) { return topic.id === existingId; });
@@ -882,9 +1077,15 @@ export function renderIdeaCruisePage() {
             return;
           }
           existing.title = incoming.title || existing.title;
-          existing.text = incoming.text || existing.text;
+          if (isTeamOpinion && incoming.text && existing.text && !existing.text.includes(incoming.text)) {
+            existing.text = existing.text + '\n\n[팀원 의견 반영]\n' + incoming.text;
+          } else {
+            existing.text = incoming.text || existing.text;
+          }
           existing.parentId = parentId;
           existing.sourceType = incoming.sourceType || existing.sourceType;
+          existing.hasTeamOpinion = existing.hasTeamOpinion || isTeamOpinion;
+          existing.reflectionSummary = reflectionSummary || existing.reflectionSummary || '';
           if (incomingCards.length) {
             existing.cards = incomingCards.concat((existing.cards || []).filter(function(card) {
               return !card.id.startsWith('api-card-');
@@ -909,7 +1110,9 @@ export function renderIdeaCruisePage() {
           splitDismissed: false,
           cards: incomingCards,
           sourceExternalId: incoming.externalId,
-          sourceType: incoming.sourceType || 'external'
+          sourceType: incoming.sourceType || 'external',
+          hasTeamOpinion: isTeamOpinion,
+          reflectionSummary: reflectionSummary
         };
         state.topics.push(topic);
         externalIdToTopicId.set(incoming.externalId, topic.id);
@@ -934,19 +1137,9 @@ export function renderIdeaCruisePage() {
     }
 
     async function refreshRoadmapContext() {
-      let pin = localStorage.getItem('idea-cruise-refresh-pin') || '';
-      if (!pin) {
-        pin = window.prompt('IDEA CRUISE 로드맵 반영 PIN을 입력하세요.');
-        if (!pin) return;
-        localStorage.setItem('idea-cruise-refresh-pin', pin);
-      }
-
-      const response = await fetch('/idea-cruise/roadmap-context?pin=' + encodeURIComponent(pin));
+      const response = await fetch('/idea-cruise/roadmap-context');
       const result = await response.json().catch(function() { return {}; });
       if (!response.ok) {
-        if (response.status === 403) {
-          localStorage.removeItem('idea-cruise-refresh-pin');
-        }
         throw new Error(result.error || '로드맵 반영에 실패했습니다.');
       }
       mergeRoadmapContext(result.topics || []);
@@ -1018,15 +1211,28 @@ export function renderIdeaCruisePage() {
       roots.forEach(function(topic, index) { place(topic, 0, index); });
       const positions = new Map();
       positioned.forEach(function(item) {
-        positions.set(item.topic.id, { x: 56 + item.depth * 310, y: 82 + item.row * 172 });
+        const autoPosition = { x: 56 + item.depth * 310, y: 82 + item.row * 172 };
+        const manualPosition = item.topic.position && Number.isFinite(item.topic.position.x) && Number.isFinite(item.topic.position.y)
+          ? item.topic.position
+          : null;
+        positions.set(item.topic.id, manualPosition || autoPosition);
       });
       const maxDepth = Math.max(0, ...positioned.map(function(item) { return item.depth; }));
       const maxRow = Math.max(0, ...positioned.map(function(item) { return item.row; }));
+      const maxX = Math.max(0, ...Array.from(positions.values()).map(function(position) { return position.x; }));
+      const maxY = Math.max(0, ...Array.from(positions.values()).map(function(position) { return position.y; }));
       return {
         positions: positions,
-        width: Math.max(980, 56 + (maxDepth + 1) * 310 + 260),
-        height: Math.max(560, 82 + (maxRow + 1) * 172 + 190)
+        width: Math.max(980, 56 + (maxDepth + 1) * 310 + 260, maxX + 300),
+        height: Math.max(560, 82 + (maxRow + 1) * 172 + 190, maxY + 300)
       };
+    }
+
+    function applyRoadmapTransform() {
+      state.roadmapScale = Math.min(1.45, Math.max(0.68, Number(state.roadmapScale) || 1));
+      roadmapEl.style.transform = 'scale(' + state.roadmapScale + ')';
+      roadmapEl.style.marginRight = Math.round(roadmapEl.offsetWidth * (state.roadmapScale - 1)) + 'px';
+      roadmapEl.style.marginBottom = Math.round(roadmapEl.offsetHeight * (state.roadmapScale - 1)) + 'px';
     }
 
     function renderRoadmap() {
@@ -1039,6 +1245,8 @@ export function renderIdeaCruisePage() {
       rootLinesEl.setAttribute('width', layout.width);
       rootLinesEl.setAttribute('height', layout.height);
       rootLinesEl.innerHTML = renderRootLines(layout.positions);
+      roadmapEl.classList.toggle('detail-focus', Boolean(state.focusedDetailTopicId));
+      applyRoadmapTransform();
 
       if (!state.topics.length) {
         topicNodesEl.innerHTML = '<article class="empty-roadmap"><strong>아직 topic이 없습니다.</strong><p>먼저 "전술 헤드셋" 같은 큰 topic을 추가하세요.</p></article>';
@@ -1057,10 +1265,20 @@ export function renderIdeaCruisePage() {
         const cardCount = (topic.cards || []).length;
         const currentCard = topic.cards && topic.cards[0];
         const conflict = currentCard && currentCard.kind === 'conflict';
-        return '<button class="topic-node ' + (topic.fixed ? 'fixed ' : '') + (conflict ? 'conflict ' : '') + (topic.id === state.activeTopicId ? 'active' : '') + '" style="left:' + position.x + 'px;top:' + position.y + 'px" data-topic="' + topic.id + '" type="button">' +
+        const visualState = topicVisualState(topic, currentCard);
+        const detailOpen = state.focusedDetailTopicId === topic.id;
+        const teamBadge = topic.hasTeamOpinion ? '<span class="team-opinion-badge">팀원 의견</span>' : '';
+        const reflection = topic.reflectionSummary ? '<span class="topic-reflection">반영됨: ' + escapeHtml(topic.reflectionSummary) + '</span>' : '';
+        const detailText = detailOpen ? '<span class="topic-detail-text">' + escapeHtml(topic.text) + '</span>' : '';
+        return '<button class="topic-node ' + visualState + ' ' + (topic.fixed ? 'fixed ' : '') + (conflict ? 'conflict ' : '') + (detailOpen ? 'focused-detail ' : '') + (topic.id === state.activeTopicId ? 'active' : '') + '" style="left:' + position.x + 'px;top:' + position.y + 'px" data-topic="' + topic.id + '" type="button">' +
+          teamBadge +
+          '<span class="move-handle" data-move-topic="' + topic.id + '" title="카드 위치 이동">move</span>' +
           '<small>' + (topic.parentId ? 'Topic' : 'Project Topic') + '</small>' +
           '<strong>' + escapeHtml(topic.title) + '</strong>' +
           '<span class="topic-summary">' + escapeHtml(compactText(topic.text, 112)) + '</span>' +
+          reflection +
+          detailText +
+          '<span class="topic-controls"><span data-toggle-topic-detail="' + topic.id + '">' + (detailOpen ? '간략히' : '자세히') + '</span></span>' +
           '<span class="topic-meta">' +
             tag(topic.fixed ? '고정' : '초안', topic.fixed ? 'blue' : '') +
             tag(topic.completed ? 'Task 후보 대상' : '진행') +
@@ -1268,6 +1486,53 @@ export function renderIdeaCruisePage() {
       recordEl.textContent = state.record || '회의록 생성 버튼을 누르면 판단 기록 초안이 여기에 표시됩니다.';
     }
 
+    function renderQuestions() {
+      questionLogEl.innerHTML = questionMessages.length
+        ? questionMessages.map(function(message) {
+            return '<article class="question-message ' + escapeHtml(message.role) + '">' +
+              '<strong>' + (message.role === 'answer' ? '답변' : '질문') + '</strong>' +
+              escapeHtml(message.text) +
+            '</article>';
+          }).join('')
+        : '<div class="quiet-box">아직 공개 질문이 없습니다. 회의 중 궁금한 점을 짧게 남기면 같은 답변 로그가 팀 전체에 보입니다.</div>';
+    }
+
+    async function loadQuestions() {
+      const response = await fetch('/idea-cruise/questions');
+      const result = await response.json().catch(function() { return {}; });
+      if (response.ok) {
+        questionMessages = Array.isArray(result.messages) ? result.messages : [];
+        renderQuestions();
+      }
+    }
+
+    async function submitQuestion(question) {
+      const response = await fetch('/idea-cruise/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: question,
+          roadmapSnapshot: state.topics.map(function(topic) {
+            return { title: topic.title, text: topic.text };
+          })
+        })
+      });
+      const result = await response.json().catch(function() { return {}; });
+      if (!response.ok) {
+        throw new Error(result.error || '질문 답변을 만들지 못했습니다.');
+      }
+      questionMessages = Array.isArray(result.messages) ? result.messages : [];
+    }
+
+    async function clearQuestions() {
+      const response = await fetch('/idea-cruise/questions', { method: 'DELETE' });
+      const result = await response.json().catch(function() { return {}; });
+      if (!response.ok) {
+        throw new Error(result.error || '질문 기록을 지우지 못했습니다.');
+      }
+      questionMessages = Array.isArray(result.messages) ? result.messages : [];
+    }
+
     function render() {
       renderRoadmap();
       renderCardPopover();
@@ -1276,6 +1541,7 @@ export function renderIdeaCruisePage() {
       renderTaskUpdates();
       renderNotTasks();
       renderRecord();
+      renderQuestions();
       saveState();
     }
 
@@ -1322,10 +1588,118 @@ export function renderIdeaCruisePage() {
       render();
     });
 
+    document.getElementById('zoom-out').addEventListener('click', function() {
+      state.roadmapScale = Math.max(0.68, state.roadmapScale - 0.1);
+      render();
+    });
+    document.getElementById('zoom-reset').addEventListener('click', function() {
+      state.roadmapScale = 1;
+      render();
+    });
+    document.getElementById('zoom-in').addEventListener('click', function() {
+      state.roadmapScale = Math.min(1.45, state.roadmapScale + 0.1);
+      render();
+    });
+
+    document.getElementById('question-form').addEventListener('submit', async function(event) {
+      event.preventDefault();
+      const question = questionInputEl.value.trim();
+      if (!question) return;
+      questionStatusEl.textContent = '답변 생성 중';
+      document.getElementById('submit-question').disabled = true;
+      try {
+        await submitQuestion(question);
+        questionInputEl.value = '';
+        questionStatusEl.textContent = '';
+      } catch (error) {
+        questionStatusEl.textContent = error.message;
+      }
+      document.getElementById('submit-question').disabled = false;
+      renderQuestions();
+    });
+
+    document.getElementById('clear-questions').addEventListener('click', async function(event) {
+      event.target.disabled = true;
+      try {
+        await clearQuestions();
+        questionStatusEl.textContent = '';
+      } catch (error) {
+        questionStatusEl.textContent = error.message;
+      }
+      event.target.disabled = false;
+      renderQuestions();
+    });
+
+    roadmapShellEl.addEventListener('pointerdown', function(event) {
+      if (event.target.closest('.topic-node') || event.target.closest('.card-popover') || event.target.closest('.layer-label') || event.target.closest('.zoom-tools')) return;
+      dragState = {
+        type: 'pan',
+        startX: event.clientX,
+        startY: event.clientY,
+        scrollLeft: roadmapShellEl.scrollLeft,
+        scrollTop: roadmapShellEl.scrollTop
+      };
+      roadmapShellEl.classList.add('dragging');
+    });
+
+    roadmapEl.addEventListener('pointerdown', function(event) {
+      const handle = event.target.closest('[data-move-topic]');
+      if (!handle) return;
+      const topic = state.topics.find(function(item) { return item.id === handle.dataset.moveTopic; });
+      const position = layoutCache.get(handle.dataset.moveTopic);
+      if (!topic || !position) return;
+      dragState = {
+        type: 'topic',
+        topicId: topic.id,
+        startX: event.clientX,
+        startY: event.clientY,
+        initialX: position.x,
+        initialY: position.y
+      };
+      event.preventDefault();
+      event.stopPropagation();
+    });
+
+    document.addEventListener('pointermove', function(event) {
+      if (!dragState) return;
+      if (dragState.type === 'pan') {
+        roadmapShellEl.scrollLeft = dragState.scrollLeft - (event.clientX - dragState.startX);
+        roadmapShellEl.scrollTop = dragState.scrollTop - (event.clientY - dragState.startY);
+        return;
+      }
+      const topic = state.topics.find(function(item) { return item.id === dragState.topicId; });
+      if (!topic) return;
+      topic.position = {
+        x: Math.max(16, Math.round(dragState.initialX + (event.clientX - dragState.startX) / state.roadmapScale)),
+        y: Math.max(56, Math.round(dragState.initialY + (event.clientY - dragState.startY) / state.roadmapScale))
+      };
+      renderRoadmap();
+      renderCardPopover();
+      saveState();
+    });
+
+    document.addEventListener('pointerup', function() {
+      if (!dragState) return;
+      dragState = null;
+      roadmapShellEl.classList.remove('dragging');
+    });
+
     roadmapEl.addEventListener('click', async function(event) {
       const closeButton = event.target.closest('[data-close-popover]');
       if (closeButton) {
         state.activeTopicId = null;
+        state.focusedDetailTopicId = null;
+        render();
+        return;
+      }
+
+      if (event.target.closest('[data-move-topic]')) return;
+
+      const detailButton = event.target.closest('[data-toggle-topic-detail]');
+      if (detailButton) {
+        const topicId = detailButton.dataset.toggleTopicDetail;
+        state.focusedDetailTopicId = state.focusedDetailTopicId === topicId ? null : topicId;
+        state.activeTopicId = topicId;
         render();
         return;
       }
@@ -1334,6 +1708,7 @@ export function renderIdeaCruisePage() {
       if (topicButton) {
         const topicId = topicButton.dataset.topic;
         state.activeTopicId = state.activeTopicId === topicId ? null : topicId;
+        if (state.activeTopicId !== topicId) state.focusedDetailTopicId = null;
         render();
         return;
       }
@@ -1575,6 +1950,9 @@ export function renderIdeaCruisePage() {
     });
 
     render();
+    loadQuestions().catch(function(error) {
+      questionStatusEl.textContent = error.message;
+    });
   </script>
 </body>
 </html>`;

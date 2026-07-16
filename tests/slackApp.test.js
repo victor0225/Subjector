@@ -108,6 +108,7 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
   assert.match(response.body, /2층 AI 카드/);
   assert.match(response.body, /Meeting Record/);
   assert.match(response.body, /Task Candidates/);
+  assert.match(response.body, /Public Questions/);
   assert.match(response.body, /card-popover/);
 });
 
@@ -142,7 +143,7 @@ test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee
   assert.match(response.body.error, /담당자/);
 });
 
-test('registerIdeaCruiseRoute protects roadmap refresh context with the health pin', async () => {
+test('registerIdeaCruiseRoute serves roadmap refresh context without a pin', async () => {
   const routes = [];
   const receiver = {
     router: {
@@ -221,12 +222,8 @@ test('registerIdeaCruiseRoute protects roadmap refresh context with the health p
 
   const route = routes.find((item) => item.path === '/idea-cruise/roadmap-context');
 
-  const rejected = createJsonResponse();
-  await route.handler({ query: {} }, rejected);
-  assert.equal(rejected.statusCode, 403);
-
   const accepted = createJsonResponse();
-  await route.handler({ query: { pin: '1234' } }, accepted);
+  await route.handler({ query: {} }, accepted);
   assert.equal(accepted.statusCode, 200);
   assert.equal(accepted.body.ok, true);
   assert.ok(accepted.body.topics.some((topic) => topic.title === 'Task: 하드웨어 후보 비교'));
@@ -425,6 +422,76 @@ test('registerIdeaCruiseRoute creates live intervention cards through the analyz
   assert.equal(analyzerCalls[0].githubOrganization, 'https://github.com/SAFIRA-ondevice');
   assert.deepEqual(analyzerCalls[0].meetingContexts, ['최근 전사: 공사현장용과 전장용 목적이 충돌할 수 있음']);
   assert.deepEqual(storeCalls[0], ['listRecentMeetingContexts', { limit: 5 }]);
+});
+
+test('registerIdeaCruiseRoute stores anonymous public IDEA CRUISE questions', async () => {
+  const routes = [];
+  const analyzerCalls = [];
+  const receiver = {
+    router: {
+      get(path, handler) {
+        routes.push({ method: 'get', path, handler });
+      },
+      post(path, handler) {
+        routes.push({ method: 'post', path, handler });
+      },
+      delete(path, handler) {
+        routes.push({ method: 'delete', path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig,
+    store: {
+      async listRecentMeetingContexts() {
+        return ['회의록: 폭음 차단 중심으로 좁힘'];
+      }
+    },
+    cardAnalyzer: {
+      async analyze(input) {
+        analyzerCalls.push(input);
+        return [
+          {
+            title: '로드맵 기준 답변',
+            body: '현재 기준은 폭음/충격음 중심입니다.',
+            suggestion: 'MVP에서는 소음 차단만 먼저 확인하세요.'
+          }
+        ];
+      }
+    }
+  });
+
+  const postRoute = routes.find((item) => item.method === 'post' && item.path === '/idea-cruise/questions');
+  const getRoute = routes.find((item) => item.method === 'get' && item.path === '/idea-cruise/questions');
+  const deleteRoute = routes.find((item) => item.method === 'delete' && item.path === '/idea-cruise/questions');
+
+  const postResponse = createJsonResponse();
+  await postRoute.handler({
+    body: {
+      question: '이번 MVP에서 주변음 보존도 같이 해야 하나?',
+      roadmapSnapshot: [{ title: '마이크', text: '폭음/충격음 중심' }]
+    }
+  }, postResponse);
+
+  assert.equal(postResponse.statusCode, 200);
+  assert.equal(postResponse.body.ok, true);
+  assert.equal(postResponse.body.messages.length, 2);
+  assert.equal(postResponse.body.messages[0].role, 'question');
+  assert.equal(postResponse.body.messages[1].role, 'answer');
+  assert.match(postResponse.body.messages[1].text, /폭음/);
+  assert.match(analyzerCalls[0].entryText, /이번 MVP/);
+  assert.deepEqual(analyzerCalls[0].completedEntries, ['마이크: 폭음/충격음 중심']);
+
+  const getResponse = createJsonResponse();
+  await getRoute.handler({}, getResponse);
+  assert.equal(getResponse.statusCode, 200);
+  assert.equal(getResponse.body.messages.length, 2);
+
+  const deleteResponse = createJsonResponse();
+  await deleteRoute.handler({}, deleteResponse);
+  assert.equal(deleteResponse.statusCode, 200);
+  assert.deepEqual(deleteResponse.body.messages, []);
 });
 
 test('registerIdeaCruiseRoute creates IDEA CRUISE task candidates through the generator', async () => {
