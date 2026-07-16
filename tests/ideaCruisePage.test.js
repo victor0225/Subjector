@@ -12,8 +12,8 @@ test('renderIdeaCruisePage exposes the two-layer roadmap desk', () => {
   assert.match(html, /card-popover/);
   assert.match(html, /Task Candidates/);
   assert.match(html, /Public Questions/);
-  assert.match(html, /Meeting Record/);
   assert.match(html, /id="refresh-roadmap"/);
+  assert.doesNotMatch(html, /Meeting Record|meeting-record|generate-record|copy-record/);
   assert.doesNotMatch(html, /간단 메모 붙여넣기/);
   assert.doesNotMatch(html, /라이브 회의/);
   assert.doesNotMatch(html, /Completed Brainstorming Inputs/);
@@ -22,10 +22,10 @@ test('renderIdeaCruisePage exposes the two-layer roadmap desk', () => {
 test('renderIdeaCruisePage documents the model split at each AI step', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /카드 생성: GPT-5\.4/);
-  assert.match(html, /회의록 생성: Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /로드맵 생성: GPT-5\.4/);
   assert.match(html, /Task 최종 정제: Gemini 2\.5 Flash-Lite/);
   assert.match(html, /자료조사, 검증, 구현/);
+  assert.doesNotMatch(html, /회의록 생성: Gemini 2\.5 Flash-Lite/);
 });
 
 test('renderIdeaCruisePage stores topic/root state locally', () => {
@@ -187,14 +187,13 @@ test('renderIdeaCruisePage separates final task refinement buckets', () => {
   assert.match(html, /data-remove-task/);
 });
 
-test('renderIdeaCruisePage keeps meeting record as decision narrative, not task list', () => {
+test('renderIdeaCruisePage removes the old meeting record workflow from the desk', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /function buildMeetingRecord\(\)/);
-  assert.match(html, /오늘 판단한 것/);
-  assert.match(html, /로드맵 변화/);
-  assert.match(html, /다음 회의로 넘길 맥락/);
-  assert.doesNotMatch(html, /task를 줄줄이 나열/);
+  assert.doesNotMatch(html, /function buildMeetingRecord\(\)/);
+  assert.doesNotMatch(html, /오늘 판단한 것|로드맵 변화|다음 회의로 넘길 맥락/);
+  assert.doesNotMatch(html, /Meeting Record|회의록 생성 버튼|결과록 복사/);
+  assert.doesNotMatch(html, /document\.getElementById\('generate-record'\)|document\.getElementById\('copy-record'\)/);
 });
 
 
@@ -202,30 +201,17 @@ test('renderIdeaCruisePage prioritizes decision and exclusion lanes in the roadm
   const html = renderIdeaCruisePage();
 
   assert.match(html, /priority-roadmap-v2/);
-  assert.match(html, /먼저 판단: 지금 결정해야 다음으로 감/);
-  assert.match(html, /보류\/제외: 지금은 다른 생각 먼저/);
   assert.match(html, /function priorityScore\(card\)/);
   assert.match(html, /function prioritizedCards\(cards, selectedIndex\)/);
-  assert.match(html, /branch-now/);
-  assert.match(html, /branch-later/);
-  assert.match(html, /선택하면 이쪽으로 심화/);
+  assert.doesNotMatch(html, /먼저 판단: 지금 결정해야 다음으로 감|보류\/제외: 지금은 다른 생각 먼저|branch-now|branch-later|선택하면 이쪽으로 심화/);
 });
 
-test('renderIdeaCruisePage frames manual pre-meeting roadmap reflection', () => {
+test('renderIdeaCruisePage keeps roadmap creation focused without the old process explainer', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /회의 전 로드맵 반영/);
-  assert.match(html, /회의 전에 누르는 수동 체크포인트/);
-  assert.match(html, /가장 최근의 봇 일반 메시지 "로드맵 반영 완료" 이후 자료/);
-  assert.match(html, /그 메시지가 다음 반영 기준/);
-  assert.match(html, /회의 중이 아니어도 짧게 논의한 메모/);
-  assert.match(html, /기존 로드맵 보며 회의·녹음/);
-  assert.match(html, /회의 녹음본 업로드/);
-  assert.match(html, /다음 회의 전 로드맵 반영/);
-  assert.match(html, /애매한 부분 팀 논의 후 수정/);
-  assert.match(html, /수정된 로드맵 기반 회의록 생성/);
-  assert.match(html, /#finals/);
-  assert.doesNotMatch(html, /마지막 반영 시점 이후부터 읽고/);
+  assert.match(html, /GitHub와 회의 자료를 바탕으로 로드맵을 생성하고 갱신합니다/);
+  assert.match(html, /로드맵 반영 원칙: 덮어쓰기보다 기존 구조 위에 얹어 반영/);
+  assert.doesNotMatch(html, /meeting-flow|회의 전 로드맵 반영|기존 로드맵 보며 회의·녹음|회의 녹음본 업로드|#finals/);
 });
 
 test('renderIdeaCruisePage keeps ambiguity cards editable with apply or ignore only', () => {
@@ -250,13 +236,32 @@ test('renderIdeaCruisePage imports reflected roadmap cards from context topics',
   assert.match(html, /sourceType === 'roadmap-reflection'/);
 });
 
-test('renderIdeaCruisePage supports the one-time direct task distribution exception', () => {
+test('renderIdeaCruisePage removes the one-time direct task distribution exception', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /이번 회의록으로 바로 task 생성/);
-  assert.match(html, /이번 회의만 예외/);
-  assert.match(html, /수기 회의록과 task 분배안/);
-  assert.match(html, /AI가 결정을 새로 만들지 않고/);
-  assert.match(html, /id="direct-meeting-text"/);
-  assert.match(html, /requestTaskCandidates\(\{ directMeetingText: directText \}\)/);
+  assert.doesNotMatch(html, /이번 회의록으로 바로 task 생성|이번 회의만 예외|수기 회의록과 task 분배안/);
+  assert.doesNotMatch(html, /id="direct-meeting-text"|generate-direct-tasks|directMeetingTextEl/);
+  assert.doesNotMatch(html, /requestTaskCandidates\(\{ directMeetingText: directText \}\)/);
+});
+
+test('renderIdeaCruisePage binds visible controls without removed DOM references', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /document\.getElementById\('add-topic'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('refresh-roadmap'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('refresh-tasks'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('question-form'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('clear-questions'\)\.addEventListener/);
+  assert.doesNotMatch(html, /document\.getElementById\('direct-meeting-text'\)|document\.getElementById\('generate-direct-tasks'\)/);
+});
+
+test('renderIdeaCruisePage emits parseable inline JavaScript with existing DOM ids', () => {
+  const html = renderIdeaCruisePage();
+  const ids = new Set([...html.matchAll(/id="([^"]+)"/g)].map((match) => match[1]));
+  const refs = [...html.matchAll(/document\.getElementById\('([^']+)'\)/g)].map((match) => match[1]);
+  const missing = refs.filter((id) => !ids.has(id));
+  const script = html.match(/<script>([\s\S]*)<\/script>/)?.[1] || '';
+
+  assert.deepEqual(missing, []);
+  assert.doesNotThrow(() => new Function(script));
 });

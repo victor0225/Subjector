@@ -106,10 +106,10 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
   assert.match(response.body, /IDEA CRUISE/);
   assert.match(response.body, /1F Topic Root Layer/);
   assert.match(response.body, /2층 AI 카드/);
-  assert.match(response.body, /Meeting Record/);
   assert.match(response.body, /Task Candidates/);
   assert.match(response.body, /Public Questions/);
   assert.match(response.body, /card-popover/);
+  assert.doesNotMatch(response.body, /Meeting Record|generate-record|copy-record/);
 });
 
 test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee', async () => {
