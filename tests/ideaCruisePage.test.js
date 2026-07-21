@@ -135,7 +135,7 @@ test('renderIdeaCruisePage supports fixed activity panels, anonymous questions, 
   assert.match(html, /id="question-log"/);
   assert.match(html, /id="clear-questions"/);
   assert.match(html, /질문 기록 지우기/);
-  assert.match(html, /grid-template-rows: minmax\(440px, 7fr\) minmax\(220px, 3fr\)/);
+  assert.match(html, /grid-template-rows: minmax\(380px, 6fr\) minmax\(260px, 4fr\)/);
   assert.match(html, /감지 예민도 기본/);
   assert.match(html, /id="zoom-in"/);
   assert.match(html, /id="zoom-out"/);

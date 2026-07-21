@@ -123,7 +123,7 @@ export function renderIdeaCruisePage() {
     }
     .side-stack {
       display: grid;
-      grid-template-rows: minmax(440px, 7fr) minmax(220px, 3fr);
+      grid-template-rows: minmax(380px, 6fr) minmax(260px, 4fr);
       gap: 16px;
       height: calc(100vh - 150px);
       min-height: 720px;
