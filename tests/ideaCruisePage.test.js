@@ -12,8 +12,9 @@ test('renderIdeaCruisePage exposes the two-layer roadmap desk', () => {
   assert.match(html, /card-popover/);
   assert.match(html, /Task Candidates/);
   assert.match(html, /Public Questions/);
-  assert.match(html, /id="refresh-roadmap"/);
-  assert.doesNotMatch(html, /Meeting Record|meeting-record|generate-record|copy-record/);
+  assert.match(html, /id="load-roadmap"/);
+  assert.doesNotMatch(html, /id="refresh-roadmap"/);
+  assert.doesNotMatch(html, /Meeting Record|generate-record|copy-record/);
   assert.doesNotMatch(html, /간단 메모 붙여넣기/);
   assert.doesNotMatch(html, /라이브 회의/);
   assert.doesNotMatch(html, /Completed Brainstorming Inputs/);
@@ -127,7 +128,9 @@ test('renderIdeaCruisePage supports fixed activity panels, anonymous questions, 
   const html = renderIdeaCruisePage();
 
   assert.match(html, /grid-template-columns: minmax\(720px, 2fr\) minmax\(340px, 1fr\)/);
-  assert.match(html, /\.roadmap-panel \{ height: calc\(100vh - 150px\)/);
+  assert.match(html, /\.roadmap-panel \{ display: flex; flex-direction: column; height: calc\(100vh - 150px\)/);
+  assert.match(html, /\.roadmap-shell \{[\s\S]*flex: 1/);
+  assert.doesNotMatch(html, /height: calc\(100% - 272px\)/);
   assert.match(html, /\.ask-panel, \.task-panel \{ height:/);
   assert.match(html, /id="question-log"/);
   assert.match(html, /id="clear-questions"/);
@@ -156,10 +159,13 @@ test('renderIdeaCruisePage matches the pinned roadmap card mockup behavior', () 
   const html = renderIdeaCruisePage();
 
   assert.match(html, /id="save-roadmap"/);
-  assert.match(html, /전체 저장/);
+  assert.match(html, /로드맵 저장/);
+  assert.match(html, /id="load-roadmap"/);
+  assert.match(html, /로드맵 불러오기/);
   assert.match(html, /saveRoadmapSnapshot\(\)/);
+  assert.match(html, /loadRoadmapSnapshot\(\)/);
   assert.match(html, /카드 고정 = 기준 확정/);
-  assert.match(html, /전체 저장 = 현재 로드맵 상태 보관/);
+  assert.match(html, /로드맵 저장 = 회의 마침 기준 보관/);
   assert.match(html, /function roadmapDetailSections\(topic\)/);
   assert.match(html, /기준 내용/);
   assert.match(html, /회의에서 확정된 근거/);
@@ -174,13 +180,13 @@ test('renderIdeaCruisePage matches the pinned roadmap card mockup behavior', () 
 test('renderIdeaCruisePage starts with the tactical headset first-floor roadmap shape', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /idea-cruise-roadmap-v4/);
-  assert.match(html, /pinned-roadmap-v4/);
+  assert.match(html, /idea-cruise-roadmap-v5/);
+  assert.match(html, /pinned-roadmap-v5/);
   assert.match(html, /function defaultTopics\(\)/);
   assert.match(html, /전술 헤드셋 MVP 기준/);
   assert.match(html, /소리 수집 장치부/);
   assert.match(html, /라즈베리 파이 학습부/);
-  assert.match(html, /라즈베리 파이 통신부/);
+  assert.match(html, /헤드셋 통신부/);
   assert.match(html, /데이터 기준/);
   assert.match(html, /parentId: 'roadmap-goal'/);
   assert.match(html, /parentId: 'roadmap-learning'/);
@@ -235,7 +241,7 @@ test('renderIdeaCruisePage removes the old meeting record workflow from the desk
 test('renderIdeaCruisePage prioritizes decision and exclusion lanes in the roadmap', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /pinned-roadmap-v4/);
+  assert.match(html, /pinned-roadmap-v5/);
   assert.match(html, /function priorityScore\(card\)/);
   assert.match(html, /function prioritizedCards\(cards, selectedIndex\)/);
   assert.doesNotMatch(html, /먼저 판단: 지금 결정해야 다음으로 감|보류\/제외: 지금은 다른 생각 먼저|branch-now|branch-later|선택하면 이쪽으로 심화/);
@@ -284,19 +290,22 @@ test('renderIdeaCruisePage overlays old roadmap reflections onto existing first-
   assert.doesNotMatch(html, /firstReflectedTopicId = topic\.id/);
 });
 
-test('renderIdeaCruisePage removes the one-time direct task distribution exception', () => {
+test('renderIdeaCruisePage makes meeting-material task generation the main task workflow', () => {
   const html = renderIdeaCruisePage();
 
-  assert.doesNotMatch(html, /이번 회의록으로 바로 task 생성|이번 회의만 예외|수기 회의록과 task 분배안/);
-  assert.doesNotMatch(html, /id="direct-meeting-text"|generate-direct-tasks|directMeetingTextEl/);
-  assert.doesNotMatch(html, /requestTaskCandidates\(\{ directMeetingText: directText \}\)/);
+  assert.match(html, /회의 자료로 task 생성/);
+  assert.match(html, /id="task-meeting-record"/);
+  assert.match(html, /const taskMeetingRecordEl = document\.getElementById\('task-meeting-record'\)/);
+  assert.match(html, /requestTaskCandidates\(\{ meetingRecord: taskMeetingRecordEl\.value/);
+  assert.match(html, /meetingRecord: meetingRecord/);
+  assert.doesNotMatch(html, /이번 회의만 예외|수기 회의록과 task 분배안/);
 });
 
 test('renderIdeaCruisePage binds visible controls without removed DOM references', () => {
   const html = renderIdeaCruisePage();
 
   assert.match(html, /document\.getElementById\('add-topic'\)\.addEventListener/);
-  assert.match(html, /document\.getElementById\('refresh-roadmap'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('load-roadmap'\)\.addEventListener/);
   assert.match(html, /document\.getElementById\('refresh-tasks'\)\.addEventListener/);
   assert.match(html, /document\.getElementById\('question-form'\)\.addEventListener/);
   assert.match(html, /document\.getElementById\('clear-questions'\)\.addEventListener/);

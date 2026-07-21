@@ -149,11 +149,11 @@ export function renderIdeaCruisePage() {
     }
     .panel-head p { margin-bottom: 0; }
 
-    .roadmap-panel { height: calc(100vh - 150px); min-height: 720px; }
+    .roadmap-panel { display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 720px; }
     .ask-panel, .task-panel { height: 100%; min-height: 0; }
     .roadmap-shell {
       position: relative;
-      height: calc(100% - 272px);
+      flex: 1;
       min-height: 420px;
       overflow: auto;
       background:
@@ -550,6 +550,16 @@ export function renderIdeaCruisePage() {
     .update-part { border: 1px solid var(--line); border-radius: 7px; padding: 9px; background: #fbfcfd; }
     .task-filter { display: flex; flex-wrap: wrap; gap: 7px; }
     .task-filter button.active { border-color: var(--teal); background: var(--teal-soft); color: var(--teal); }
+    .task-generation {
+      display: grid;
+      gap: 9px;
+      margin-bottom: 10px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+    .task-generation textarea { min-height: 82px; }
 
     .meeting-panel { margin: 0 22px 22px; }
     .record {
@@ -587,7 +597,7 @@ export function renderIdeaCruisePage() {
   <header>
     <div>
       <h1>IDEA CRUISE Roadmap Desk</h1>
-      <p>1층은 회의 기준 로드맵입니다. 카드 고정 = 기준 확정, 전체 저장 = 현재 로드맵 상태 보관입니다.</p>
+      <p>1층은 회의 기준 로드맵입니다. 카드 고정 = 기준 확정, 로드맵 저장 = 회의 마침 기준 보관입니다.</p>
     </div>
     <div class="status">
       <span>로드맵 생성: GPT-5.4</span>
@@ -605,8 +615,8 @@ export function renderIdeaCruisePage() {
         </div>
         <div class="actions">
           <button id="add-topic" class="primary" type="button">Topic 추가</button>
-          <button id="refresh-roadmap" type="button">로드맵 반영</button>
-          <button id="save-roadmap" type="button">전체 저장</button>
+          <button id="load-roadmap" type="button">로드맵 불러오기</button>
+          <button id="save-roadmap" type="button">로드맵 저장</button>
         </div>
       </div>
       <div class="hint">로드맵 반영 원칙: 덮어쓰기보다 기존 구조 위에 얹어 반영하고, 사람이 옮긴 카드 위치는 유지합니다.</div>
@@ -653,11 +663,14 @@ export function renderIdeaCruisePage() {
         <div class="panel-head">
           <div>
             <h2>Task Candidates</h2>
-            <p>자료조사, 검증, 구현처럼 시간을 써야 해결되는 일만 남깁니다. 각 task에는 생성 맥락을 표시합니다.</p>
+            <p>회의록, 회의 녹음본 전사, 현재 로드맵을 기준으로 자료조사, 검증, 구현처럼 시간이 필요한 일만 task 후보로 만듭니다.</p>
           </div>
-          <button id="refresh-tasks" class="primary" type="button">갱신</button>
+          <button id="refresh-tasks" class="primary" type="button">회의 자료로 task 생성</button>
         </div>
         <div class="tasks">
+          <div class="task-generation">
+            <label>회의 자료 보충<textarea id="task-meeting-record" placeholder="회의-결과록에 올린 회의록/전사문이 있으면 자동 참고합니다. 여기에 보충 메모를 붙여도 됩니다."></textarea></label>
+          </div>
           <div id="task-filter" class="task-filter"></div>
           <div id="task-generation-error"></div>
           <div id="task-list"></div>
@@ -689,8 +702,8 @@ export function renderIdeaCruisePage() {
   </dialog>
 
   <script>
-    const STORAGE_KEY = 'idea-cruise-roadmap-v4';
-    const ROADMAP_UI_VERSION = 'pinned-roadmap-v4';
+    const STORAGE_KEY = 'idea-cruise-roadmap-v5';
+    const ROADMAP_UI_VERSION = 'pinned-roadmap-v5';
     const state = loadState();
     let layoutCache = new Map();
     let questionMessages = [];
@@ -711,6 +724,7 @@ export function renderIdeaCruisePage() {
     const questionLogEl = document.getElementById('question-log');
     const questionInputEl = document.getElementById('question-input');
     const questionStatusEl = document.getElementById('question-status');
+    const taskMeetingRecordEl = document.getElementById('task-meeting-record');
 
     function defaultTopics() {
       return [
@@ -758,8 +772,8 @@ export function renderIdeaCruisePage() {
         },
         {
           id: 'roadmap-comm',
-          title: '라즈베리 파이 통신부',
-          text: '라즈베리 파이끼리 또는 장치 간 통신하는 방법을 정리하는 파트입니다. 학습부와 별개로 통신 방식, 지연, 안정성을 확인합니다.',
+          title: '헤드셋 통신부',
+          text: '헤드셋 통신을 위해 라즈베리 파이끼리 또는 장치 간 통신하는 방법을 정리하는 파트입니다. 학습부와 별개로 통신 방식, 지연, 안정성을 확인합니다.',
           parentId: 'roadmap-goal',
           fixed: false,
           completed: false,
@@ -799,6 +813,7 @@ export function renderIdeaCruisePage() {
         refreshMessage: '',
         roadmapUiVersion: ROADMAP_UI_VERSION,
         roadmapSnapshot: null,
+        taskMeetingRecord: '',
         focusedDetailTopicId: null,
         roadmapScale: 1
       };
@@ -840,7 +855,42 @@ export function renderIdeaCruisePage() {
         taskCount: state.tasks.length + state.existingTaskUpdates.length,
         questionCount: questionMessages.length
       };
-      state.refreshMessage = '전체 저장됨: 고정 ' + state.roadmapSnapshot.fixedCount + '개, 미고정 ' + state.roadmapSnapshot.unfixedCount + '개';
+      state.refreshMessage = '로드맵 저장됨: 고정 ' + state.roadmapSnapshot.fixedCount + '개, 미고정 ' + state.roadmapSnapshot.unfixedCount + '개';
+      saveState();
+    }
+
+    function normalizeSnapshotTopic(topic) {
+      return Object.assign({
+        id: createId('topic'),
+        title: '저장된 topic',
+        text: '',
+        parentId: null,
+        fixed: false,
+        completed: false,
+        splitApplied: false,
+        splitDismissed: false,
+        cards: []
+      }, topic, {
+        cards: [],
+        position: topic.position || null
+      });
+    }
+
+    function loadRoadmapSnapshot() {
+      const savedTopics = Array.isArray(state.roadmapSnapshot?.topics) ? state.roadmapSnapshot.topics : [];
+      state.topics = savedTopics.length
+        ? savedTopics.map(normalizeSnapshotTopic)
+        : defaultTopics();
+      const defaultById = new Map(defaultTopics().map(function(topic) { return [topic.id, topic]; }));
+      const currentIds = new Set(state.topics.map(function(topic) { return topic.id; }));
+      defaultById.forEach(function(topic, id) {
+        if (!currentIds.has(id)) {
+          state.topics.push(topic);
+        }
+      });
+      state.activeTopicId = null;
+      state.focusedDetailTopicId = null;
+      state.refreshMessage = savedTopics.length ? '저장된 로드맵을 불러왔습니다.' : '기본 로드맵을 불러왔습니다.';
       saveState();
     }
 
@@ -1007,10 +1057,10 @@ export function renderIdeaCruisePage() {
       ensurePriorityCards(topic);
     }
 
-    async function requestTaskCandidates() {
-      const completed = completedTopics();
+    async function requestTaskCandidates({ meetingRecord = '' } = {}) {
+      const completed = state.topics.length ? state.topics : completedTopics();
       if (completed.length === 0) {
-        state.taskGenerationError = 'Task 후보 대상으로 표시된 topic이 없습니다. topic 팝오버에서 "Task 후보로 보냄"을 누른 뒤 갱신하세요.';
+        state.taskGenerationError = 'Task 후보 생성에 사용할 로드맵 topic이 없습니다.';
         return;
       }
       const response = await fetch('/idea-cruise/task-candidates', {
@@ -1019,7 +1069,8 @@ export function renderIdeaCruisePage() {
         body: JSON.stringify({
           completedPages: completed.map(function(topic, index) {
             return { id: topic.id, number: index + 1, title: topic.title, text: topic.text };
-          })
+          }),
+          meetingRecord: meetingRecord
         })
       });
       const result = await response.json().catch(function() { return {}; });
@@ -1584,6 +1635,9 @@ export function renderIdeaCruisePage() {
       renderTaskUpdates();
       renderNotTasks();
       renderQuestions();
+      if (document.activeElement !== taskMeetingRecordEl) {
+        taskMeetingRecordEl.value = state.taskMeetingRecord || '';
+      }
       saveState();
     }
 
@@ -1609,14 +1663,8 @@ export function renderIdeaCruisePage() {
     }
 
     document.getElementById('add-topic').addEventListener('click', openTopicDialog);
-    document.getElementById('refresh-roadmap').addEventListener('click', async function(event) {
-      event.target.disabled = true;
-      try {
-        await refreshRoadmapContext();
-      } catch (error) {
-        state.refreshMessage = error.message;
-      }
-      event.target.disabled = false;
+    document.getElementById('load-roadmap').addEventListener('click', function() {
+      loadRoadmapSnapshot();
       render();
     });
     document.getElementById('save-roadmap').addEventListener('click', function() {
@@ -1674,6 +1722,11 @@ export function renderIdeaCruisePage() {
       }
       event.target.disabled = false;
       renderQuestions();
+    });
+
+    taskMeetingRecordEl.addEventListener('input', function() {
+      state.taskMeetingRecord = taskMeetingRecordEl.value;
+      saveState();
     });
 
     roadmapShellEl.addEventListener('pointerdown', function(event) {
@@ -1800,7 +1853,8 @@ export function renderIdeaCruisePage() {
     document.getElementById('refresh-tasks').addEventListener('click', async function(event) {
       event.target.disabled = true;
       try {
-        await requestTaskCandidates();
+        state.taskMeetingRecord = taskMeetingRecordEl.value;
+        await requestTaskCandidates({ meetingRecord: taskMeetingRecordEl.value });
       } catch (error) {
         state.taskGenerationError = error.message;
       }

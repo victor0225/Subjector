@@ -508,6 +508,14 @@ test('registerIdeaCruiseRoute creates IDEA CRUISE task candidates through the ge
 
   registerIdeaCruiseRoute(receiver, {
     config: teamConfig,
+    store: {
+      async listAllTasks() {
+        return [];
+      },
+      async listRecentMeetingContexts() {
+        return ['회의-결과록: 녹음본 전사에서 5~10m 통신 우선 확인'];
+      }
+    },
     taskCandidateGenerator: {
       async generate(input) {
         generatorCalls.push(input);
@@ -540,7 +548,8 @@ test('registerIdeaCruiseRoute creates IDEA CRUISE task candidates through the ge
           title: '폭음 데이터',
           text: '공사현장 위험음 감지로 좁힘'
         }
-      ]
+      ],
+      meetingRecord: '수기 회의록: 데이터 기준은 학습부 아래에 둠'
     }
   }, response);
 
@@ -549,6 +558,8 @@ test('registerIdeaCruiseRoute creates IDEA CRUISE task candidates through the ge
   assert.equal(response.body.tasks[0].title, '폭음 데이터셋 라이선스 확인');
   assert.deepEqual(response.body.notTasks, ['AudioSet 개념 설명']);
   assert.match(generatorCalls[0].completedPages[0].text, /공사현장/);
+  assert.match(generatorCalls[0].meetingRecord, /수기 회의록/);
+  assert.match(generatorCalls[0].meetingRecord, /회의-결과록: 녹음본 전사/);
 });
 
 test('registerIdeaCruiseRoute rejects task candidate generation when generator is missing', async () => {

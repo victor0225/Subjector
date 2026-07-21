@@ -74,6 +74,7 @@ test('createGeminiIdeaCruiseTaskGenerator separates new tasks, existing task boo
   assert.match(calls[0][1].body, /공사현장 위험음 감지/);
   assert.match(calls[0][1].body, /시간을 써야만 해결되는 일만 task/);
   assert.match(calls[0][1].body, /Current in-process tasks/);
+  assert.match(calls[0][1].body, /Meeting materials/);
   assert.equal(result.tasks[0].title, '폭음 데이터셋 라이선스 확인');
   assert.equal(result.tasks[0].reason, '기존 하드웨어 task와 산출물이 다르다.');
   assert.equal(result.tasks[0].assignee, '미배정');
@@ -84,6 +85,50 @@ test('createGeminiIdeaCruiseTaskGenerator separates new tasks, existing task boo
     { id: result.notTasks[0].id, content: 'AudioSet이 무엇인지 설명하기', reason: '즉시 답변으로 해결됨' },
     { id: result.notTasks[1].id, content: '공사현장용으로 좁히는 회의 내 결정', reason: '회의에서 결정할 내용' }
   ]);
+});
+
+test('createGeminiIdeaCruiseTaskGenerator includes meeting materials in the prompt', async () => {
+  let requestBody = '';
+  const generator = createGeminiIdeaCruiseTaskGenerator({
+    apiKey: 'gemini-key',
+    fetchImpl: async (url, options) => {
+      requestBody = options.body;
+      return {
+        ok: true,
+        async json() {
+          return {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        newTasks: [],
+                        existingTaskUpdates: [],
+                        notTasks: []
+                      })
+                    }
+                  ]
+                }
+              }
+            ]
+          };
+        },
+        async text() {
+          return '';
+        }
+      };
+    }
+  });
+
+  await generator.generate({
+    completedPages: [{ id: 'roadmap-comm', number: 1, title: '헤드셋 통신부', text: '라즈베리파이 통신 기준' }],
+    currentTasks: [],
+    meetingRecord: '회의 녹음본 전사: 5~10m 통신을 우선 확인하기로 함'
+  });
+
+  assert.match(requestBody, /Meeting materials/);
+  assert.match(requestBody, /회의 녹음본 전사: 5~10m 통신을 우선 확인하기로 함/);
 });
 
 test('createGeminiIdeaCruiseTaskGenerator redacts API keys in errors', async () => {

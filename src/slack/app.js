@@ -402,10 +402,18 @@ export function registerIdeaCruiseRoute(receiver, {
       const currentTasks = store?.listAllTasks
         ? (await store.listAllTasks({ limit: 50 })).filter((task) => ['미시작', '수락', '오늘은 여기까지', '보완 필요', '미정리', '변경 요청 중', '회의 필요'].includes(task.status))
         : [];
+      const meetingContexts = store?.listRecentMeetingContexts
+        ? await store.listRecentMeetingContexts({ limit: 5 })
+        : [];
+      const meetingRecord = [
+        String(body.meetingRecord ?? '').trim(),
+        ...meetingContexts
+      ].filter(Boolean).join('\n\n---\n\n');
 
       const result = await taskCandidateGenerator.generate({
         completedPages,
-        currentTasks
+        currentTasks,
+        meetingRecord
       });
 
       return res.status(200).json({

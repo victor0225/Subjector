@@ -73,7 +73,7 @@ async function readErrorBody(response) {
   }
 }
 
-function buildIdeaCruiseTaskInput({ completedPages = [], currentTasks = [] }) {
+function buildIdeaCruiseTaskInput({ completedPages = [], currentTasks = [], meetingRecord = '' }) {
   return [
     'You are IDEA CRUISE task candidate generator.',
     'Use Korean.',
@@ -107,7 +107,10 @@ function buildIdeaCruiseTaskInput({ completedPages = [], currentTasks = [] }) {
       `Needed info: ${task.context?.neededInfo || ''}`,
       `Done criteria: ${task.context?.doneCriteria || ''}`,
       `Why: ${task.context?.why || task.context?.goal || ''}`
-    ].join('\n')).join('\n---\n') || 'none'
+    ].join('\n')).join('\n---\n') || 'none',
+    '',
+    'Meeting materials:',
+    String(meetingRecord || '').trim() || 'none'
   ].join('\n');
 }
 
@@ -161,7 +164,7 @@ export function createGeminiIdeaCruiseTaskGenerator({ apiKey, model = 'gemini-2.
     throw new Error('Gemini IDEA CRUISE task generator requires fetch');
   }
 
-  async function generate({ completedPages = [], currentTasks = [] }) {
+  async function generate({ completedPages = [], currentTasks = [], meetingRecord = '' }) {
     const response = await fetchImpl(`${GEMINI_GENERATE_BASE_URL}/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
       headers: {
@@ -172,7 +175,7 @@ export function createGeminiIdeaCruiseTaskGenerator({ apiKey, model = 'gemini-2.
           {
             role: 'user',
             parts: [
-              { text: buildIdeaCruiseTaskInput({ completedPages, currentTasks }) }
+              { text: buildIdeaCruiseTaskInput({ completedPages, currentTasks, meetingRecord }) }
             ]
           }
         ],
