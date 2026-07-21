@@ -58,6 +58,8 @@ test('loadConfigFromEnv builds app config from environment values', () => {
   assert.equal(config.gemini.transcriptionModel, 'gemini-3.5-flash');
   assert.equal(config.gemini.taskExtractionModel, 'gemini-3.5-flash');
   assert.equal(config.gemini.finalsSummaryModel, 'gemini-3.5-flash');
+  assert.equal(config.github.organizationUrl, 'https://github.com/SAFIRA-ondevice');
+  assert.deepEqual(config.github.repositories, ['SAFIRA-ondevice/Soohyun']);
 });
 
 test('loadConfigFromEnv allows overriding AI model selections', () => {
@@ -90,6 +92,30 @@ test('loadConfigFromEnv allows overriding AI model selections', () => {
   assert.equal(config.gemini.transcriptionModel, 'gemini-3.5-flash-lite');
   assert.equal(config.gemini.taskExtractionModel, 'gemini-3.5-pro');
   assert.equal(config.gemini.finalsSummaryModel, 'gemini-3.5-finals');
+});
+
+test('loadConfigFromEnv allows overriding GitHub organization and repositories', () => {
+  const config = loadConfigFromEnv({
+    PORT: '3333',
+    BASE_URL: 'https://subjector.onrender.com',
+    HEALTH_PIN: '2468',
+    SLACK_BOT_TOKEN: 'xoxb-token',
+    SLACK_SIGNING_SECRET: 'secret',
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+    OPENAI_API_KEY: 'sk-key',
+    GEMINI_API_KEY: 'gemini-key',
+    MEETING_CHANNEL_ID: 'C1',
+    IN_PROCESS_CHANNEL_ID: 'C2',
+    FINALS_CHANNEL_ID: 'C3',
+    LEAD_USER_KEY: 'suhyeon',
+    USERS_JSON: usersJson,
+    GITHUB_ORGANIZATION_URL: 'https://github.com/CustomOrg',
+    GITHUB_REPOSITORIES: 'CustomOrg/App, SAFIRA-ondevice/Soohyun '
+  });
+
+  assert.equal(config.github.organizationUrl, 'https://github.com/CustomOrg');
+  assert.deepEqual(config.github.repositories, ['CustomOrg/App', 'SAFIRA-ondevice/Soohyun']);
 });
 
 test('loadConfigFromEnv enables participant skip only with an explicit test flag', () => {

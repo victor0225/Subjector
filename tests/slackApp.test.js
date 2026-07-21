@@ -105,7 +105,7 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
   assert.equal(response.contentType, 'html');
   assert.match(response.body, /IDEA CRUISE/);
   assert.match(response.body, /1F Topic Root Layer/);
-  assert.match(response.body, /2층 AI 카드/);
+  assert.match(response.body, /2층 상세/);
   assert.match(response.body, /Task Candidates/);
   assert.match(response.body, /Public Questions/);
   assert.match(response.body, /card-popover/);

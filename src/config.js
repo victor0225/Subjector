@@ -25,6 +25,15 @@ function envFlag(value) {
   return String(value ?? '').trim().toLowerCase() === 'true';
 }
 
+function parseGithubRepositories(raw) {
+  const value = String(raw ?? 'SAFIRA-ondevice/Soohyun');
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .map((entry) => entry.replace(/^https:\/\/github\.com\//i, '').replace(/\.git$/i, ''))
+    .filter(Boolean);
+}
+
 export function parseUsersJson(raw) {
   let parsed;
 
@@ -146,6 +155,7 @@ export function loadConfigFromEnv(env = process.env) {
     },
     github: {
       organizationUrl: env.GITHUB_ORGANIZATION_URL?.trim() || 'https://github.com/SAFIRA-ondevice',
+      repositories: parseGithubRepositories(env.GITHUB_REPOSITORIES),
       token: env.GITHUB_TOKEN?.trim() || ''
     },
     features: {

@@ -8,7 +8,7 @@ test('renderIdeaCruisePage exposes the two-layer roadmap desk', () => {
   assert.doesNotMatch(html, /<<<<<<<|=======|>>>>>>>/);
   assert.match(html, /IDEA CRUISE Roadmap Desk/);
   assert.match(html, /1F Topic Root Layer/);
-  assert.match(html, /2층 AI 카드/);
+  assert.match(html, /2층 상세/);
   assert.match(html, /card-popover/);
   assert.match(html, /Task Candidates/);
   assert.match(html, /Public Questions/);
@@ -31,7 +31,7 @@ test('renderIdeaCruisePage documents the model split at each AI step', () => {
 test('renderIdeaCruisePage stores topic/root state locally', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /topics: \[\]/);
+  assert.match(html, /topics: defaultTopics\(\)/);
   assert.match(html, /activeTopicId: null/);
   assert.match(html, /function activeTopic\(\)/);
   assert.match(html, /function addTopic\(/);
@@ -46,7 +46,6 @@ test('renderIdeaCruisePage supports fixed topics as hard editing boundaries', ()
 
   assert.match(html, /topic\.fixed = !topic\.fixed/);
   assert.match(html, /고정된 기준 카드입니다/);
-  assert.match(html, /고정 해제 후 적용/);
   assert.match(html, /고정된 topic은 고정 해제 후 수정할 수 있습니다/);
 });
 
@@ -61,16 +60,15 @@ test('renderIdeaCruisePage prioritizes split and conflict cards', () => {
   assert.match(html, /ensurePriorityCards\(topic\)/);
 });
 
-test('renderIdeaCruisePage keeps one visible AI card and pending count', () => {
+test('renderIdeaCruisePage keeps second floor as roadmap detail without old topic editor or AI card stack', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /const card = topic\.cards && topic\.cards\[0\]/);
-  assert.match(html, /대기 카드/);
-  assert.match(html, /renderPrimaryCard\(topic, card, pendingCount\)/);
-  assert.match(html, /data-toggle-pending/);
-  assert.match(html, /data-promote-card/);
-  assert.match(html, /data-dismiss-card/);
-  assert.match(html, /적용 실패/);
+  assert.match(html, /renderRoadmapDetailSections\(topic\)/);
+  assert.doesNotMatch(html, /Topic 제목<input data-topic-title/);
+  assert.doesNotMatch(html, /Topic 내용<textarea data-topic-text/);
+  assert.doesNotMatch(html, /renderPrimaryCard\(topic, card, pendingCount\)/);
+  assert.doesNotMatch(html, /data-toggle-pending|data-promote-card|data-apply-card|data-dismiss-card/);
+  assert.doesNotMatch(html, /AI 수정안 초안|우리가 하기로 한 것|대기 카드/);
 });
 
 test('renderIdeaCruisePage clamps topic nodes and opens details from the fixed card size', () => {
@@ -173,6 +171,24 @@ test('renderIdeaCruisePage matches the pinned roadmap card mockup behavior', () 
   assert.match(html, /data-toggle-fixed/);
 });
 
+test('renderIdeaCruisePage starts with the tactical headset first-floor roadmap shape', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /idea-cruise-roadmap-v3/);
+  assert.match(html, /pinned-roadmap-v3/);
+  assert.match(html, /function defaultTopics\(\)/);
+  assert.match(html, /전술 헤드셋 MVP 기준/);
+  assert.match(html, /소리 수집 장치부/);
+  assert.match(html, /라즈베리 파이 학습부/);
+  assert.match(html, /라즈베리 파이 통신부/);
+  assert.match(html, /데이터 기준/);
+  assert.match(html, /parentId: 'roadmap-goal'/);
+  assert.match(html, /parentId: 'roadmap-learning'/);
+  assert.match(html, /position: \{ x: 56, y: 280 \}/);
+  assert.match(html, /position: \{ x: 366, y: 96 \}/);
+  assert.match(html, /position: \{ x: 676, y: 238 \}/);
+});
+
 test('renderIdeaCruisePage task candidates use the approved editable fields and source reason', () => {
   const html = renderIdeaCruisePage();
 
@@ -219,7 +235,7 @@ test('renderIdeaCruisePage removes the old meeting record workflow from the desk
 test('renderIdeaCruisePage prioritizes decision and exclusion lanes in the roadmap', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /priority-roadmap-v2/);
+  assert.match(html, /pinned-roadmap-v3/);
   assert.match(html, /function priorityScore\(card\)/);
   assert.match(html, /function prioritizedCards\(cards, selectedIndex\)/);
   assert.doesNotMatch(html, /먼저 판단: 지금 결정해야 다음으로 감|보류\/제외: 지금은 다른 생각 먼저|branch-now|branch-later|선택하면 이쪽으로 심화/);
@@ -233,16 +249,15 @@ test('renderIdeaCruisePage keeps roadmap creation focused without the old proces
   assert.doesNotMatch(html, /meeting-flow|회의 전 로드맵 반영|기존 로드맵 보며 회의·녹음|회의 녹음본 업로드|#finals/);
 });
 
-test('renderIdeaCruisePage keeps ambiguity cards editable with apply or ignore only', () => {
+test('renderIdeaCruisePage removes old ambiguity card editing controls from the second floor', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /AI 수정안 초안/);
-  assert.match(html, /우리가 하기로 한 것/);
-  assert.match(html, /data-card-decision-note/);
-  assert.match(html, /data-apply-card/);
-  assert.match(html, /data-dismiss-card/);
-  assert.match(html, /return '반영'/);
-  assert.match(html, />무시</);
+  assert.doesNotMatch(html, /AI 수정안 초안/);
+  assert.doesNotMatch(html, /우리가 하기로 한 것/);
+  assert.doesNotMatch(html, /data-card-decision-note/);
+  assert.doesNotMatch(html, /data-apply-card/);
+  assert.doesNotMatch(html, /data-dismiss-card/);
+  assert.doesNotMatch(html, />무시</);
   assert.doesNotMatch(html, /수정 후 반영/);
   assert.doesNotMatch(html, /활동창|활동 창/);
 });

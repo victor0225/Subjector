@@ -397,8 +397,8 @@ export function renderIdeaCruisePage() {
       border-radius: 10px 10px 0 0;
     }
     .popover-head p { margin-bottom: 0; }
-    .topic-editor, .ai-card { display: grid; gap: 10px; padding: 12px; }
-    .topic-editor { border-bottom: 1px solid var(--line); background: #fbfdff; }
+    .topic-actions-panel, .ai-card { display: grid; gap: 10px; padding: 12px; }
+    .topic-actions-panel { border-top: 1px solid var(--line); background: #fbfdff; }
     .detail-sections {
       display: grid;
       gap: 10px;
@@ -601,7 +601,7 @@ export function renderIdeaCruisePage() {
       <div class="panel-head">
         <div>
           <h2>1F Topic Root Layer</h2>
-          <p>GitHub와 회의 자료를 바탕으로 로드맵을 생성하고 갱신합니다. topic을 클릭하면 2층 AI 카드 팝오버가 열립니다.</p>
+          <p>GitHub와 회의 자료를 바탕으로 로드맵을 생성하고 갱신합니다. topic을 클릭하면 2층 상세가 열립니다.</p>
         </div>
         <div class="actions">
           <button id="add-topic" class="primary" type="button">Topic 추가</button>
@@ -689,8 +689,8 @@ export function renderIdeaCruisePage() {
   </dialog>
 
   <script>
-    const STORAGE_KEY = 'idea-cruise-roadmap-v2';
-    const ROADMAP_UI_VERSION = 'priority-roadmap-v2';
+    const STORAGE_KEY = 'idea-cruise-roadmap-v3';
+    const ROADMAP_UI_VERSION = 'pinned-roadmap-v3';
     const state = loadState();
     let layoutCache = new Map();
     let questionMessages = [];
@@ -712,9 +712,84 @@ export function renderIdeaCruisePage() {
     const questionInputEl = document.getElementById('question-input');
     const questionStatusEl = document.getElementById('question-status');
 
+    function defaultTopics() {
+      return [
+        {
+          id: 'roadmap-goal',
+          title: '전술 헤드셋 MVP 기준',
+          text: '전술 환경에서 위험 소리는 감지하고 필요한 음성 정보는 놓치지 않는 MVP 기준입니다. 회의에서 확정된 큰 방향을 먼저 고정하고, 하위 장치/학습/통신 기준을 오른쪽으로 확장합니다.',
+          parentId: null,
+          fixed: true,
+          completed: false,
+          splitApplied: false,
+          splitDismissed: false,
+          cards: [],
+          fixedItems: ['전술 헤드셋을 Subjector MVP의 중심 주제로 둡니다.', '왼쪽에서 오른쪽으로 진행 방향을 읽습니다.'],
+          scope: 'MVP 목적, 회의 기준, 이후 하위 topic의 공통 전제',
+          position: { x: 56, y: 280 }
+        },
+        {
+          id: 'roadmap-sound',
+          title: '소리 수집 장치부',
+          text: '헤드셋과 ESP32 또는 유사 장치를 연결해 실제 소리를 수집하는 파트입니다. 어떤 센서와 보드 조합으로 시작할지, 수집 품질을 어느 정도로 볼지 기준을 잡습니다.',
+          parentId: 'roadmap-goal',
+          fixed: true,
+          completed: false,
+          splitApplied: false,
+          splitDismissed: false,
+          cards: [],
+          fixedItems: ['소리 입력 장치와 보드 연결을 MVP 선행 기준으로 봅니다.'],
+          scope: '마이크/헤드셋 입력, ESP32 연결, 수집 안정성',
+          position: { x: 366, y: 96 }
+        },
+        {
+          id: 'roadmap-learning',
+          title: '라즈베리 파이 학습부',
+          text: '라즈베리 파이에서 소리 데이터를 학습하고 분류하는 파트입니다. 드론 소리, 말소리 등 실제로 학습에 넣을 데이터 기준을 오른쪽 하위 카드로 확장합니다.',
+          parentId: 'roadmap-goal',
+          fixed: true,
+          completed: false,
+          splitApplied: false,
+          splitDismissed: false,
+          cards: [],
+          fixedItems: ['라즈베리 파이를 학습/분류 실험의 기준 장치로 둡니다.'],
+          scope: '데이터셋 선정, 라벨 기준, 라즈베리 파이 추론 가능성',
+          position: { x: 366, y: 280 }
+        },
+        {
+          id: 'roadmap-comm',
+          title: '라즈베리 파이 통신부',
+          text: '라즈베리 파이끼리 또는 장치 간 통신하는 방법을 정리하는 파트입니다. 학습부와 별개로 통신 방식, 지연, 안정성을 확인합니다.',
+          parentId: 'roadmap-goal',
+          fixed: false,
+          completed: false,
+          splitApplied: false,
+          splitDismissed: false,
+          cards: [],
+          fixedItems: [],
+          scope: '라즈베리 파이 간 통신, 네트워크 방식, 지연 시간',
+          position: { x: 366, y: 464 }
+        },
+        {
+          id: 'roadmap-data',
+          title: '데이터 기준',
+          text: '학습부에서 실제로 사용할 소리 데이터의 종류와 출처를 정합니다. 드론 소리 데이터, 말소리 데이터처럼 학습 대상이 확정되면 하위 카드로 나눕니다.',
+          parentId: 'roadmap-learning',
+          fixed: false,
+          completed: false,
+          splitApplied: false,
+          splitDismissed: false,
+          cards: [],
+          fixedItems: [],
+          scope: '드론 소리 데이터, 말소리 데이터, 라벨/출처 기준',
+          position: { x: 676, y: 238 }
+        }
+      ];
+    }
+
     function defaultState() {
       return {
-        topics: [],
+        topics: defaultTopics(),
         activeTopicId: null,
         tasks: [],
         existingTaskUpdates: [],
@@ -724,7 +799,6 @@ export function renderIdeaCruisePage() {
         refreshMessage: '',
         roadmapUiVersion: ROADMAP_UI_VERSION,
         roadmapSnapshot: null,
-        expandedPendingTopicId: null,
         focusedDetailTopicId: null,
         roadmapScale: 1
       };
@@ -1192,7 +1266,11 @@ export function renderIdeaCruisePage() {
         topic.title = titleFromText(topic.text) || topic.title;
       }
       topic.cards = (topic.cards || []).filter(function(item) { return item.id !== card.id; });
-      if (state.expandedPendingTopicId === topic.id) state.expandedPendingTopicId = null;
+      ensurePriorityCards(topic);
+    }
+
+    function dismissSplitSuggestion(topic) {
+      topic.splitDismissed = true;
       ensurePriorityCards(topic);
     }
 
@@ -1265,12 +1343,11 @@ export function renderIdeaCruisePage() {
 
       roadmapEl.classList.toggle('card-layer-on', Boolean(state.activeTopicId));
       layerStateEl.textContent = state.activeTopicId
-        ? (activeTopic()?.title || '선택 topic') + ' topic의 2층 AI 카드가 켜져 있습니다.'
-        : (state.refreshMessage || 'topic을 클릭하면 2층 AI 카드가 켜집니다.');
+        ? (activeTopic()?.title || '선택 topic') + ' topic의 2층 상세가 켜져 있습니다.'
+        : (state.refreshMessage || 'topic을 클릭하면 2층 상세가 켜집니다.');
 
       topicNodesEl.innerHTML = state.topics.map(function(topic) {
         const position = layout.positions.get(topic.id);
-        const cardCount = (topic.cards || []).length;
         const currentCard = topic.cards && topic.cards[0];
         const conflict = currentCard && currentCard.kind === 'conflict';
         const visualState = topicVisualState(topic, currentCard);
@@ -1290,7 +1367,6 @@ export function renderIdeaCruisePage() {
           '<span class="topic-meta">' +
             tag(topic.fixed ? '고정' : '초안', topic.fixed ? 'blue' : '') +
             tag(topic.completed ? 'Task 후보 대상' : '진행') +
-            tag('대기 카드 ' + Math.max(cardCount - 1, 0)) +
             (conflict ? tag('충돌', 'rose') : '') +
           '</span>' +
         '</button>';
@@ -1336,66 +1412,15 @@ export function renderIdeaCruisePage() {
       const position = layoutCache.get(topic.id) || { x: 60, y: 80 };
       const left = Math.max(24, Math.min(position.x + 250, Number.parseInt(roadmapEl.style.width, 10) - 480));
       const top = Math.max(64, position.y - 18);
-      const card = topic.cards && topic.cards[0];
-      const pendingCount = Math.max((topic.cards || []).length - 1, 0);
       cardPopoverEl.style.left = left + 'px';
       cardPopoverEl.style.top = top + 'px';
       cardPopoverEl.classList.add('open');
       cardPopoverEl.innerHTML =
         '<div class="popover-head"><div><h2>2F Detail: ' + escapeHtml(topic.title) + '</h2><p>' + (topic.fixed ? '고정된 기준 카드입니다. 기준 변경은 고정 해제 후 사람이 직접 저장합니다.' : '아직 회의에서 마무리되지 않은 카드입니다. 정리 후 고정하면 기준이 됩니다.') + '</p></div><button data-close-popover type="button">닫기</button></div>' +
         renderRoadmapDetailSections(topic) +
-        '<div class="topic-editor">' +
-          '<label>Topic 제목<input data-topic-title value="' + escapeHtml(topic.title) + '" ' + (topic.fixed ? 'disabled' : '') + '></label>' +
-          '<label>Topic 내용<textarea data-topic-text ' + (topic.fixed ? 'disabled' : '') + '>' + escapeHtml(topic.text) + '</textarea></label>' +
-          '<div class="actions"><button class="primary" data-save-topic ' + (topic.fixed ? 'disabled' : '') + ' type="button">저장</button><button data-toggle-fixed type="button">' + (topic.fixed ? '고정 해제' : '고정') + '</button><button data-analyze-topic type="button">AI 분석</button><button data-complete-topic type="button">Task 후보로 보냄</button><button class="danger" data-remove-topic type="button">제거</button></div>' +
-        '</div>' +
-        (card ? renderPrimaryCard(topic, card, pendingCount) : '<article class="ai-card"><span class="tag">카드 없음</span><h3>현재 표시할 AI 카드가 없습니다</h3><p>필요할 때 AI 분석을 누르세요. 고정 topic과 충돌이 생기면 충돌 카드가 우선 표시됩니다.</p></article>');
-    }
-
-    function renderPendingCards(topic) {
-      const pending = (topic.cards || []).slice(1);
-      if (!pending.length || state.expandedPendingTopicId !== topic.id) return '';
-      return '<div class="pending-list" aria-label="대기 카드 목록">' + pending.map(function(card) {
-        return '<div class="pending-card-row">' +
-          '<div><strong>' + escapeHtml(card.title || kindLabel(card.kind)) + '</strong><span>' + escapeHtml(card.body || card.suggestion || '내용 없음') + '</span></div>' +
-          '<button data-promote-card="' + card.id + '" type="button">보기</button>' +
+        '<div class="topic-actions-panel">' +
+          '<div class="actions"><button data-toggle-fixed type="button">' + (topic.fixed ? '고정 해제' : '고정') + '</button><button data-complete-topic type="button">Task 후보로 보냄</button><button class="danger" data-remove-topic type="button">제거</button></div>' +
         '</div>';
-      }).join('') + '</div>';
-    }
-
-    function renderPrimaryCard(topic, card, pendingCount) {
-      const kind = normalizeKind(card.kind);
-      const fixedBlocked = topic.fixed && kind !== 'conflict';
-      const childPreview = card.childTopics && card.childTopics.length
-        ? '<div class="child-preview">' + card.childTopics.map(function(child) {
-            return '<div><strong>' + escapeHtml(child.title) + '</strong><p>' + escapeHtml(child.text) + '</p></div>';
-          }).join('') + '</div>'
-        : '';
-      const details = card.details && card.details.length
-        ? '<div class="child-preview">' + card.details.map(function(item) {
-            return '<div><strong>' + escapeHtml(item.title) + '</strong><p>' + escapeHtml(item.body) + '</p></div>';
-          }).join('') + '</div>'
-        : '';
-      const aiDraft = card.suggestion || card.body || topic.text;
-      const suggestion = '<div class="decision-note">' +
-        '<label>AI 수정안 초안<textarea data-card-suggestion readonly>' + escapeHtml(aiDraft) + '</textarea></label>' +
-        '<label>우리가 하기로 한 것<textarea data-card-decision-note ' + (fixedBlocked ? 'disabled' : '') + ' placeholder="예: 소음 차단만 필터링 하기로 했음">' + escapeHtml(card.userDecision || '') + '</textarea></label>' +
-      '</div>';
-      const pendingControl = pendingCount > 0
-        ? '<button data-toggle-pending="' + topic.id + '" type="button">' + (state.expandedPendingTopicId === topic.id ? '대기 카드 접기' : '대기 카드 ' + pendingCount + ' 보기') + '</button>'
-        : '<span class="pending-count">대기 카드 0</span>';
-      return '<article class="ai-card ' + kind + '" data-card-id="' + card.id + '">' +
-        '<div class="card-head"><span class="tag strong">' + escapeHtml(card.type || kindLabel(kind)) + '</span><span class="tag">대기 카드 ' + pendingCount + '</span></div>' +
-        '<h3>' + escapeHtml(card.title) + '</h3>' +
-        '<p>' + escapeHtml(card.body) + '</p>' +
-        (card.impact ? '<div class="impact"><strong>로드맵 영향</strong><br>' + escapeHtml(card.impact) + '</div>' : '') +
-        details +
-        childPreview +
-        suggestion +
-        '<div class="actions"><button class="primary" data-apply-card="' + card.id + '" ' + (fixedBlocked ? 'disabled' : '') + ' type="button">' + (fixedBlocked ? '고정 해제 후 적용' : applyLabel(kind)) + '</button><button data-dismiss-card="' + card.id + '" type="button">무시</button>' + pendingControl + '</div>' +
-        renderPendingCards(topic) +
-        (card.error ? '<div class="error-log">적용 실패: ' + escapeHtml(card.error) + '</div>' : '') +
-      '</article>';
     }
 
     function kindLabel(kind) {
@@ -1408,12 +1433,6 @@ export function renderIdeaCruisePage() {
         split: 'topic 분리 제안',
         conflict: '충돌 경고'
       }[kind] || 'card';
-    }
-
-    function applyLabel(kind) {
-      if (kind === 'split') return '기능별 topic 생성';
-      if (kind === 'conflict') return '충돌 확인';
-      return '반영';
     }
 
     function renderTaskFilters() {
@@ -1704,35 +1723,6 @@ export function renderIdeaCruisePage() {
       const topic = activeTopic();
       if (!topic) return;
 
-      const togglePendingButton = event.target.closest('[data-toggle-pending]');
-      if (togglePendingButton) {
-        state.expandedPendingTopicId = state.expandedPendingTopicId === topic.id ? null : topic.id;
-        render();
-        return;
-      }
-
-      const promoteButton = event.target.closest('[data-promote-card]');
-      if (promoteButton) {
-        const index = (topic.cards || []).findIndex(function(card) { return card.id === promoteButton.dataset.promoteCard; });
-        if (index > 0) {
-          const selected = topic.cards.splice(index, 1)[0];
-          topic.cards.unshift(selected);
-        }
-        state.expandedPendingTopicId = null;
-        render();
-        return;
-      }
-
-      const saveButton = event.target.closest('[data-save-topic]');
-      if (saveButton) {
-        if (topic.fixed) return;
-        topic.title = document.querySelector('[data-topic-title]').value.trim() || topic.title;
-        topic.text = document.querySelector('[data-topic-text]').value.trim() || topic.text;
-        ensurePriorityCards(topic);
-        render();
-        return;
-      }
-
       const fixedButton = event.target.closest('[data-toggle-fixed]');
       if (fixedButton) {
         topic.fixed = !topic.fixed;
@@ -1759,52 +1749,6 @@ export function renderIdeaCruisePage() {
         return;
       }
 
-      const analyzeButton = event.target.closest('[data-analyze-topic]');
-      if (analyzeButton) {
-        analyzeButton.disabled = true;
-        try {
-          await requestCardsForTopic(topic);
-        } catch (error) {
-          topic.cards = [{
-            id: 'analysis-error-' + Date.now(),
-            kind: 'filter',
-            type: 'AI 연결 오류',
-            title: 'AI Analysis를 실행하지 못했습니다',
-            body: error.message,
-            suggestion: '',
-            error: error.message
-          }];
-        }
-        render();
-        return;
-      }
-
-      const applyButton = event.target.closest('[data-apply-card]');
-      if (applyButton) {
-        const card = (topic.cards || []).find(function(item) { return item.id === applyButton.dataset.applyCard; });
-        if (!card) return;
-        try {
-          const cardEl = event.target.closest('[data-card-id]');
-          const decisionNote = cardEl?.querySelector('[data-card-decision-note]')?.value || '';
-          const aiDraft = cardEl?.querySelector('[data-card-suggestion]')?.value || '';
-          const content = decisionNote.trim() || aiDraft.trim() || card.suggestion || '';
-          applyCard(topic, card, content);
-        } catch (error) {
-          card.error = error.message;
-        }
-        render();
-        return;
-      }
-
-      const dismissButton = event.target.closest('[data-dismiss-card]');
-      if (dismissButton) {
-        const dismissedCard = (topic.cards || []).find(function(card) { return card.id === dismissButton.dataset.dismissCard; });
-        if (dismissedCard && dismissedCard.kind === 'split') topic.splitDismissed = true;
-        topic.cards = (topic.cards || []).filter(function(card) { return card.id !== dismissButton.dataset.dismissCard; });
-        if (state.expandedPendingTopicId === topic.id) state.expandedPendingTopicId = null;
-        render();
-        return;
-      }
     });
 
     taskFilterEl.addEventListener('click', function(event) {

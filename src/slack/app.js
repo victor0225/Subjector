@@ -293,7 +293,7 @@ export function registerIdeaCruiseRoute(receiver, {
         entryText,
         completedEntries: Array.isArray(body.completedEntries) ? body.completedEntries : [],
         meetingContexts,
-        githubOrganization: 'https://github.com/SAFIRA-ondevice'
+        githubOrganization: config.github?.organizationUrl || 'https://github.com/SAFIRA-ondevice'
       });
 
       return res.status(200).json({
@@ -340,7 +340,7 @@ export function registerIdeaCruiseRoute(receiver, {
           entryText: question,
           completedEntries,
           meetingContexts,
-          githubOrganization: 'https://github.com/SAFIRA-ondevice'
+          githubOrganization: config.github?.organizationUrl || 'https://github.com/SAFIRA-ondevice'
         });
         const firstCard = Array.isArray(cards) ? cards[0] : null;
         answer = firstCard
@@ -1637,6 +1637,7 @@ export function createSlackApp({
 
   const githubContextProvider = createGitHubOrganizationContextProvider({
     organizationUrl: config.github?.organizationUrl,
+    repositories: config.github?.repositories,
     token: config.github?.token
   });
 
