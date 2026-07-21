@@ -123,7 +123,7 @@ export function renderIdeaCruisePage() {
     }
     .side-stack {
       display: grid;
-      grid-template-rows: minmax(260px, 0.72fr) minmax(360px, 1fr);
+      grid-template-rows: minmax(440px, 7fr) minmax(220px, 3fr);
       gap: 16px;
       height: calc(100vh - 150px);
       min-height: 720px;
@@ -619,7 +619,7 @@ export function renderIdeaCruisePage() {
           <button id="save-roadmap" type="button">로드맵 저장</button>
         </div>
       </div>
-      <div class="hint">로드맵 반영 원칙: 덮어쓰기보다 기존 구조 위에 얹어 반영하고, 사람이 옮긴 카드 위치는 유지합니다.</div>
+      <div class="hint">로드맵 기준: 회의에서 확정된 내용 우선, 고정 카드는 보존, 소리 수집·학습·통신·데이터 기준에 맞춰 왼쪽에서 오른쪽 진행 방향으로 붙입니다.</div>
       <div class="roadmap-shell">
         <div class="zoom-tools" aria-label="로드맵 확대 축소">
           <button id="zoom-out" type="button" title="축소">-</button>
@@ -702,8 +702,30 @@ export function renderIdeaCruisePage() {
   </dialog>
 
   <script>
-    const STORAGE_KEY = 'idea-cruise-roadmap-v5';
-    const ROADMAP_UI_VERSION = 'pinned-roadmap-v5';
+    const STORAGE_KEY = 'idea-cruise-roadmap-v6';
+    const ROADMAP_UI_VERSION = 'pinned-roadmap-v6';
+    const ROADMAP_REFLECTION_CRITERIA = [
+      {
+        targetId: 'roadmap-comm',
+        label: '헤드셋 통신부',
+        keywords: ['통신', '거리', '채널링', '송수신', '패킷', '네트워크']
+      },
+      {
+        targetId: 'roadmap-data',
+        label: '데이터 기준',
+        keywords: ['데이터', '데이터셋', '말소리', '드론', '총소리', '전투기', '헬리콥터', '라벨']
+      },
+      {
+        targetId: 'roadmap-learning',
+        label: '라즈베리 파이 학습부',
+        keywords: ['학습', '모델', '정확도', '지연율', '추론', '라즈베리파이']
+      },
+      {
+        targetId: 'roadmap-sound',
+        label: '소리 수집 장치부',
+        keywords: ['ESP32', '오디오', '마이크', '스피커', '헤드셋', '소리 수집', '입출력']
+      }
+    ];
     const state = loadState();
     let layoutCache = new Map();
     let questionMessages = [];
@@ -1164,17 +1186,11 @@ export function renderIdeaCruisePage() {
       const byId = function(id) {
         return state.topics.find(function(topic) { return topic.id === id; }) || null;
       };
-      if (includesAny(text, ['통신', '거리', '채널링', '송수신', '패킷', '네트워크'])) {
-        return byId('roadmap-comm');
-      }
-      if (includesAny(text, ['데이터', '데이터셋', '말소리', '드론', '총소리', '전투기', '헬리콥터', '라벨'])) {
-        return byId('roadmap-data') || byId('roadmap-learning');
-      }
-      if (includesAny(text, ['학습', '모델', '정확도', '지연율', '추론', '라즈베리파이'])) {
-        return byId('roadmap-learning');
-      }
-      if (includesAny(text, ['ESP32', '오디오', '마이크', '스피커', '헤드셋', '소리 수집', '입출력'])) {
-        return byId('roadmap-sound');
+      for (const criterion of ROADMAP_REFLECTION_CRITERIA) {
+        const target = byId(criterion.targetId);
+        if (target && includesAny(text, criterion.keywords)) {
+          return target;
+        }
       }
       return byId('roadmap-goal') || state.topics[0] || null;
     }
@@ -1364,12 +1380,6 @@ export function renderIdeaCruisePage() {
       ensurePriorityCards(topic);
     }
 
-    function completeTopic(topic) {
-      topic.completed = true;
-      topic.title = titleFromText(topic.text) || topic.title;
-      return requestTaskCandidates();
-    }
-
     function computeLayout() {
       const childrenByParent = new Map();
       state.topics.forEach(function(topic) {
@@ -1456,7 +1466,7 @@ export function renderIdeaCruisePage() {
           '<span class="topic-controls"><span data-toggle-topic-detail="' + topic.id + '">' + (detailOpen ? '간략히' : '자세히') + '</span></span>' +
           '<span class="topic-meta">' +
             tag(topic.fixed ? '고정' : '초안', topic.fixed ? 'blue' : '') +
-            tag(topic.completed ? 'Task 후보 대상' : '진행') +
+            tag('회의 참고') +
             (conflict ? tag('충돌', 'rose') : '') +
           '</span>' +
         '</button>';
@@ -1509,7 +1519,7 @@ export function renderIdeaCruisePage() {
         '<div class="popover-head"><div><h2>2F Detail: ' + escapeHtml(topic.title) + '</h2><p>' + (topic.fixed ? '고정된 기준 카드입니다. 기준 변경은 고정 해제 후 사람이 직접 저장합니다.' : '아직 회의에서 마무리되지 않은 카드입니다. 정리 후 고정하면 기준이 됩니다.') + '</p></div><button data-close-popover type="button">닫기</button></div>' +
         renderRoadmapDetailSections(topic) +
         '<div class="topic-actions-panel">' +
-          '<div class="actions"><button data-toggle-fixed type="button">' + (topic.fixed ? '고정 해제' : '고정') + '</button><button data-complete-topic type="button">Task 후보로 보냄</button><button class="danger" data-remove-topic type="button">제거</button></div>' +
+          '<div class="actions"><button data-toggle-fixed type="button">' + (topic.fixed ? '고정 해제' : '고정') + '</button><button class="danger" data-remove-topic type="button">제거</button></div>' +
         '</div>';
     }
 
@@ -1526,11 +1536,7 @@ export function renderIdeaCruisePage() {
     }
 
     function renderTaskFilters() {
-      const completed = completedTopics();
-      taskFilterEl.innerHTML = '<button class="' + (state.taskFilter === 'all' ? 'active' : '') + '" data-task-filter="all" type="button">전체</button>' +
-        completed.map(function(topic, index) {
-          return '<button class="' + (state.taskFilter === topic.id ? 'active' : '') + '" data-task-filter="' + topic.id + '" type="button">' + (index + 1) + '</button>';
-        }).join('');
+      taskFilterEl.innerHTML = '<button class="' + (state.taskFilter === 'all' ? 'active' : '') + '" data-task-filter="all" type="button">전체</button>';
     }
 
     function visibleTasks() {
@@ -1551,7 +1557,7 @@ export function renderIdeaCruisePage() {
           '<div class="actions"><button class="primary" data-apply-task="' + task.id + '" type="button">Subjector in-process에 적용</button><button class="danger" data-remove-task="' + task.id + '" type="button">제거</button></div>' +
           (task.error ? '<div class="error-log">반영 실패: ' + escapeHtml(task.error) + '</div>' : '') +
         '</article>';
-      }).join('') : '<div class="quiet-box">완료된 topic에서 시간이 필요한 항목만 task 후보로 생성됩니다.</div>';
+      }).join('') : '<div class="quiet-box">회의 자료와 현재 로드맵에서 시간이 필요한 항목만 task 후보로 생성됩니다.</div>';
 
       taskListEl.querySelectorAll('.task-card').forEach(function(card) {
         const task = state.tasks.find(function(item) { return item.id === card.dataset.taskId; });
@@ -1818,18 +1824,6 @@ export function renderIdeaCruisePage() {
       const fixedButton = event.target.closest('[data-toggle-fixed]');
       if (fixedButton) {
         topic.fixed = !topic.fixed;
-        render();
-        return;
-      }
-
-      const completeButton = event.target.closest('[data-complete-topic]');
-      if (completeButton) {
-        completeButton.disabled = true;
-        try {
-          await completeTopic(topic);
-        } catch (error) {
-          state.taskGenerationError = error.message;
-        }
         render();
         return;
       }

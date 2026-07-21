@@ -92,11 +92,11 @@ test('renderIdeaCruisePage consumes split cards after apply or dismiss', () => {
   assert.match(html, /!topic\.splitApplied && !topic\.splitDismissed/);
 });
 
-test('renderIdeaCruisePage labels topic completion as task candidate handoff', () => {
+test('renderIdeaCruisePage keeps roadmap cards as reference criteria instead of task handoff', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /data-complete-topic type="button">Task 후보로 보냄/);
-  assert.match(html, /Task 후보 대상/);
+  assert.doesNotMatch(html, /data-complete-topic|Task 후보로 보냄|Task 후보 대상/);
+  assert.doesNotMatch(html, /function completeTopic\(/);
   assert.doesNotMatch(html, /완료된 topic이 없습니다/);
 });
 
@@ -120,7 +120,7 @@ test('renderIdeaCruisePage merges refreshed Subjector context without overwritin
   assert.match(html, /sourceExternalId/);
   assert.match(html, /externalUpdateCard\(existing, incoming\)/);
   assert.match(html, /고정 topic에 최신 변경이 도착했습니다/);
-  assert.match(html, /덮어쓰기보다 기존 구조 위에 얹어 반영/);
+  assert.match(html, /로드맵 기준: 회의에서 확정된 내용 우선/);
   assert.match(html, /hasTeamOpinion/);
 });
 
@@ -135,6 +135,7 @@ test('renderIdeaCruisePage supports fixed activity panels, anonymous questions, 
   assert.match(html, /id="question-log"/);
   assert.match(html, /id="clear-questions"/);
   assert.match(html, /질문 기록 지우기/);
+  assert.match(html, /grid-template-rows: minmax\(440px, 7fr\) minmax\(220px, 3fr\)/);
   assert.match(html, /감지 예민도 기본/);
   assert.match(html, /id="zoom-in"/);
   assert.match(html, /id="zoom-out"/);
@@ -180,8 +181,8 @@ test('renderIdeaCruisePage matches the pinned roadmap card mockup behavior', () 
 test('renderIdeaCruisePage starts with the tactical headset first-floor roadmap shape', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /idea-cruise-roadmap-v5/);
-  assert.match(html, /pinned-roadmap-v5/);
+  assert.match(html, /idea-cruise-roadmap-v6/);
+  assert.match(html, /pinned-roadmap-v6/);
   assert.match(html, /function defaultTopics\(\)/);
   assert.match(html, /전술 헤드셋 MVP 기준/);
   assert.match(html, /소리 수집 장치부/);
@@ -241,7 +242,7 @@ test('renderIdeaCruisePage removes the old meeting record workflow from the desk
 test('renderIdeaCruisePage prioritizes decision and exclusion lanes in the roadmap', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /pinned-roadmap-v5/);
+  assert.match(html, /pinned-roadmap-v6/);
   assert.match(html, /function priorityScore\(card\)/);
   assert.match(html, /function prioritizedCards\(cards, selectedIndex\)/);
   assert.doesNotMatch(html, /먼저 판단: 지금 결정해야 다음으로 감|보류\/제외: 지금은 다른 생각 먼저|branch-now|branch-later|선택하면 이쪽으로 심화/);
@@ -251,8 +252,21 @@ test('renderIdeaCruisePage keeps roadmap creation focused without the old proces
   const html = renderIdeaCruisePage();
 
   assert.match(html, /GitHub와 회의 자료를 바탕으로 로드맵을 생성하고 갱신합니다/);
-  assert.match(html, /로드맵 반영 원칙: 덮어쓰기보다 기존 구조 위에 얹어 반영/);
+  assert.match(html, /로드맵 기준: 회의에서 확정된 내용 우선/);
+  assert.match(html, /고정 카드는 보존/);
+  assert.match(html, /소리 수집·학습·통신·데이터 기준/);
   assert.doesNotMatch(html, /meeting-flow|회의 전 로드맵 반영|기존 로드맵 보며 회의·녹음|회의 녹음본 업로드|#finals/);
+});
+
+test('renderIdeaCruisePage documents strict roadmap reflection criteria in code', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /ROADMAP_REFLECTION_CRITERIA/);
+  assert.match(html, /targetId: 'roadmap-comm'[\s\S]*통신/);
+  assert.match(html, /targetId: 'roadmap-data'[\s\S]*데이터/);
+  assert.match(html, /targetId: 'roadmap-learning'[\s\S]*학습/);
+  assert.match(html, /targetId: 'roadmap-sound'[\s\S]*ESP32/);
+  assert.match(html, /for \(const criterion of ROADMAP_REFLECTION_CRITERIA\)/);
 });
 
 test('renderIdeaCruisePage removes old ambiguity card editing controls from the second floor', () => {
@@ -299,6 +313,7 @@ test('renderIdeaCruisePage makes meeting-material task generation the main task 
   assert.match(html, /requestTaskCandidates\(\{ meetingRecord: taskMeetingRecordEl\.value/);
   assert.match(html, /meetingRecord: meetingRecord/);
   assert.doesNotMatch(html, /이번 회의만 예외|수기 회의록과 task 분배안/);
+  assert.doesNotMatch(html, /완료된 topic에서/);
 });
 
 test('renderIdeaCruisePage binds visible controls without removed DOM references', () => {
