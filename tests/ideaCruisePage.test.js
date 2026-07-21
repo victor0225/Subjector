@@ -174,8 +174,8 @@ test('renderIdeaCruisePage matches the pinned roadmap card mockup behavior', () 
 test('renderIdeaCruisePage starts with the tactical headset first-floor roadmap shape', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /idea-cruise-roadmap-v3/);
-  assert.match(html, /pinned-roadmap-v3/);
+  assert.match(html, /idea-cruise-roadmap-v4/);
+  assert.match(html, /pinned-roadmap-v4/);
   assert.match(html, /function defaultTopics\(\)/);
   assert.match(html, /전술 헤드셋 MVP 기준/);
   assert.match(html, /소리 수집 장치부/);
@@ -235,7 +235,7 @@ test('renderIdeaCruisePage removes the old meeting record workflow from the desk
 test('renderIdeaCruisePage prioritizes decision and exclusion lanes in the roadmap', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /pinned-roadmap-v3/);
+  assert.match(html, /pinned-roadmap-v4/);
   assert.match(html, /function priorityScore\(card\)/);
   assert.match(html, /function prioritizedCards\(cards, selectedIndex\)/);
   assert.doesNotMatch(html, /먼저 판단: 지금 결정해야 다음으로 감|보류\/제외: 지금은 다른 생각 먼저|branch-now|branch-later|선택하면 이쪽으로 심화/);
@@ -268,6 +268,20 @@ test('renderIdeaCruisePage imports reflected roadmap cards from context topics',
   assert.match(html, /incoming\.cards/);
   assert.match(html, /mapApiCard\(card/);
   assert.match(html, /sourceType === 'roadmap-reflection'/);
+});
+
+test('renderIdeaCruisePage overlays old roadmap reflections onto existing first-floor cards', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /function mergeIncomingRoadmapReflection\(incoming\)/);
+  assert.match(html, /const target = matchRoadmapTopicForIncoming\(incoming\)/);
+  assert.match(html, /target\.hasTeamOpinion = true/);
+  assert.match(html, /incoming\.sourceType === 'roadmap-reflection'[\s\S]*mergeIncomingRoadmapReflection\(incoming\);[\s\S]*return;/);
+  assert.match(html, /function shouldSkipIncomingContext\(incoming\)/);
+  assert.match(html, /incoming\.sourceType === 'github'/);
+  assert.match(html, /조회 실패/);
+  assert.match(html, /return;\s*\n\s*\}/);
+  assert.doesNotMatch(html, /firstReflectedTopicId = topic\.id/);
 });
 
 test('renderIdeaCruisePage removes the one-time direct task distribution exception', () => {
