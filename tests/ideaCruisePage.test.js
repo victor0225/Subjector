@@ -45,7 +45,7 @@ test('renderIdeaCruisePage supports fixed topics as hard editing boundaries', ()
   const html = renderIdeaCruisePage();
 
   assert.match(html, /topic\.fixed = !topic\.fixed/);
-  assert.match(html, /고정된 topic입니다/);
+  assert.match(html, /고정된 기준 카드입니다/);
   assert.match(html, /고정 해제 후 적용/);
   assert.match(html, /고정된 topic은 고정 해제 후 수정할 수 있습니다/);
 });
@@ -147,11 +147,30 @@ test('renderIdeaCruisePage color codes roadmap card states', () => {
   assert.match(html, /\.topic-node\.existing-card/);
   assert.match(html, /background: #effaf4/);
   assert.match(html, /\.topic-node\.action-card/);
-  assert.match(html, /background: #fff8df/);
+  assert.match(html, /background: #fff3cf/);
   assert.match(html, /\.topic-node\.conflict/);
-  assert.match(html, /background: #fff0f1/);
+  assert.match(html, /background: #ffe3e1/);
   assert.match(html, /function topicVisualState\(topic, currentCard\)/);
-  assert.match(html, /topic\.completed \|\| topic\.sourceExternalId \|\| topic\.hasTeamOpinion/);
+  assert.match(html, /topic\.fixed/);
+});
+
+test('renderIdeaCruisePage matches the pinned roadmap card mockup behavior', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /id="save-roadmap"/);
+  assert.match(html, /전체 저장/);
+  assert.match(html, /saveRoadmapSnapshot\(\)/);
+  assert.match(html, /카드 고정 = 기준 확정/);
+  assert.match(html, /전체 저장 = 현재 로드맵 상태 보관/);
+  assert.match(html, /function roadmapDetailSections\(topic\)/);
+  assert.match(html, /기준 내용/);
+  assert.match(html, /회의에서 확정된 근거/);
+  assert.match(html, /적용 범위/);
+  assert.match(html, /현재 정리된 내용/);
+  assert.match(html, /아직 결정 안 된 부분/);
+  assert.match(html, /if \(topic\.fixed\) \{[\s\S]*기준 내용[\s\S]*회의에서 확정된 근거[\s\S]*적용 범위/);
+  assert.match(html, /return \[[\s\S]*현재 정리된 내용[\s\S]*아직 결정 안 된 부분/);
+  assert.match(html, /data-toggle-fixed/);
 });
 
 test('renderIdeaCruisePage task candidates use the approved editable fields and source reason', () => {

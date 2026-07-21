@@ -231,7 +231,7 @@ export function renderIdeaCruisePage() {
       border: 1px solid var(--line);
       border-left: 5px solid var(--teal);
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.97);
+      background: #effaf4;
       box-shadow: 0 12px 24px rgba(19, 37, 48, 0.12);
       padding: 12px;
       overflow: hidden;
@@ -248,10 +248,10 @@ export function renderIdeaCruisePage() {
     .topic-node.action-card {
       border-color: #eed79a;
       border-left-color: var(--amber);
-      background: #fff8df;
+      background: #fff3cf;
     }
-    .topic-node.fixed { border-left-color: var(--blue); }
-    .topic-node.conflict { border-color: #efbdc2; border-left-color: var(--red); background: #fff0f1; }
+    .topic-node.fixed { border-left-color: var(--teal); }
+    .topic-node.conflict { border-color: #efbdc2; border-left-color: var(--red); background: #ffe3e1; }
     .roadmap.card-layer-on .topic-node:not(.active) { opacity: 0.52; filter: grayscale(0.18); }
     .roadmap.detail-focus .topic-node:not(.focused-detail) { opacity: 0.22; filter: blur(1px) grayscale(0.22); }
     .move-handle {
@@ -399,6 +399,32 @@ export function renderIdeaCruisePage() {
     .popover-head p { margin-bottom: 0; }
     .topic-editor, .ai-card { display: grid; gap: 10px; padding: 12px; }
     .topic-editor { border-bottom: 1px solid var(--line); background: #fbfdff; }
+    .detail-sections {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .detail-sections article {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      padding: 10px;
+    }
+    .detail-sections strong {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 12px;
+    }
+    .detail-sections p,
+    .detail-sections ul {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.48;
+    }
+    .detail-sections ul { padding-left: 18px; }
     .ai-card { border-left: 4px solid var(--teal); }
     .ai-card.conflict { border-left-color: var(--red); }
     .ai-card.split { border-left-color: var(--violet); }
@@ -561,7 +587,7 @@ export function renderIdeaCruisePage() {
   <header>
     <div>
       <h1>IDEA CRUISE Roadmap Desk</h1>
-      <p>1층은 topic/root 지도, 2층은 선택한 topic에 붙는 AI 카드입니다. 고정한 기준과 충돌할 때만 AI가 강하게 개입합니다.</p>
+      <p>1층은 회의 기준 로드맵입니다. 카드 고정 = 기준 확정, 전체 저장 = 현재 로드맵 상태 보관입니다.</p>
     </div>
     <div class="status">
       <span>로드맵 생성: GPT-5.4</span>
@@ -580,6 +606,7 @@ export function renderIdeaCruisePage() {
         <div class="actions">
           <button id="add-topic" class="primary" type="button">Topic 추가</button>
           <button id="refresh-roadmap" type="button">로드맵 반영</button>
+          <button id="save-roadmap" type="button">전체 저장</button>
         </div>
       </div>
       <div class="hint">로드맵 반영 원칙: 덮어쓰기보다 기존 구조 위에 얹어 반영하고, 사람이 옮긴 카드 위치는 유지합니다.</div>
@@ -696,6 +723,7 @@ export function renderIdeaCruisePage() {
         taskGenerationError: '',
         refreshMessage: '',
         roadmapUiVersion: ROADMAP_UI_VERSION,
+        roadmapSnapshot: null,
         expandedPendingTopicId: null,
         focusedDetailTopicId: null,
         roadmapScale: 1
@@ -714,6 +742,32 @@ export function renderIdeaCruisePage() {
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function saveRoadmapSnapshot() {
+      const fixedCount = state.topics.filter(function(topic) { return topic.fixed; }).length;
+      state.roadmapSnapshot = {
+        savedAt: new Date().toISOString(),
+        topics: state.topics.map(function(topic) {
+          return {
+            id: topic.id,
+            title: topic.title,
+            text: topic.text,
+            parentId: topic.parentId || null,
+            fixed: Boolean(topic.fixed),
+            completed: Boolean(topic.completed),
+            position: topic.position || null,
+            hasTeamOpinion: Boolean(topic.hasTeamOpinion),
+            reflectionSummary: topic.reflectionSummary || ''
+          };
+        }),
+        fixedCount: fixedCount,
+        unfixedCount: state.topics.length - fixedCount,
+        taskCount: state.tasks.length + state.existingTaskUpdates.length,
+        questionCount: questionMessages.length
+      };
+      state.refreshMessage = '전체 저장됨: 고정 ' + state.roadmapSnapshot.fixedCount + '개, 미고정 ' + state.roadmapSnapshot.unfixedCount + '개';
+      saveState();
     }
 
     function createId(prefix) {
@@ -937,8 +991,47 @@ export function renderIdeaCruisePage() {
 
     function topicVisualState(topic, currentCard) {
       if (currentCard && currentCard.kind === 'conflict') return 'conflict';
-      if (topic.completed || topic.sourceExternalId || topic.hasTeamOpinion) return 'action-card';
-      return 'existing-card';
+      if (topic.fixed) return 'existing-card';
+      return 'action-card';
+    }
+
+    function topicListFrom(value, fallback) {
+      if (Array.isArray(value) && value.length) return value;
+      return fallback ? [fallback] : [];
+    }
+
+    function roadmapDetailSections(topic) {
+      if (topic.fixed) {
+        return [
+          { title: '기준 내용', body: topic.text || '고정된 기준입니다.' },
+          {
+            title: '회의에서 확정된 근거',
+            items: topicListFrom(topic.fixedItems, topic.reflectionSummary || '회의에서 기준으로 고정했습니다.')
+          },
+          {
+            title: '적용 범위',
+            body: topic.scope || '이 카드와 연결된 하위 브랜치 및 task 후보의 기준으로 사용합니다.'
+          }
+        ];
+      }
+
+      return [
+        { title: '현재 정리된 내용', body: topic.text || '아직 정리 중인 카드입니다.' },
+        {
+          title: '아직 결정 안 된 부분',
+          items: topicListFrom(topic.openItems, '회의에서 마무리되면 고정 버튼으로 기준화합니다.')
+        }
+      ];
+    }
+
+    function renderRoadmapDetailSections(topic) {
+      return '<div class="detail-sections">' + roadmapDetailSections(topic).map(function(section) {
+        return '<article><strong>' + escapeHtml(section.title) + '</strong>' +
+          (section.items
+            ? '<ul>' + section.items.map(function(item) { return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ul>'
+            : '<p>' + escapeHtml(section.body) + '</p>') +
+          '</article>';
+      }).join('') + '</div>';
     }
 
     function addTopic({ title, text, parentId }) {
@@ -1249,7 +1342,8 @@ export function renderIdeaCruisePage() {
       cardPopoverEl.style.top = top + 'px';
       cardPopoverEl.classList.add('open');
       cardPopoverEl.innerHTML =
-        '<div class="popover-head"><div><h2>2F AI Card: ' + escapeHtml(topic.title) + '</h2><p>' + (topic.fixed ? '고정된 topic입니다. 수정하려면 먼저 고정 해제하세요.' : 'topic 내용을 수정하거나 AI 분석으로 카드 1개를 갱신할 수 있습니다.') + '</p></div><button data-close-popover type="button">닫기</button></div>' +
+        '<div class="popover-head"><div><h2>2F Detail: ' + escapeHtml(topic.title) + '</h2><p>' + (topic.fixed ? '고정된 기준 카드입니다. 기준 변경은 고정 해제 후 사람이 직접 저장합니다.' : '아직 회의에서 마무리되지 않은 카드입니다. 정리 후 고정하면 기준이 됩니다.') + '</p></div><button data-close-popover type="button">닫기</button></div>' +
+        renderRoadmapDetailSections(topic) +
         '<div class="topic-editor">' +
           '<label>Topic 제목<input data-topic-title value="' + escapeHtml(topic.title) + '" ' + (topic.fixed ? 'disabled' : '') + '></label>' +
           '<label>Topic 내용<textarea data-topic-text ' + (topic.fixed ? 'disabled' : '') + '>' + escapeHtml(topic.text) + '</textarea></label>' +
@@ -1465,6 +1559,10 @@ export function renderIdeaCruisePage() {
         state.refreshMessage = error.message;
       }
       event.target.disabled = false;
+      render();
+    });
+    document.getElementById('save-roadmap').addEventListener('click', function() {
+      saveRoadmapSnapshot();
       render();
     });
     document.getElementById('close-topic-dialog').addEventListener('click', function() { topicDialog.close(); });
