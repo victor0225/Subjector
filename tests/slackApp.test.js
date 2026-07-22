@@ -211,6 +211,15 @@ test('registerIdeaCruiseRoute serves roadmap refresh context without a pin', asy
             ]
           }
         ];
+      },
+      async listRecentMeetingContexts() {
+        return [
+          [
+            '회의: Subjector 프로젝트 하드웨어 및 AI 모델 설계 회의',
+            '요약: ESP32 기반의 무선 통신 헤드셋 제작과 EfficientAT 기반 소리 분류 AI 모델 구축 방안을 조율함.',
+            '결정: 기성 차음 귀마개 개조 / MANET 통신 프로토콜 설계'
+          ].join('\n')
+        ];
       }
     },
     githubContextProvider: {
@@ -229,6 +238,8 @@ test('registerIdeaCruiseRoute serves roadmap refresh context without a pin', asy
   assert.ok(accepted.body.topics.some((topic) => topic.title === 'Task: 하드웨어 후보 비교'));
   assert.ok(accepted.body.topics.some((topic) => topic.title === '변경 반영: 하드웨어 후보 비교'));
   assert.ok(accepted.body.topics.some((topic) => topic.title === 'GitHub 프로젝트 상태'));
+  assert.ok(accepted.body.topics.some((topic) => topic.sourceType === 'meeting-context'));
+  assert.ok(accepted.body.topics.some((topic) => /Subjector 프로젝트 하드웨어/.test(topic.title)));
   const reflection = accepted.body.topics.find((topic) => topic.sourceType === 'roadmap-reflection');
   assert.equal(reflection.title, '회의 반영: 소음 차단 범위 결정');
   assert.equal(reflection.cards[0].kind, 'decision');

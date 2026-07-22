@@ -127,6 +127,22 @@ function trimForRoadmap(text, limit = 900) {
   return normalized.length > limit ? `${normalized.slice(0, limit)}...` : normalized;
 }
 
+function roadmapContextId(text, index) {
+  let hash = 0;
+  const value = String(text || '');
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  }
+  return `meeting-context-${index}-${Math.abs(hash).toString(36)}`;
+}
+
+function meetingContextTitle(context, index) {
+  const titleLine = String(context || '').split('\n').find((line) => line.trim().startsWith('회의:'));
+  return titleLine
+    ? `회의 맥락: ${titleLine.replace(/^회의:\s*/, '').trim()}`
+    : `회의 맥락: 최근 회의 ${index + 1}`;
+}
+
 function userDisplayFromKey(config, userKey) {
   const user = config.users?.find((item) => item.key === userKey);
   return user?.displayName || user?.fullName || userKey || '미배정';
@@ -149,7 +165,7 @@ function taskRoadmapText(task, config) {
   ].filter(Boolean).join('\n');
 }
 
-function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], githubContexts = [], roadmapReflections = [], config = {} }) {
+function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], githubContexts = [], roadmapReflections = [], meetingContexts = [], config = {} }) {
   const topics = [];
 
   for (const task of tasks.filter((item) => IDEA_CRUISE_ROADMAP_TASK_STATUSES.has(item.status))) {
@@ -222,6 +238,19 @@ function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], github
     });
   }
 
+  for (const [index, context] of meetingContexts.slice(0, 5).entries()) {
+    topics.push({
+      externalId: roadmapContextId(context, index),
+      parentExternalId: '',
+      sourceType: 'meeting-context',
+      title: meetingContextTitle(context, index),
+      text: [
+        '[회의 전사/회의록 맥락]',
+        trimForRoadmap(context, 1200)
+      ].join('\n')
+    });
+  }
+
   return topics;
 }
 
@@ -241,11 +270,12 @@ export function registerIdeaCruiseRoute(receiver, {
 
   receiver.router.get('/idea-cruise/roadmap-context', async (req, res) => {
     try {
-      const [tasks, changeRequests, githubContexts, roadmapReflections] = await Promise.all([
+      const [tasks, changeRequests, githubContexts, roadmapReflections, meetingContexts] = await Promise.all([
         store?.listAllTasks ? store.listAllTasks({ limit: 100 }) : [],
         store?.listAllChangeRequests ? store.listAllChangeRequests({ limit: 50 }) : [],
         githubContextProvider?.listContext ? githubContextProvider.listContext({ repoLimit: 6, issueLimit: 4 }) : [],
-        store?.listRecentRoadmapReflections ? store.listRecentRoadmapReflections({ limit: 10 }) : []
+        store?.listRecentRoadmapReflections ? store.listRecentRoadmapReflections({ limit: 10 }) : [],
+        store?.listRecentMeetingContexts ? store.listRecentMeetingContexts({ limit: 5 }) : []
       ]);
 
       return res.status(200).json({
@@ -256,6 +286,7 @@ export function registerIdeaCruiseRoute(receiver, {
           changeRequests,
           githubContexts,
           roadmapReflections,
+          meetingContexts,
           config
         })
       });
