@@ -66,7 +66,7 @@ export function buildDailySummaryMessage({ user, workDate, tasks = [], results =
     section('변경 요청', changeRows),
     '',
     section('다음 확인', [
-      '미정리 task는 다음 출근 때 #in-process에서 다시 확인합니다.',
+      '미정리 task는 다음 보드 최신화 때 #in-process에서 다시 확인합니다.',
       '변경 요청이 있으면 영향받는 사람의 찬성/반대와 근거를 모읍니다.'
     ])
   ].join('\n');

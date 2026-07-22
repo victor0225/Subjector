@@ -205,7 +205,6 @@ export function buildInProcessBoardMessage({ user, tasks = [], workDate = format
   const sortedTasks = sortTasksForDisplay(tasks);
   const header = [
     `*${displayName} task*`,
-    `상태: 출근 확인됨`,
     `기준일: ${workDate}`
   ].join('\n');
 

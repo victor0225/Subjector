@@ -14,17 +14,19 @@ test('normalizeCommand trims text and collapses whitespace', () => {
   assert.equal(normalizeCommand('  finals   업데이트  '), 'finals 업데이트');
 });
 
-test('출근 requests #in-process update', () => {
+test('출근 is a compatibility alias for #in-process refresh', () => {
   const result = handleDmCommand({
     text: '출근',
     user: config.users[0],
     config
   });
 
-  assert.equal(result.type, 'start_work');
-  assert.equal(result.updateInProcess, true);
+  assert.equal(result.type, 'refresh_in_process');
+  assert.equal(result.refreshInProcess, true);
+  assert.equal(result.updateInProcess, undefined);
   assert.match(result.text, /수현님/);
   assert.match(result.text, /#in-process/);
+  assert.doesNotMatch(result.text, /출근 확인|업무 시작/);
 });
 
 test('최신화 refreshes #in-process without starting work', () => {
@@ -89,18 +91,32 @@ test('로드맵 반영 is rejected for non-lead users', () => {
   assert.match(result.text, /수현님만/);
 });
 
-test('퇴근 requests daily summary generation', () => {
+test('오늘 요약 requests daily summary generation', () => {
   const result = handleDmCommand({
-    text: '퇴근',
+    text: '오늘 요약',
     user: config.users[1],
     config
   });
 
-  assert.equal(result.type, 'end_work');
+  assert.equal(result.type, 'daily_summary');
   assert.equal(result.createDailySummary, true);
   assert.match(result.text, /조은님/);
-  assert.match(result.text, /퇴근 명령을 확인했습니다/);
   assert.match(result.text, /오늘 한 일 요약/);
+  assert.doesNotMatch(result.text, /퇴근/);
+});
+
+test('일일 정리 and legacy 퇴근 request daily summary generation', () => {
+  for (const text of ['일일 정리', '퇴근']) {
+    const result = handleDmCommand({
+      text,
+      user: config.users[1],
+      config
+    });
+
+    assert.equal(result.type, 'daily_summary');
+    assert.equal(result.createDailySummary, true);
+    assert.match(result.text, /오늘 한 일 요약/);
+  }
 });
 
 test('finals 업데이트 is allowed for lead user', () => {
@@ -170,8 +186,10 @@ test('unknown command returns short help text', () => {
   });
 
   assert.equal(result.type, 'help');
-  assert.match(result.text, /출근/);
   assert.match(result.text, /최신화/);
   assert.match(result.text, /로드맵 반영/);
-  assert.match(result.text, /퇴근/);
+  assert.match(result.text, /오늘 요약/);
+  assert.match(result.text, /일일 정리/);
+  assert.match(result.text, /회의 기록/);
+  assert.doesNotMatch(result.text, /업무 시작|출근 기록|퇴근/);
 });

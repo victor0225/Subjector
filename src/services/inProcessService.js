@@ -23,16 +23,6 @@ function kstDayRange(workDate) {
   };
 }
 
-function allUsersEndedWork({ users, sessions }) {
-  const endedUserKeys = new Set(
-    sessions
-      .filter((session) => session.endedAt)
-      .map((session) => session.userKey)
-  );
-
-  return users.every((user) => endedUserKeys.has(user.key));
-}
-
 function isSlackMessageNotFound(error) {
   return error?.data?.error === 'message_not_found'
     || error?.error === 'message_not_found'
@@ -355,7 +345,7 @@ export function createInProcessService({
 
     return {
       ...result,
-      dmText: `${formatDisplayName(user)}, 출근 확인했습니다. #in-process에 오늘 task 영역을 ${verb}.`
+      dmText: `${formatDisplayName(user)}, #in-process task 영역을 ${verb}.`
     };
   }
 
@@ -479,38 +469,10 @@ export function createInProcessService({
     };
   }
 
-  async function maybePublishAutomaticFinalsUpdate({ workDate, now }) {
-    const sessions = await store.listEndedWorkSessionsForDate({ workDate });
-    if (!allUsersEndedWork({ users, sessions })) {
-      return null;
-    }
-
-    const existingFinalsUpdate = await store.getFinalsUpdateForDate({ workDate });
-    if (existingFinalsUpdate) {
-      return null;
-    }
-
-    await createAndPublishFinalsUpdateForWorkDate(workDate, {
-      updatedByUserKey: config.leadUserKey,
-      reason: 'all_ended',
-      now
-    });
-
-    return {
-      finalsUpdated: true
-    };
-  }
-
-  async function handleEndWork({ user }) {
+  async function handleDailySummary({ user }) {
     const now = clock();
     const workDate = formatKstDate(now);
     const { fromIso, toIso } = kstDayRange(workDate);
-
-    await store.endWorkSession({
-      userKey: user.key,
-      workDate,
-      endedAt: now.toISOString()
-    });
 
     await store.markAcceptedTasksUnresolvedForUser({
       userKey: user.key
@@ -523,7 +485,6 @@ export function createInProcessService({
       store.listDailyTaskResultsForUser({ userKey: user.key, fromIso, toIso }),
       store.listDailyChangeRequestsForUser({ userKey: user.key, fromIso, toIso })
     ]);
-    const automaticFinals = await maybePublishAutomaticFinalsUpdate({ workDate, now });
     const dailySummary = buildDailySummaryMessage({
       user,
       workDate,
@@ -533,9 +494,12 @@ export function createInProcessService({
     });
 
     return {
-      dmText: `${dailySummary}${automaticFinals ? '\n\n#finals 누적 정리도 업데이트했습니다.' : ''}`,
-      ...(automaticFinals ?? {})
+      dmText: dailySummary
     };
+  }
+
+  async function handleEndWork({ user }) {
+    return handleDailySummary({ user });
   }
 
   async function handleCodexPromptCopyRequest({ taskId }) {
@@ -859,6 +823,7 @@ export function createInProcessService({
     handleRefreshInProcess,
     refreshBoardForUser,
     handleArchiveTestTasks,
+    handleDailySummary,
     handleEndWork,
     handleFinalsPreview,
     handleScheduledFinalsUpdate,

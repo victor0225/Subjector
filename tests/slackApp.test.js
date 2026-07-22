@@ -751,9 +751,10 @@ test('registerIdeaCruiseRoute rejects live intervention card analysis when analy
   assert.match(response.body.error, /AI Analysis/);
 });
 
-test('handleDirectDmMessage updates #in-process for 출근 commands', async () => {
+test('handleDirectDmMessage treats 출근 as #in-process refresh compatibility alias', async () => {
   const replies = [];
   const serviceCalls = [];
+  let startWorkCalled = false;
 
   await handleDirectDmMessage({
     message: {
@@ -765,22 +766,27 @@ test('handleDirectDmMessage updates #in-process for 출근 commands', async () =
     config,
     logger: { info() {}, error() {} },
     inProcessService: {
-      async handleStartWork(input) {
+      async handleStartWork() {
+        startWorkCalled = true;
+      },
+      async handleRefreshInProcess(input) {
         serviceCalls.push(input);
         return {
-          action: 'posted',
+          action: 'updated',
           taskCount: 0,
-          dmText: '수현님, 출근 확인했습니다. #in-process에 오늘 task 영역을 만들었습니다.'
+          dmText: '수현님, #in-process task 영역을 최신화했습니다.'
         };
       }
     }
   });
 
+  assert.equal(startWorkCalled, false);
   assert.equal(serviceCalls.length, 1);
   assert.equal(serviceCalls[0].user.key, 'suhyeon');
   assert.equal(replies.length, 1);
   assert.match(replies[0].text, /#in-process/);
-  assert.match(replies[0].text, /만들었습니다/);
+  assert.match(replies[0].text, /최신화했습니다/);
+  assert.doesNotMatch(replies[0].text, /출근 확인/);
 });
 
 test('handleDirectDmMessage reports #in-process update failures to the user', async () => {
@@ -797,7 +803,7 @@ test('handleDirectDmMessage reports #in-process update failures to the user', as
     config,
     logger: { info() {}, error(error) { errors.push(error); } },
     inProcessService: {
-      async handleStartWork() {
+      async handleRefreshInProcess() {
         throw new Error('Slack post failed');
       }
     }
@@ -805,7 +811,7 @@ test('handleDirectDmMessage reports #in-process update failures to the user', as
 
   assert.equal(errors.length, 1);
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /#in-process 업데이트에 실패했습니다/);
+  assert.match(replies[0].text, /#in-process 최신화에 실패했습니다/);
   assert.match(replies[0].text, /Render 로그/);
 });
 
@@ -895,7 +901,7 @@ test('handleDirectDmMessage rejects team refresh from non-lead users', async () 
   assert.match(replies[0].text, /수현님만/);
 });
 
-test('handleDirectDmMessage sends a daily summary for 퇴근 commands', async () => {
+test('handleDirectDmMessage sends a daily summary for 오늘 요약 commands', async () => {
   const replies = [];
   const serviceCalls = [];
 
@@ -903,13 +909,13 @@ test('handleDirectDmMessage sends a daily summary for 퇴근 commands', async ()
     message: {
       channel_type: 'im',
       user: 'U1',
-      text: '퇴근'
+      text: '오늘 요약'
     },
     say: async (payload) => replies.push(payload),
     config,
     logger: { info() {}, error() {} },
     inProcessService: {
-      async handleEndWork(input) {
+      async handleDailySummary(input) {
         serviceCalls.push(input);
         return {
           dmText: '수현님, 오늘 한 일 요약입니다.\n- 센서 후보 정리'
@@ -924,30 +930,34 @@ test('handleDirectDmMessage sends a daily summary for 퇴근 commands', async ()
   assert.match(replies[0].text, /오늘 한 일 요약/);
 });
 
-test('handleDirectDmMessage reports automatic finals update after everyone ends work', async () => {
+test('handleDirectDmMessage keeps 퇴근 as a daily summary compatibility alias', async () => {
   const replies = [];
+  const serviceCalls = [];
 
   await handleDirectDmMessage({
     message: {
       channel_type: 'im',
-      user: 'U3',
+      user: 'U1',
       text: '퇴근'
     },
     say: async (payload) => replies.push(payload),
-    config: teamConfig,
+    config,
     logger: { info() {}, error() {} },
     inProcessService: {
-      async handleEndWork(input) {
+      async handleDailySummary(input) {
+        serviceCalls.push(input);
         return {
-          dmText: `${input.user.displayName}님, 오늘 한 일 요약입니다.`,
-          finalsUpdated: true
+          dmText: `${input.user.displayName}님, 오늘 한 일 요약입니다.`
         };
       }
     }
   });
 
+  assert.equal(serviceCalls.length, 1);
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /민성님, 오늘 한 일 요약입니다/);
+  assert.match(replies[0].text, /수현님, 오늘 한 일 요약입니다/);
+  assert.doesNotMatch(replies[0].text, /퇴근/);
+  assert.doesNotMatch(replies[0].text, /#finals 누적 정리도 업데이트/);
 });
 
 test('handleDirectDmMessage reports daily summary failures to the user', async () => {
@@ -958,13 +968,13 @@ test('handleDirectDmMessage reports daily summary failures to the user', async (
     message: {
       channel_type: 'im',
       user: 'U1',
-      text: '퇴근'
+      text: '오늘 요약'
     },
     say: async (payload) => replies.push(payload),
     config,
     logger: { info() {}, error(error) { errors.push(error); } },
     inProcessService: {
-      async handleEndWork() {
+      async handleDailySummary() {
         throw new Error('summary failed');
       }
     }

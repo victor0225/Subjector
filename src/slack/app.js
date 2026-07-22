@@ -624,7 +624,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
       return;
     } catch (error) {
       logger.error?.(error);
-      const text = `${formatDisplayName(user)}, #in-process 업데이트에 실패했습니다. Render 로그를 확인한 뒤 다시 '출근'을 보내 주세요.`;
+      const text = `${formatDisplayName(user)}, #in-process 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
       await say({ text, blocks: buildTextMessageBlocks(text) });
       return;
     }
@@ -691,7 +691,8 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
 
   if (response.createDailySummary && inProcessService) {
     try {
-      const result = await inProcessService.handleEndWork({ user });
+      const dailySummaryHandler = inProcessService.handleDailySummary ?? inProcessService.handleEndWork;
+      const result = await dailySummaryHandler({ user });
       await say({
         text: result.dmText,
         blocks: buildTextMessageBlocks(result.dmText)
@@ -699,7 +700,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
       return;
     } catch (error) {
       logger.error?.(error);
-      const text = `${formatDisplayName(user)}, 오늘 한 일 요약 생성에 실패했습니다. Render 로그를 확인한 뒤 다시 '퇴근'을 보내 주세요.`;
+      const text = `${formatDisplayName(user)}, 오늘 한 일 요약 생성에 실패했습니다. Render 로그를 확인한 뒤 다시 '오늘 요약'을 보내 주세요.`;
       await say({ text, blocks: buildTextMessageBlocks(text) });
       return;
     }

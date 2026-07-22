@@ -1114,7 +1114,7 @@ test('handleTaskActionSubmission stores change request output', async () => {
   assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '수락');
 });
 
-test('handleEndWork stores the end time and returns a daily summary', async () => {
+test('handleDailySummary returns a daily summary without recording attendance', async () => {
   const store = createFakeStore();
   const service = createInProcessService({
     store,
@@ -1124,16 +1124,12 @@ test('handleEndWork stores the end time and returns a daily summary', async () =
     clock: () => new Date('2026-06-28T12:00:00.000Z')
   });
 
-  const result = await service.handleEndWork({ user });
+  const result = await service.handleDailySummary({ user });
 
   assert.match(result.dmText, /수현님, 오늘 한 일 요약입니다/);
   assert.match(result.dmText, /센서 후보 정리/);
   assert.match(result.dmText, /ESP32 우선 추천/);
-  assert.deepEqual(store.calls.find(([name]) => name === 'endWorkSession')[1], {
-    userKey: 'suhyeon',
-    workDate: '2026-06-28',
-    endedAt: '2026-06-28T12:00:00.000Z'
-  });
+  assert.equal(store.calls.some(([name]) => name === 'endWorkSession'), false);
   assert.deepEqual(store.calls.find(([name]) => name === 'markAcceptedTasksUnresolvedForUser')[1], {
     userKey: 'suhyeon'
   });
@@ -1141,7 +1137,7 @@ test('handleEndWork stores the end time and returns a daily summary', async () =
   assert.equal(store.calls.find(([name]) => name === 'listDailyTaskResultsForUser')[1].toIso, '2026-06-28T15:00:00.000Z');
 });
 
-test('handleEndWork refreshes #in-process after marking accepted tasks unresolved', async () => {
+test('handleDailySummary refreshes #in-process after marking accepted tasks unresolved', async () => {
   const store = createFakeStore({
     existingMessage: {
       channelId: 'C_IN_PROCESS',
@@ -1167,7 +1163,7 @@ test('handleEndWork refreshes #in-process after marking accepted tasks unresolve
     clock: () => new Date('2026-06-28T12:00:00.000Z')
   });
 
-  await service.handleEndWork({ user });
+  await service.handleDailySummary({ user });
 
   const update = slackClient.calls.find(([name]) => name === 'update');
   assert.equal(update[1].channel, 'C_IN_PROCESS');
@@ -1175,7 +1171,7 @@ test('handleEndWork refreshes #in-process after marking accepted tasks unresolve
   assert.match(update[1].text, /미정리/);
 });
 
-test('handleEndWork updates #finals when all users have ended work and no update exists', async () => {
+test('handleDailySummary does not update #finals from all-ended attendance state', async () => {
   const store = createFakeStore({
     endedSessions: [
       { userKey: 'suhyeon', workDate: '2026-06-28', endedAt: '2026-06-28T10:00:00.000Z' },
@@ -1191,16 +1187,17 @@ test('handleEndWork updates #finals when all users have ended work and no update
     clock: () => new Date('2026-06-28T12:00:00.000Z')
   });
 
-  const result = await service.handleEndWork({ user: minsung });
+  const result = await service.handleDailySummary({ user: minsung });
 
   assert.match(result.dmText, /민성님, 오늘 한 일 요약입니다/);
-  assert.match(result.dmText, /#finals 누적 정리도 업데이트했습니다/);
-  assert.equal(store.calls.find(([name]) => name === 'getFinalsUpdateForDate')[1].workDate, '2026-06-28');
-  assert.equal(store.calls.find(([name]) => name === 'createFinalsUpdate')[1].workDate, '2026-06-28');
-  assert.equal(store.calls.find(([name]) => name === 'createFinalsUpdate')[1].reason, 'all_ended');
+  assert.doesNotMatch(result.dmText, /#finals 누적 정리도 업데이트했습니다/);
+  assert.equal(result.finalsUpdated, undefined);
+  assert.equal(store.calls.some(([name]) => name === 'listEndedWorkSessionsForDate'), false);
+  assert.equal(store.calls.some(([name]) => name === 'getFinalsUpdateForDate'), false);
+  assert.equal(store.calls.some(([name]) => name === 'createFinalsUpdate'), false);
 });
 
-test('handleEndWork does not create a finals preview until every user has ended work', async () => {
+test('handleDailySummary never waits for other users before returning the summary', async () => {
   const store = createFakeStore({
     endedSessions: [
       { userKey: 'suhyeon', workDate: '2026-06-28', endedAt: '2026-06-28T10:00:00.000Z' },
@@ -1215,13 +1212,13 @@ test('handleEndWork does not create a finals preview until every user has ended 
     clock: () => new Date('2026-06-28T12:00:00.000Z')
   });
 
-  const result = await service.handleEndWork({ user: minsung });
+  const result = await service.handleDailySummary({ user: minsung });
 
   assert.doesNotMatch(result.dmText, /#finals 누적 정리도 업데이트했습니다/);
   assert.equal(store.calls.some(([name]) => name === 'createFinalsUpdate'), false);
 });
 
-test('handleEndWork does not create a duplicate finals preview for the same date', async () => {
+test('handleDailySummary ignores existing finals updates because finals is manual or scheduled', async () => {
   const store = createFakeStore({
     endedSessions: [
       { userKey: 'suhyeon', workDate: '2026-06-28', endedAt: '2026-06-28T10:00:00.000Z' },
@@ -1243,7 +1240,7 @@ test('handleEndWork does not create a duplicate finals preview for the same date
     clock: () => new Date('2026-06-28T12:00:00.000Z')
   });
 
-  const result = await service.handleEndWork({ user: minsung });
+  const result = await service.handleDailySummary({ user: minsung });
 
   assert.doesNotMatch(result.dmText, /#finals 누적 정리도 업데이트했습니다/);
   assert.equal(store.calls.some(([name]) => name === 'createFinalsUpdate'), false);

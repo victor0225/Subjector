@@ -10,11 +10,10 @@ export function buildHelpText(displayName) {
   return [
     `${displayName}, 사용할 수 있는 명령어입니다.`,
     '',
-    '- `출근`: 오늘 업무 시작을 기록하고 #in-process task 영역을 만들거나 갱신합니다.',
-    '- `최신화`: 출근 기록은 건드리지 않고 #in-process task 영역만 갱신합니다.',
+    '- `최신화`: #in-process task 영역을 갱신합니다.',
     '- `전체 최신화`: 수현님만 사용할 수 있는 명령입니다. 팀 전체 #in-process task 영역을 한 번에 갱신합니다.',
     '- `로드맵 반영`: 수현님만 사용할 수 있는 명령입니다. #회의-결과록의 일반 메시지 "로드맵 반영 완료" 이후 자료를 IDEA CRUISE에 반영합니다.',
-    '- `퇴근`: 오늘 한 일 요약을 DM으로 받습니다.',
+    '- `오늘 요약` 또는 `일일 정리`: 오늘 한 일 요약을 DM으로 받습니다.',
     '- `finals 업데이트`: 수현님만 사용할 수 있는 명령입니다. #finals 누적 정리를 바로 업데이트합니다.',
     '- `회의 기록: 내용`: 녹음 없이 회의 내용을 텍스트로 저장하고 IDEA CRUISE 참고 맥락으로 사용합니다.',
     '- `테스트 task 정리`: 수현님만 사용할 수 있는 명령입니다. 제목에 테스트가 들어간 task를 보관 처리합니다.'
@@ -26,15 +25,7 @@ export function handleDmCommand({ text, user, config }) {
   const displayName = formatDisplayName(user);
   const rawMeetingMatch = command.match(/^회의\s*(?:기록|결과)\s*[:：]\s*(.+)$/);
 
-  if (command === '출근') {
-    return {
-      type: 'start_work',
-      text: `${displayName}, 출근 명령을 확인했습니다. #in-process task 영역을 업데이트하겠습니다.`,
-      updateInProcess: true
-    };
-  }
-
-  if (command === '최신화') {
+  if (command === '출근' || command === '최신화') {
     return {
       type: 'refresh_in_process',
       text: `${displayName}, 최신화 명령을 확인했습니다. #in-process task 영역을 갱신하겠습니다.`,
@@ -72,10 +63,10 @@ export function handleDmCommand({ text, user, config }) {
     };
   }
 
-  if (command === '퇴근') {
+  if (command === '오늘 요약' || command === '일일 정리' || command === '퇴근') {
     return {
-      type: 'end_work',
-      text: `${displayName}, 퇴근 명령을 확인했습니다. 오늘 한 일 요약을 생성하겠습니다.`,
+      type: 'daily_summary',
+      text: `${displayName}, 오늘 한 일 요약을 생성하겠습니다.`,
       createDailySummary: true
     };
   }
