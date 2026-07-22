@@ -646,6 +646,31 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
     }
   }
 
+  if (response.refreshAllInProcess && inProcessService?.refreshBoardForUser) {
+    try {
+      const results = [];
+      for (const teamMember of config.users ?? []) {
+        const result = await inProcessService.refreshBoardForUser({ user: teamMember });
+        results.push({ user: teamMember, result });
+      }
+
+      const text = [
+        `${formatDisplayName(user)}, 팀 전체 #in-process task 영역을 최신화했습니다.`,
+        `대상: ${results.length}명`
+      ].join('\n');
+      await say({
+        text,
+        blocks: buildTextMessageBlocks(text)
+      });
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, 팀 전체 #in-process 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '전체 최신화'를 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
   if (response.reflectRoadmap && meetingService?.handleRoadmapReflectionRequest) {
     try {
       const result = await meetingService.handleRoadmapReflectionRequest({

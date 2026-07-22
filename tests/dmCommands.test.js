@@ -41,6 +41,30 @@ test('최신화 refreshes #in-process without starting work', () => {
   assert.match(result.text, /#in-process/);
 });
 
+test('전체 최신화 refreshes every team member board for the lead', () => {
+  const result = handleDmCommand({
+    text: '전체 최신화',
+    user: config.users[0],
+    config
+  });
+
+  assert.equal(result.type, 'refresh_all_in_process');
+  assert.equal(result.refreshAllInProcess, true);
+  assert.match(result.text, /팀 전체/);
+  assert.match(result.text, /#in-process/);
+});
+
+test('전체 최신화 is rejected for non-lead users', () => {
+  const result = handleDmCommand({
+    text: '전체 최신화',
+    user: config.users[1],
+    config
+  });
+
+  assert.equal(result.type, 'not_allowed');
+  assert.match(result.text, /수현님만/);
+});
+
 test('로드맵 반영 requests IDEA CRUISE roadmap reflection for the lead', () => {
   const result = handleDmCommand({
     text: '로드맵 반영',

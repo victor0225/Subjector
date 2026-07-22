@@ -840,6 +840,61 @@ test('handleDirectDmMessage refreshes #in-process for 최신화 commands', async
   assert.match(replies[0].text, /최신화했습니다/);
 });
 
+test('handleDirectDmMessage lets the lead refresh every team member board', async () => {
+  const replies = [];
+  const serviceCalls = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      user: 'U1',
+      text: '전체 최신화'
+    },
+    say: async (payload) => replies.push(payload),
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async refreshBoardForUser(input) {
+        serviceCalls.push(input);
+        return {
+          action: 'updated',
+          taskCount: 1
+        };
+      }
+    }
+  });
+
+  assert.deepEqual(serviceCalls.map((call) => call.user.key), ['suhyeon', 'joeun', 'minsung']);
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /팀 전체/);
+  assert.match(replies[0].text, /3명/);
+});
+
+test('handleDirectDmMessage rejects team refresh from non-lead users', async () => {
+  const replies = [];
+  const serviceCalls = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      user: 'U2',
+      text: '전체 최신화'
+    },
+    say: async (payload) => replies.push(payload),
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async refreshBoardForUser(input) {
+        serviceCalls.push(input);
+      }
+    }
+  });
+
+  assert.equal(serviceCalls.length, 0);
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /수현님만/);
+});
+
 test('handleDirectDmMessage sends a daily summary for 퇴근 commands', async () => {
   const replies = [];
   const serviceCalls = [];
