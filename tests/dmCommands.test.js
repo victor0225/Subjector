@@ -143,39 +143,29 @@ test('finals 업데이트 is rejected for non-lead user', () => {
   assert.match(result.text, /수현님만/);
 });
 
-test('테스트 task 정리 is allowed for lead user', () => {
+test('테스트 task 정리 is no longer a user-facing DM command', () => {
   const result = handleDmCommand({
     text: '테스트 task 정리',
     user: config.users[0],
     config
   });
 
-  assert.equal(result.type, 'archive_test_tasks');
-  assert.equal(result.archiveTestTasks, true);
-  assert.match(result.text, /테스트 task/);
+  assert.equal(result.type, 'help');
+  assert.equal(result.archiveTestTasks, undefined);
+  assert.doesNotMatch(result.text, /테스트 task 정리/);
 });
 
-test('테스트 task 정리 is rejected for non-lead user', () => {
-  const result = handleDmCommand({
-    text: '테스트 task 정리',
-    user: config.users[1],
-    config
-  });
-
-  assert.equal(result.type, 'not_allowed');
-  assert.match(result.text, /수현님만/);
-});
-
-test('회의 기록 command captures raw meeting text', () => {
+test('회의 기록 is no longer stored through a DM command', () => {
   const result = handleDmCommand({
     text: '회의 기록: ESP32 기준으로 진행하기로 함',
     user: config.users[0],
     config
   });
 
-  assert.equal(result.type, 'raw_meeting_text');
-  assert.equal(result.createRawMeeting, true);
-  assert.equal(result.rawMeetingText, 'ESP32 기준으로 진행하기로 함');
+  assert.equal(result.type, 'help');
+  assert.equal(result.createRawMeeting, undefined);
+  assert.equal(result.rawMeetingText, undefined);
+  assert.doesNotMatch(result.text, /회의 기록/);
 });
 
 test('unknown command returns short help text', () => {
@@ -190,6 +180,6 @@ test('unknown command returns short help text', () => {
   assert.match(result.text, /로드맵 반영/);
   assert.match(result.text, /오늘 요약/);
   assert.match(result.text, /일일 정리/);
-  assert.match(result.text, /회의 기록/);
+  assert.doesNotMatch(result.text, /회의 기록|테스트 task 정리/);
   assert.doesNotMatch(result.text, /업무 시작|출근 기록|퇴근/);
 });

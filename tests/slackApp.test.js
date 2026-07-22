@@ -1016,7 +1016,7 @@ test('handleDirectDmMessage directly updates finals for lead finals update comma
   assert.equal(replies[0].blocks.some((block) => block.type === 'actions'), false);
 });
 
-test('handleDirectDmMessage archives test tasks for lead cleanup commands', async () => {
+test('handleDirectDmMessage no longer exposes test task cleanup as a DM command', async () => {
   const replies = [];
   const serviceCalls = [];
 
@@ -1040,12 +1040,13 @@ test('handleDirectDmMessage archives test tasks for lead cleanup commands', asyn
     }
   });
 
-  assert.equal(serviceCalls.length, 1);
-  assert.equal(serviceCalls[0].user.key, 'suhyeon');
-  assert.match(replies[0].text, /보관 처리/);
+  assert.equal(serviceCalls.length, 0);
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /사용할 수 있는 명령어/);
+  assert.doesNotMatch(replies[0].text, /테스트 task 정리/);
 });
 
-test('handleDirectDmMessage records raw meeting text and sends participant input DMs', async () => {
+test('handleDirectDmMessage no longer records raw meeting text through a DM command', async () => {
   const replies = [];
   const serviceCalls = [];
   const openedDms = [];
@@ -1095,14 +1096,12 @@ test('handleDirectDmMessage records raw meeting text and sends participant input
     }
   });
 
-  assert.equal(serviceCalls.length, 1);
-  assert.equal(serviceCalls[0].sourceChannelId, 'D_LEAD');
-  assert.equal(serviceCalls[0].sourceMessageTs, '1710000000.000200');
-  assert.equal(serviceCalls[0].submittedByUserKey, 'suhyeon');
-  assert.equal(serviceCalls[0].rawText, 'ESP32 기준으로 진행하기로 함');
-  assert.match(replies[0].text, /저장했습니다/);
-  assert.equal(openedDms.length, 2);
-  assert.match(postedMessages[1].text, /조은님/);
+  assert.equal(serviceCalls.length, 0);
+  assert.equal(openedDms.length, 0);
+  assert.equal(postedMessages.length, 0);
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /사용할 수 있는 명령어/);
+  assert.doesNotMatch(replies[0].text, /회의 기록/);
 });
 
 test('handleDirectDmMessage requests IDEA CRUISE roadmap reflection from the lead', async () => {

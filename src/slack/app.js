@@ -722,51 +722,6 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
     }
   }
 
-  if (response.archiveTestTasks && inProcessService) {
-    try {
-      const result = await inProcessService.handleArchiveTestTasks({ user });
-      await say({
-        text: result.dmText,
-        blocks: buildTextMessageBlocks(result.dmText)
-      });
-      return;
-    } catch (error) {
-      logger.error?.(error);
-      const text = `${formatDisplayName(user)}, 테스트 task 정리에 실패했습니다. Render 로그를 확인한 뒤 다시 '테스트 task 정리'를 보내 주세요.`;
-      await say({ text, blocks: buildTextMessageBlocks(text) });
-      return;
-    }
-  }
-
-  if (response.createRawMeeting && meetingService) {
-    try {
-      const result = await meetingService.handleRawMeetingText({
-        sourceChannelId: message.channel,
-        sourceMessageTs: message.ts,
-        submittedByUserKey: user.key,
-        rawText: response.rawMeetingText
-      });
-
-      await say({
-        text: result.text,
-        blocks: buildTextMessageBlocks(result.text)
-      });
-
-      if (client && result.directMessages?.length > 0) {
-        await sendDirectMessages({
-          client,
-          messages: result.directMessages
-        });
-      }
-      return;
-    } catch (error) {
-      logger.error?.(error);
-      const text = `${formatDisplayName(user)}, 회의 기록 저장에 실패했습니다. Render 로그를 확인한 뒤 다시 보내 주세요.`;
-      await say({ text, blocks: buildTextMessageBlocks(text) });
-      return;
-    }
-  }
-
   await say({
     text: response.text,
     blocks: buildTextMessageBlocks(response.text)
