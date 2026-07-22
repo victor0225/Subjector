@@ -81,6 +81,13 @@ function parseTaskChangeText(rawText) {
   };
 }
 
+function parseTaskCleanupText(rawText) {
+  return {
+    cleanupType: parseSection(rawText, '정리 유형'),
+    reason: parseSection(rawText, '정리 사유')
+  };
+}
+
 function normalizeSubmissionAttachments(attachments = []) {
   return attachments
     .filter((file) => file?.id || file?.name)
@@ -747,6 +754,22 @@ export function createInProcessService({
           ...change
         });
       }
+    } else if (actionId === 'task_cleanup') {
+      const cleanup = parseTaskCleanupText(rawText);
+      await store.submitTaskResult({
+        taskId,
+        resultType: action.resultType,
+        rawText: submissionText,
+        submittedByUserKey
+      });
+      if (store.updateTaskContextFromCleanup) {
+        await store.updateTaskContextFromCleanup({
+          taskId,
+          cleanedByUserKey: submittedByUserKey,
+          rawText,
+          ...cleanup
+        });
+      }
     } else {
       const resultInput = {
         taskId,
@@ -810,6 +833,13 @@ export function createInProcessService({
           finalStatus,
           evaluation
         })
+      };
+    }
+
+    if (actionId === 'task_cleanup') {
+      return {
+        status: finalStatus,
+        responseText: `${formatDisplayName(owner)}, task를 정리됨으로 변경했습니다. 원래 task와 정리 사유 기록은 남겨두었습니다.`
       };
     }
 

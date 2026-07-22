@@ -16,6 +16,7 @@ test('taskActionFromActionId maps the simplified task actions', () => {
   assert.equal(taskActionFromActionId('task_stop_today').status, '오늘은 여기까지');
   assert.equal(taskActionFromActionId('task_change_request').status, '수락');
   assert.equal(taskActionFromActionId('task_file_submission').status, '추가 진행 예정');
+  assert.equal(taskActionFromActionId('task_cleanup').status, '정리됨');
   assert.equal(taskActionFromActionId('unknown'), null);
 });
 
@@ -58,6 +59,28 @@ test('buildTaskActionModalView customizes prompt labels for each action', () => 
   assert.match(changeView.blocks[2].label.text, /해야 할 일 변경/);
   assert.match(changeView.blocks[3].label.text, /확인할 것 추가\/수정/);
   assert.match(changeView.blocks[4].label.text, /완료 기준 변경 제안/);
+});
+
+test('cleanup modal lets a team member choose one of three cleanup types and explain why', () => {
+  const view = buildTaskActionModalView({
+    actionId: 'task_cleanup',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    taskTitle: '회의에서 이미 정리한 기준'
+  });
+
+  const cleanupTypeBlock = view.blocks.find((block) => block.block_id === 'task_cleanup_type');
+  const reasonBlock = view.blocks.find((block) => block.block_id === 'task_action_input');
+
+  assert.equal(view.title.text, '정리');
+  assert.equal(cleanupTypeBlock.element.type, 'static_select');
+  assert.deepEqual(cleanupTypeBlock.element.options.map((option) => option.text.text), [
+    '회의에서 해결됨',
+    'task로 하지 않음',
+    '중복/기존 task에 흡수'
+  ]);
+  assert.match(reasonBlock.label.text, /정리 사유/);
+  assert.match(reasonBlock.element.placeholder.text, /로드맵에 구멍이 남아도/);
 });
 
 test('completion and stop-for-today modals stay text-only so empty attachments do not block submit', () => {
@@ -218,4 +241,33 @@ test('extractTaskActionSubmissionText rejects an empty change modal', () => {
   };
 
   assert.equal(extractTaskActionSubmissionText(view, 'task_change_request'), '');
+});
+
+test('extractTaskActionSubmissionText records cleanup type and reason', () => {
+  const view = {
+    state: {
+      values: {
+        task_cleanup_type: {
+          cleanup_type: {
+            selected_option: {
+              text: { text: 'task로 하지 않음' },
+              value: 'not_a_task'
+            }
+          }
+        },
+        task_action_input: {
+          raw_text: {
+            value: '오늘 회의에서 정리한 내용이라 별도 진행 부담을 만들지 않기로 함'
+          }
+        }
+      }
+    }
+  };
+
+  const text = extractTaskActionSubmissionText(view, 'task_cleanup');
+
+  assert.match(text, /\[정리 유형\]/);
+  assert.match(text, /task로 하지 않음/);
+  assert.match(text, /\[정리 사유\]/);
+  assert.match(text, /별도 진행 부담/);
 });

@@ -819,6 +819,65 @@ export function createSupabaseStore(supabase) {
     };
   }
 
+  async function updateTaskContextFromCleanup({
+    taskId,
+    cleanedByUserKey,
+    cleanupType = '',
+    reason = '',
+    rawText = ''
+  }) {
+    const existingResult = await supabase
+      .from('tasks')
+      .select('id,assignee_user_key,context')
+      .eq('id', taskId)
+      .maybeSingle();
+
+    throwIfError(existingResult, 'Failed to read task for cleanup context update');
+    if (!existingResult.data) {
+      throw new Error('Failed to read task for cleanup context update: task not found');
+    }
+
+    const context = existingResult.data.context ?? {};
+    const cleanupRecord = {
+      cleanedByUserKey,
+      cleanupType,
+      reason,
+      rawText,
+      createdAt: new Date().toISOString()
+    };
+    const nextContext = {
+      ...context,
+      cleanupHistory: [
+        ...(Array.isArray(context.cleanupHistory) ? context.cleanupHistory : []),
+        cleanupRecord
+      ],
+      changeHistory: [
+        ...(Array.isArray(context.changeHistory) ? context.changeHistory : []),
+        {
+          type: 'cleanup',
+          cleanupType,
+          reason,
+          rawText,
+          proposerUserKey: cleanedByUserKey,
+          createdAt: cleanupRecord.createdAt
+        }
+      ]
+    };
+
+    const updateResult = await supabase
+      .from('tasks')
+      .update({ context: nextContext })
+      .eq('id', taskId);
+
+    throwIfError(updateResult, 'Failed to update task context from cleanup');
+
+    return {
+      taskId,
+      assigneeUserKey: existingResult.data.assignee_user_key,
+      context: nextContext
+    };
+  }
+
   async function findSlackMessage({ purpose, channelId }) {
     const result = await supabase
       .from('slack_messages')
@@ -1093,6 +1152,7 @@ export function createSupabaseStore(supabase) {
     listAllTasks,
     updateIdeaCruiseTaskContext,
     updateTaskContextFromChange,
+    updateTaskContextFromCleanup,
     findSlackMessage,
     listTaskDetailMessagesForThread,
     getTaskById,

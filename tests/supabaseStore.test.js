@@ -629,6 +629,40 @@ test('updateTaskContextFromChange replaces execution fields and records change h
   assert.equal(update[2].context.changeHistory[0].proposerUserKey, 'suhyeon');
 });
 
+test('updateTaskContextFromCleanup records cleanup history without rewriting execution criteria', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      tasks: {
+        id: 'task-1',
+        assignee_user_key: 'suhyeon',
+        context: {
+          why: '기존 해야 할 일',
+          neededInfo: '기존 확인할 것',
+          doneCriteria: '기존 완료 기준'
+        }
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const result = await store.updateTaskContextFromCleanup({
+    taskId: 'task-1',
+    cleanedByUserKey: 'joeun',
+    cleanupType: 'task로 하지 않음',
+    reason: '회의에서 정리한 내용이라 별도 진행 부담을 만들지 않음',
+    rawText: '[정리 유형]\ntask로 하지 않음'
+  });
+
+  const update = supabase.calls.find((call) => call[0] === 'tasks' && call[1] === 'update');
+  assert.equal(result.assigneeUserKey, 'suhyeon');
+  assert.equal(update[2].context.why, '기존 해야 할 일');
+  assert.equal(update[2].context.doneCriteria, '기존 완료 기준');
+  assert.equal(update[2].context.cleanupHistory[0].cleanedByUserKey, 'joeun');
+  assert.equal(update[2].context.cleanupHistory[0].cleanupType, 'task로 하지 않음');
+  assert.match(update[2].context.cleanupHistory[0].reason, /별도 진행 부담/);
+  assert.equal(update[2].context.changeHistory[0].cleanupType, 'task로 하지 않음');
+});
+
 test('endWorkSession upserts by user and work date with ended time', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);

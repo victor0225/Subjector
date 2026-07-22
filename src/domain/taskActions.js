@@ -14,6 +14,9 @@ export const TASK_CHANGE_NEEDED_INFO_BLOCK_ID = 'task_change_needed_info';
 export const TASK_CHANGE_NEEDED_INFO_ACTION_ID = 'needed_info';
 export const TASK_CHANGE_DONE_CRITERIA_BLOCK_ID = 'task_change_done_criteria';
 export const TASK_CHANGE_DONE_CRITERIA_ACTION_ID = 'done_criteria';
+export const TASK_CLEANUP_ACTION_ID = 'task_cleanup';
+export const TASK_CLEANUP_TYPE_BLOCK_ID = 'task_cleanup_type';
+export const TASK_CLEANUP_TYPE_ACTION_ID = 'cleanup_type';
 
 const TASK_ACTIONS = {
   task_complete: {
@@ -50,6 +53,14 @@ const TASK_ACTIONS = {
     acceptsAttachments: true,
     requiresAttachments: false,
     requiresResultTypeSelect: false
+  },
+  [TASK_CLEANUP_ACTION_ID]: {
+    actionId: TASK_CLEANUP_ACTION_ID,
+    label: '정리',
+    status: '정리됨',
+    resultType: '정리됨',
+    inputLabel: '정리 사유',
+    placeholder: '로드맵에 구멍이 남아도 괜찮다고 판단한 이유, 회의에서 해결된 내용, 또는 흡수된 기존 task를 적어 주세요.'
   }
 };
 
@@ -151,6 +162,50 @@ function changeInputBlocks() {
   ];
 }
 
+function cleanupInputBlocks(action) {
+  return [
+    {
+      type: 'section',
+      text: mrkdwn('정리하면 이 task는 #in-process에서 사라지고, 기록에는 정리됨 상태와 사유가 남습니다.')
+    },
+    {
+      type: 'input',
+      block_id: TASK_CLEANUP_TYPE_BLOCK_ID,
+      label: plainText('정리 유형'),
+      element: {
+        type: 'static_select',
+        action_id: TASK_CLEANUP_TYPE_ACTION_ID,
+        placeholder: plainText('정리 유형 선택'),
+        options: [
+          {
+            text: plainText('회의에서 해결됨'),
+            value: 'resolved_in_meeting'
+          },
+          {
+            text: plainText('task로 하지 않음'),
+            value: 'not_a_task'
+          },
+          {
+            text: plainText('중복/기존 task에 흡수'),
+            value: 'merged_into_existing_task'
+          }
+        ]
+      }
+    },
+    {
+      type: 'input',
+      block_id: TASK_ACTION_INPUT_BLOCK_ID,
+      label: plainText(action.inputLabel),
+      element: {
+        type: 'plain_text_input',
+        action_id: TASK_ACTION_INPUT_ACTION_ID,
+        multiline: true,
+        placeholder: plainText(action.placeholder)
+      }
+    }
+  ];
+}
+
 function normalizeFile(file) {
   return {
     id: file.id,
@@ -195,7 +250,12 @@ export function buildTaskActionModalView({ actionId, taskId, assigneeUserKey, ta
         type: 'section',
         text: mrkdwn(`*${taskTitle}*`)
       }
-    ].concat(changeInputBlocks()) : [
+    ].concat(changeInputBlocks()) : actionId === TASK_CLEANUP_ACTION_ID ? [
+      {
+        type: 'section',
+        text: mrkdwn(`*${taskTitle}*`)
+      }
+    ].concat(cleanupInputBlocks(action)) : [
       {
         type: 'section',
         text: mrkdwn(`*${taskTitle}*`)
@@ -238,6 +298,23 @@ export function extractTaskActionSubmissionText(view, actionId = null) {
       '',
       '[완료 기준 변경 제안]',
       doneCriteria
+    ].join('\n').trim();
+  }
+
+  if (actionId === TASK_CLEANUP_ACTION_ID) {
+    const selectedOption = view.state.values?.[TASK_CLEANUP_TYPE_BLOCK_ID]?.[TASK_CLEANUP_TYPE_ACTION_ID]?.selected_option;
+    const cleanupType = selectedOption?.text?.text || selectedOption?.value || '';
+    const reason = inputValue(view, TASK_ACTION_INPUT_BLOCK_ID, TASK_ACTION_INPUT_ACTION_ID);
+    if (!cleanupType || !reason) {
+      return '';
+    }
+
+    return [
+      '[정리 유형]',
+      cleanupType,
+      '',
+      '[정리 사유]',
+      reason
     ].join('\n').trim();
   }
 

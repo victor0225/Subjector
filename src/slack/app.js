@@ -113,6 +113,7 @@ const IDEA_CRUISE_ROADMAP_TASK_STATUSES = new Set([
   '오늘은 여기까지',
   '추가 진행 예정',
   '보완 필요',
+  '정리됨',
   '미정리',
   '변경 요청 중',
   '회의 필요'
@@ -138,6 +139,9 @@ function taskRoadmapText(task, config) {
   const latestChange = Array.isArray(context.changeHistory) && context.changeHistory.length > 0
     ? context.changeHistory[context.changeHistory.length - 1]
     : null;
+  const latestCleanup = Array.isArray(context.cleanupHistory) && context.cleanupHistory.length > 0
+    ? context.cleanupHistory[context.cleanupHistory.length - 1]
+    : null;
 
   return [
     '[Subjector task]',
@@ -146,6 +150,7 @@ function taskRoadmapText(task, config) {
     `왜 하는가: ${context.why || context.reason || context.goal || '기록 없음'}`,
     `필요 정보: ${context.neededInfo || context.requiredInfo || '기록 없음'}`,
     `완료 기준: ${context.doneCriteria || context.completionCriteria || context.acceptanceCriteria || '기록 없음'}`,
+    latestCleanup ? `정리 기록: ${latestCleanup.cleanupType || '정리됨'} / ${latestCleanup.reason || '사유 기록 없음'}` : '',
     latestChange ? `최근 변경: ${latestChange.why || latestChange.rawText || '변경 기록 있음'}` : ''
   ].filter(Boolean).join('\n');
 }
@@ -451,7 +456,7 @@ export function registerIdeaCruiseRoute(receiver, {
       }
 
       const currentTasks = store?.listAllTasks
-        ? (await store.listAllTasks({ limit: 50 })).filter((task) => ['미시작', '수락', '오늘은 여기까지', '보완 필요', '미정리', '변경 요청 중', '회의 필요'].includes(task.status))
+        ? (await store.listAllTasks({ limit: 50 })).filter((task) => ['미시작', '수락', '오늘은 여기까지', '보완 필요', '정리됨', '미정리', '변경 요청 중', '회의 필요'].includes(task.status))
         : [];
       const meetingContexts = store?.listRecentMeetingContexts
         ? await store.listRecentMeetingContexts({ limit: 5 })
@@ -1501,7 +1506,7 @@ function registerTaskActionHandlers(app, config, logger, inProcessService) {
     });
   });
 
-  for (const actionId of ['task_complete', 'task_stop_today', 'task_file_submission', 'task_change_request']) {
+  for (const actionId of ['task_complete', 'task_stop_today', 'task_file_submission', 'task_change_request', 'task_cleanup']) {
     app.action(actionId, async ({ ack, body, client }) => {
       await handleTaskActionButton({
         ack,

@@ -169,7 +169,8 @@ function taskActionsBlock({ task, user }) {
       block_id: `task_actions_${task.id}`,
       elements: [
         taskActionButton({ actionId: 'task_accept_direct', text: '수락', task, user, style: 'primary' }),
-        taskActionButton({ actionId: 'task_change_request', text: '변경', task, user, style: 'danger' })
+        taskActionButton({ actionId: 'task_change_request', text: '변경', task, user, style: 'danger' }),
+        taskActionButton({ actionId: 'task_cleanup', text: '정리', task, user })
       ]
     };
   }
@@ -180,7 +181,8 @@ function taskActionsBlock({ task, user }) {
     elements: [
       codexPromptCopyButton(task),
       taskActionButton({ actionId: 'task_file_submission', text: '작업 제출', task, user, style: 'primary' }),
-      taskActionButton({ actionId: 'task_change_request', text: '변경', task, user, style: 'danger' })
+      taskActionButton({ actionId: 'task_change_request', text: '변경', task, user, style: 'danger' }),
+      taskActionButton({ actionId: 'task_cleanup', text: '정리', task, user })
     ]
   };
 }

@@ -173,11 +173,13 @@ test('buildInProcessBoardMessage attaches task action buttons including direct w
   assert.ok(actions);
   assert.deepEqual(actions.elements.map((element) => element.action_id), [
     'task_accept_direct',
-    'task_change_request'
+    'task_change_request',
+    'task_cleanup'
   ]);
   assert.deepEqual(actions.elements.map((element) => element.text.text), [
     '수락',
-    '변경'
+    '변경',
+    '정리'
   ]);
   assert.ok(actions.elements.every((element) => element.value.includes('task-1')));
   assert.ok(actions.elements.every((element) => element.value.includes('suhyeon')));
@@ -205,12 +207,14 @@ test('buildInProcessBoardMessage replaces accept button with prompt copy after t
   assert.deepEqual(actions.elements.map((element) => element.action_id), [
     'copy_codex_prompt',
     'task_file_submission',
-    'task_change_request'
+    'task_change_request',
+    'task_cleanup'
   ]);
   assert.deepEqual(actions.elements.map((element) => element.text.text), [
     '도움 받기',
     '작업 제출',
-    '변경'
+    '변경',
+    '정리'
   ]);
   assert.equal(actions.elements[0].value, 'task-1');
   assert.equal(actions.elements.some((element) => element.action_id === 'task_accept_generate_prompt'), false);

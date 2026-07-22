@@ -103,6 +103,9 @@ function createFakeStore({
     async updateTaskContextFromChange(input) {
       calls.push(['updateTaskContextFromChange', input]);
     },
+    async updateTaskContextFromCleanup(input) {
+      calls.push(['updateTaskContextFromCleanup', input]);
+    },
     async updateTaskStatus(input) {
       calls.push(['updateTaskStatus', input]);
     },
@@ -1034,6 +1037,46 @@ test('handleTaskActionSubmission stores stop-for-today output with non-blocking 
   assert.match(result.responseText, /진행 상황은 이해됩니다/);
   assert.equal(store.calls.find(([name]) => name === 'submitTaskResult')[1].parsedSummary.verdict, 'informational');
   assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '오늘은 여기까지');
+});
+
+test('handleTaskActionSubmission marks a task cleaned up with type, reason, and history', async () => {
+  const store = createFakeStore({
+    existingMessage: { messageTs: '1710000000.000100', threadTs: '1710000000.000100' },
+    tasks: []
+  });
+  const service = createInProcessService({
+    store,
+    slackClient: createFakeSlackClient(),
+    config,
+    users: allUsers,
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  const result = await service.handleTaskActionSubmission({
+    actionId: 'task_cleanup',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'joeun',
+    rawText: '[정리 유형]\ntask로 하지 않음\n\n[정리 사유]\n오늘 회의에서 정리한 내용이라 별도 진행 부담을 만들지 않기로 함'
+  });
+
+  assert.equal(result.status, '정리됨');
+  assert.match(result.responseText, /task를 정리됨으로 변경했습니다/);
+  assert.deepEqual(store.calls.find(([name]) => name === 'submitTaskResult')[1], {
+    taskId: 'task-1',
+    resultType: '정리됨',
+    rawText: '[정리 유형]\ntask로 하지 않음\n\n[정리 사유]\n오늘 회의에서 정리한 내용이라 별도 진행 부담을 만들지 않기로 함',
+    submittedByUserKey: 'joeun'
+  });
+  assert.deepEqual(store.calls.find(([name]) => name === 'updateTaskContextFromCleanup')[1], {
+    taskId: 'task-1',
+    cleanedByUserKey: 'joeun',
+    cleanupType: 'task로 하지 않음',
+    reason: '오늘 회의에서 정리한 내용이라 별도 진행 부담을 만들지 않기로 함',
+    rawText: '[정리 유형]\ntask로 하지 않음\n\n[정리 사유]\n오늘 회의에서 정리한 내용이라 별도 진행 부담을 만들지 않기로 함'
+  });
+  assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '정리됨');
+  assert.ok(store.calls.some(([name]) => name === 'listOpenTasksForUser'));
 });
 
 test('handleTaskActionSubmission stores change request output', async () => {

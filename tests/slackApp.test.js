@@ -282,6 +282,20 @@ test('registerIdeaCruiseRoute creates roadmap patches from the current roadmap a
               neededInfo: '거리별 지연',
               doneCriteria: 'MANET 방식 후보 비교'
             }
+          },
+          {
+            id: 'task-cleaned',
+            assigneeUserKey: 'joeun',
+            title: '회의에서 정리한 임시 기준',
+            status: '정리됨',
+            context: {
+              cleanupHistory: [
+                {
+                  cleanupType: 'task로 하지 않음',
+                  reason: '로드맵 구멍을 인지하고 별도 task로 진행하지 않음'
+                }
+              ]
+            }
           }
         ];
       },
@@ -331,6 +345,7 @@ test('registerIdeaCruiseRoute creates roadmap patches from the current roadmap a
   assert.equal(response.body.roadmapPatch.updatedTopics[0].targetId, 'roadmap-sound');
   assert.match(generatorCalls[0].meetingMaterials, /기성 차음 귀마개/);
   assert.match(generatorCalls[0].taskSignals[0].text, /MANET 방식 후보 비교/);
+  assert.match(generatorCalls[0].taskSignals.find((signal) => signal.id === 'subjector-task-task-cleaned').text, /task로 하지 않음/);
   assert.equal(generatorCalls[0].currentRoadmap[0].id, 'roadmap-sound');
   assert.ok(response.body.topics.every((topic) => !String(topic.title).startsWith('Task: ')));
   assert.ok(response.body.topics.every((topic) => topic.sourceType !== 'meeting-context'));
@@ -612,7 +627,21 @@ test('registerIdeaCruiseRoute creates IDEA CRUISE task candidates through the ge
     config: teamConfig,
     store: {
       async listAllTasks() {
-        return [];
+        return [
+          {
+            id: 'task-cleaned',
+            title: '회의에서 이미 정리한 기준',
+            status: '정리됨',
+            context: {
+              cleanupHistory: [
+                {
+                  cleanupType: '회의에서 해결됨',
+                  reason: '오늘 회의에서 기준을 정해서 추가 task로 진행하지 않음'
+                }
+              ]
+            }
+          }
+        ];
       },
       async listRecentMeetingContexts() {
         return ['회의-결과록: 녹음본 전사에서 5~10m 통신 우선 확인'];
@@ -662,6 +691,8 @@ test('registerIdeaCruiseRoute creates IDEA CRUISE task candidates through the ge
   assert.match(generatorCalls[0].completedPages[0].text, /공사현장/);
   assert.match(generatorCalls[0].meetingRecord, /수기 회의록/);
   assert.match(generatorCalls[0].meetingRecord, /회의-결과록: 녹음본 전사/);
+  assert.match(generatorCalls[0].currentTasks[0].status, /정리됨/);
+  assert.match(generatorCalls[0].currentTasks[0].context.cleanupHistory[0].reason, /추가 task로 진행하지 않음/);
 });
 
 test('registerIdeaCruiseRoute rejects task candidate generation when generator is missing', async () => {
