@@ -132,10 +132,12 @@ test('renderIdeaCruisePage supports fixed activity panels, anonymous questions, 
   assert.match(html, /\.roadmap-panel \{ display: flex; flex-direction: column; height: calc\(100vh - 150px\)/);
   assert.match(html, /\.roadmap-shell \{[\s\S]*flex: 1/);
   assert.doesNotMatch(html, /height: calc\(100% - 272px\)/);
-  assert.match(html, /\.ask-panel \{ height:/);
+  assert.match(html, /\.task-panel, \.question-drawer \.question-panel \{ height:/);
   assert.match(html, /id="question-log"/);
   assert.match(html, /id="clear-questions"/);
   assert.match(html, /질문 기록 지우기/);
+  assert.match(html, /id="task-list"/);
+  assert.match(html, /회의 자료로 task 생성/);
   assert.doesNotMatch(html, /grid-template-rows: minmax\(380px, 6fr\) minmax\(260px, 4fr\)/);
   assert.match(html, /감지 예민도 기본/);
   assert.match(html, /id="zoom-in"/);
@@ -144,20 +146,24 @@ test('renderIdeaCruisePage supports fixed activity panels, anonymous questions, 
   assert.doesNotMatch(html, /질문자|담당자 지정|질문에서 task/);
 });
 
-test('renderIdeaCruisePage keeps task candidates in a right drawer opened from the top right', () => {
+test('renderIdeaCruisePage keeps public questions in a right drawer opened from the top right', () => {
   const html = renderIdeaCruisePage();
   const sideStack = html.match(/<section class="side-stack">([\s\S]*?)<\/section>\s*<\/main>/)?.[1] || '';
+  const questionDrawer = html.match(/<aside id="question-drawer"[\s\S]*?<\/aside>/)?.[0] || '';
 
-  assert.match(html, /id="open-task-drawer"[^>]*>Task 후보/);
-  assert.match(html, /id="task-drawer"/);
-  assert.match(html, /class="task-drawer/);
-  assert.match(html, /id="close-task-drawer"/);
-  assert.match(html, /state\.taskDrawerOpen/);
-  assert.match(html, /document\.body\.classList\.toggle\('task-drawer-open'/);
-  assert.match(html, /document\.getElementById\('open-task-drawer'\)\.addEventListener/);
-  assert.match(html, /document\.getElementById\('close-task-drawer'\)\.addEventListener/);
-  assert.match(html, /document\.getElementById\('task-drawer-backdrop'\)\.addEventListener/);
-  assert.doesNotMatch(sideStack, /Task Candidates|task-panel/);
+  assert.match(html, /id="open-question-drawer"[^>]*>질문/);
+  assert.match(html, /id="question-drawer"/);
+  assert.match(html, /class="question-drawer/);
+  assert.match(html, /id="close-question-drawer"/);
+  assert.match(html, /state\.questionDrawerOpen/);
+  assert.match(html, /document\.body\.classList\.toggle\('question-drawer-open'/);
+  assert.match(html, /document\.getElementById\('open-question-drawer'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('close-question-drawer'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('question-drawer-backdrop'\)\.addEventListener/);
+  assert.match(sideStack, /Task Candidates|task-panel/);
+  assert.doesNotMatch(sideStack, /Public Questions|question-panel/);
+  assert.match(questionDrawer, /Public Questions/);
+  assert.match(questionDrawer, /id="question-form"/);
 });
 
 test('renderIdeaCruisePage color codes roadmap card states', () => {

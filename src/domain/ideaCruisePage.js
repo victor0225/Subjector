@@ -147,8 +147,7 @@ export function renderIdeaCruisePage() {
     .panel-head p { margin-bottom: 0; }
 
     .roadmap-panel { display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 720px; }
-    .ask-panel { height: 100%; min-height: 0; }
-    .task-drawer .task-panel { height: 100%; min-height: 0; }
+    .task-panel, .question-drawer .question-panel { height: 100%; min-height: 0; }
     .roadmap-shell {
       position: relative;
       flex: 1;
@@ -559,7 +558,7 @@ export function renderIdeaCruisePage() {
     }
     .task-generation textarea { min-height: 82px; }
 
-    .task-drawer-backdrop {
+    .question-drawer-backdrop {
       position: fixed;
       inset: 0;
       z-index: 20;
@@ -568,7 +567,7 @@ export function renderIdeaCruisePage() {
       pointer-events: none;
       transition: opacity 180ms ease;
     }
-    .task-drawer {
+    .question-drawer {
       position: fixed;
       top: 0;
       right: 0;
@@ -581,13 +580,13 @@ export function renderIdeaCruisePage() {
       transform: translateX(100%);
       transition: transform 180ms ease;
     }
-    .task-drawer[aria-hidden="true"] { pointer-events: none; }
-    body.task-drawer-open { overflow: hidden; }
-    body.task-drawer-open .task-drawer-backdrop {
+    .question-drawer[aria-hidden="true"] { pointer-events: none; }
+    body.question-drawer-open { overflow: hidden; }
+    body.question-drawer-open .question-drawer-backdrop {
       opacity: 1;
       pointer-events: auto;
     }
-    body.task-drawer-open .task-drawer {
+    body.question-drawer-open .question-drawer {
       transform: translateX(0);
     }
 
@@ -618,8 +617,8 @@ export function renderIdeaCruisePage() {
       header, .panel-head { flex-direction: column; }
       .app-shell { grid-template-columns: 1fr; }
       .roadmap-panel, .side-stack { height: auto; min-height: auto; }
-      .ask-panel { min-height: 360px; }
-      .task-drawer { width: 100vw; padding: 10px; }
+      .task-panel { min-height: 360px; }
+      .question-drawer { width: 100vw; padding: 10px; }
       .roadmap-shell, .tasks { max-height: none; }
     }
   </style>
@@ -634,7 +633,7 @@ export function renderIdeaCruisePage() {
       <span>로드맵 생성: GPT-5.4</span>
       <span>Task 후보 생성: GPT-5.4</span>
       <span>감지 예민도 기본</span>
-      <button id="open-task-drawer" class="primary" type="button">Task 후보</button>
+      <button id="open-question-drawer" class="primary" type="button">질문</button>
     </div>
   </header>
 
@@ -672,50 +671,50 @@ export function renderIdeaCruisePage() {
     </section>
 
     <section class="side-stack">
-      <aside class="panel ask-panel">
+      <aside class="panel task-panel">
         <div class="panel-head">
           <div>
-            <h2>Public Questions</h2>
-            <p>로드맵, GitHub, 회의록 맥락으로 바로 묻고 답합니다. 질문과 답변은 팀 전체에게 같은 로그로 보입니다.</p>
+            <h2>Task Candidates</h2>
+            <p>회의록, 회의 녹음본 전사, 현재 로드맵을 기준으로 자료조사, 검증, 구현처럼 시간이 필요한 일만 task 후보로 만듭니다.</p>
           </div>
-          <button id="clear-questions" type="button">질문 기록 지우기</button>
+          <button id="refresh-tasks" class="primary" type="button">회의 자료로 task 생성</button>
         </div>
-        <div class="question-area">
-          <div id="question-log" class="question-log" aria-live="polite"></div>
-          <form id="question-form" class="question-form">
-            <label>질문<textarea id="question-input" placeholder="예: 이번 MVP에서 주변음 보존까지 같이 봐야 하나?"></textarea></label>
-            <div class="actions">
-              <button id="submit-question" class="primary" type="submit">질문 보내기</button>
-              <span id="question-status" class="pending-count"></span>
-            </div>
-          </form>
+        <div class="tasks">
+          <div class="task-generation">
+            <label>회의 자료 보충<textarea id="task-meeting-record" placeholder="회의-결과록에 올린 회의록/전사문이 있으면 자동 참고합니다. 여기에 보충 메모를 붙여도 됩니다."></textarea></label>
+          </div>
+          <div id="task-filter" class="task-filter"></div>
+          <div id="task-generation-error"></div>
+          <div id="task-list"></div>
+          <div id="task-update-list"></div>
+          <div id="not-task-list"></div>
         </div>
       </aside>
     </section>
   </main>
 
-  <div id="task-drawer-backdrop" class="task-drawer-backdrop" hidden></div>
-  <aside id="task-drawer" class="task-drawer" aria-hidden="true">
-    <section class="panel task-panel">
+  <div id="question-drawer-backdrop" class="question-drawer-backdrop" hidden></div>
+  <aside id="question-drawer" class="question-drawer" aria-hidden="true">
+    <section class="panel question-panel">
       <div class="panel-head">
         <div>
-          <h2>Task Candidates</h2>
-          <p>회의록, 회의 녹음본 전사, 현재 로드맵을 기준으로 자료조사, 검증, 구현처럼 시간이 필요한 일만 task 후보로 만듭니다.</p>
+          <h2>Public Questions</h2>
+          <p>로드맵, GitHub, 회의록 맥락으로 바로 묻고 답합니다. 질문과 답변은 팀 전체에게 같은 로그로 보입니다.</p>
         </div>
         <div class="actions">
-          <button id="refresh-tasks" class="primary" type="button">회의 자료로 task 생성</button>
-          <button id="close-task-drawer" type="button">닫기</button>
+          <button id="clear-questions" type="button">질문 기록 지우기</button>
+          <button id="close-question-drawer" type="button">닫기</button>
         </div>
       </div>
-      <div class="tasks">
-        <div class="task-generation">
-          <label>회의 자료 보충<textarea id="task-meeting-record" placeholder="회의-결과록에 올린 회의록/전사문이 있으면 자동 참고합니다. 여기에 보충 메모를 붙여도 됩니다."></textarea></label>
-        </div>
-        <div id="task-filter" class="task-filter"></div>
-        <div id="task-generation-error"></div>
-        <div id="task-list"></div>
-        <div id="task-update-list"></div>
-        <div id="not-task-list"></div>
+      <div class="question-area">
+        <div id="question-log" class="question-log" aria-live="polite"></div>
+        <form id="question-form" class="question-form">
+          <label>질문<textarea id="question-input" placeholder="예: 이번 MVP에서 주변음 보존까지 같이 봐야 하나?"></textarea></label>
+          <div class="actions">
+            <button id="submit-question" class="primary" type="submit">질문 보내기</button>
+            <span id="question-status" class="pending-count"></span>
+          </div>
+        </form>
       </div>
     </section>
   </aside>
@@ -780,8 +779,8 @@ export function renderIdeaCruisePage() {
     const taskUpdateListEl = document.getElementById('task-update-list');
     const notTaskListEl = document.getElementById('not-task-list');
     const taskFilterEl = document.getElementById('task-filter');
-    const taskDrawerEl = document.getElementById('task-drawer');
-    const taskDrawerBackdropEl = document.getElementById('task-drawer-backdrop');
+    const questionDrawerEl = document.getElementById('question-drawer');
+    const questionDrawerBackdropEl = document.getElementById('question-drawer-backdrop');
     const topicDialog = document.getElementById('topic-dialog');
     const parentTopicEl = document.getElementById('parent-topic');
     const questionLogEl = document.getElementById('question-log');
@@ -879,7 +878,7 @@ export function renderIdeaCruisePage() {
         taskMeetingRecord: '',
         focusedDetailTopicId: null,
         roadmapScale: 1,
-        taskDrawerOpen: false
+        questionDrawerOpen: false
       };
     }
 
@@ -1765,10 +1764,10 @@ export function renderIdeaCruisePage() {
       document.getElementById('task-generation-error').innerHTML = state.taskGenerationError ? '<div class="error-log">' + escapeHtml(state.taskGenerationError) + '</div>' : '';
     }
 
-    function renderTaskDrawer() {
-      document.body.classList.toggle('task-drawer-open', Boolean(state.taskDrawerOpen));
-      taskDrawerEl.setAttribute('aria-hidden', state.taskDrawerOpen ? 'false' : 'true');
-      taskDrawerBackdropEl.hidden = !state.taskDrawerOpen;
+    function renderQuestionDrawer() {
+      document.body.classList.toggle('question-drawer-open', Boolean(state.questionDrawerOpen));
+      questionDrawerEl.setAttribute('aria-hidden', state.questionDrawerOpen ? 'false' : 'true');
+      questionDrawerBackdropEl.hidden = !state.questionDrawerOpen;
     }
 
     function renderQuestions() {
@@ -1825,7 +1824,7 @@ export function renderIdeaCruisePage() {
       renderTasks();
       renderTaskUpdates();
       renderNotTasks();
-      renderTaskDrawer();
+      renderQuestionDrawer();
       renderQuestions();
       if (document.activeElement !== taskMeetingRecordEl) {
         taskMeetingRecordEl.value = state.taskMeetingRecord || '';
@@ -1855,16 +1854,16 @@ export function renderIdeaCruisePage() {
     }
 
     document.getElementById('add-topic').addEventListener('click', openTopicDialog);
-    document.getElementById('open-task-drawer').addEventListener('click', function() {
-      state.taskDrawerOpen = true;
+    document.getElementById('open-question-drawer').addEventListener('click', function() {
+      state.questionDrawerOpen = true;
       render();
     });
-    document.getElementById('close-task-drawer').addEventListener('click', function() {
-      state.taskDrawerOpen = false;
+    document.getElementById('close-question-drawer').addEventListener('click', function() {
+      state.questionDrawerOpen = false;
       render();
     });
-    document.getElementById('task-drawer-backdrop').addEventListener('click', function() {
-      state.taskDrawerOpen = false;
+    document.getElementById('question-drawer-backdrop').addEventListener('click', function() {
+      state.questionDrawerOpen = false;
       render();
     });
     document.getElementById('refresh-roadmap').addEventListener('click', async function(event) {
