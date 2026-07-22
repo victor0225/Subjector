@@ -148,6 +148,7 @@ export function renderIdeaCruisePage() {
 
     .roadmap-panel { display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 720px; }
     .task-panel, .question-drawer .question-panel { height: 100%; min-height: 0; }
+    .question-drawer .question-panel { display: flex; flex-direction: column; }
     .roadmap-shell {
       position: relative;
       flex: 1;
@@ -490,7 +491,7 @@ export function renderIdeaCruisePage() {
       display: grid;
       grid-template-rows: 1fr auto;
       gap: 12px;
-      height: calc(100% - 78px);
+      flex: 1;
       min-height: 0;
       padding: 14px;
     }

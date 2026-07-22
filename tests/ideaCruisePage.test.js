@@ -155,6 +155,9 @@ test('renderIdeaCruisePage keeps public questions in a right drawer opened from 
   assert.match(html, /id="question-drawer"/);
   assert.match(html, /class="question-drawer/);
   assert.match(html, /id="close-question-drawer"/);
+  assert.match(html, /\.question-drawer \.question-panel \{[\s\S]*display: flex;[\s\S]*flex-direction: column/);
+  assert.match(html, /\.question-area \{[\s\S]*flex: 1/);
+  assert.doesNotMatch(html, /\.question-area \{[\s\S]*height: calc\(100% - 78px\)/);
   assert.match(html, /state\.questionDrawerOpen/);
   assert.match(html, /document\.body\.classList\.toggle\('question-drawer-open'/);
   assert.match(html, /document\.getElementById\('open-question-drawer'\)\.addEventListener/);
