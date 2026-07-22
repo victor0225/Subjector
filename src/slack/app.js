@@ -21,6 +21,7 @@ import { createInProcessService } from '../services/inProcessService.js';
 import { createMeetingTaskExtractor } from '../services/meetingTaskExtractorFactory.js';
 import { createMeetingService } from '../services/meetingService.js';
 import { createOpenAiIdeaCruiseCardAnalyzer } from '../services/openaiIdeaCruiseCardAnalyzer.js';
+import { createOpenAiIdeaCruiseRoadmapPatchGenerator } from '../services/openaiIdeaCruiseRoadmapPatchGenerator.js';
 import { createOpenAiIdeaCruiseTaskGenerator } from '../services/openaiIdeaCruiseTaskGenerator.js';
 import { createSlackFileDownloader } from '../services/slackFileDownloader.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
@@ -127,22 +128,6 @@ function trimForRoadmap(text, limit = 900) {
   return normalized.length > limit ? `${normalized.slice(0, limit)}...` : normalized;
 }
 
-function roadmapContextId(text, index) {
-  let hash = 0;
-  const value = String(text || '');
-  for (let i = 0; i < value.length; i += 1) {
-    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
-  }
-  return `meeting-context-${index}-${Math.abs(hash).toString(36)}`;
-}
-
-function meetingContextTitle(context, index) {
-  const titleLine = String(context || '').split('\n').find((line) => line.trim().startsWith('회의:'));
-  return titleLine
-    ? `회의 맥락: ${titleLine.replace(/^회의:\s*/, '').trim()}`
-    : `회의 맥락: 최근 회의 ${index + 1}`;
-}
-
 function userDisplayFromKey(config, userKey) {
   const user = config.users?.find((item) => item.key === userKey);
   return user?.displayName || user?.fullName || userKey || '미배정';
@@ -165,27 +150,20 @@ function taskRoadmapText(task, config) {
   ].filter(Boolean).join('\n');
 }
 
-function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], githubContexts = [], roadmapReflections = [], meetingContexts = [], config = {} }) {
-  const topics = [];
+function buildIdeaCruiseTaskSignals({ tasks = [], changeRequests = [], config = {} }) {
+  const signals = [];
 
   for (const task of tasks.filter((item) => IDEA_CRUISE_ROADMAP_TASK_STATUSES.has(item.status))) {
-    const taskExternalId = `subjector-task-${task.id}`;
-    topics.push({
-      externalId: taskExternalId,
-      parentExternalId: '',
-      sourceType: 'subjector-task',
-      sourceTaskId: task.id,
-      title: `Task: ${task.title}`,
+    signals.push({
+      id: `subjector-task-${task.id}`,
+      title: task.title || '제목 없는 task',
       text: taskRoadmapText(task, config)
     });
 
     const changeHistory = Array.isArray(task.context?.changeHistory) ? task.context.changeHistory : [];
     for (const change of changeHistory.slice(-3)) {
-      topics.push({
-        externalId: `subjector-task-change-${task.id}-${change.createdAt || topics.length}`,
-        parentExternalId: taskExternalId,
-        sourceType: 'subjector-change',
-        sourceTaskId: task.id,
+      signals.push({
+        id: `subjector-task-change-${task.id}-${change.createdAt || signals.length}`,
         title: `변경 반영: ${task.title}`,
         text: [
           '[담당자 변경 반영]',
@@ -199,11 +177,8 @@ function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], github
   }
 
   for (const request of changeRequests.slice(0, 20)) {
-    topics.push({
-      externalId: `subjector-change-request-${request.taskId}-${request.createdAt}`,
-      parentExternalId: `subjector-task-${request.taskId}`,
-      sourceType: 'change-request',
-      sourceTaskId: request.taskId,
+    signals.push({
+      id: `subjector-change-request-${request.taskId}-${request.createdAt}`,
       title: `변경 요청: ${request.taskTitle}`,
       text: [
         '[변경 요청]',
@@ -213,6 +188,12 @@ function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], github
       ].join('\n')
     });
   }
+
+  return signals;
+}
+
+function buildIdeaCruiseRoadmapContext({ githubContexts = [], roadmapReflections = [] }) {
+  const topics = [];
 
   if (githubContexts.length > 0) {
     topics.push({
@@ -238,19 +219,6 @@ function buildIdeaCruiseRoadmapContext({ tasks = [], changeRequests = [], github
     });
   }
 
-  for (const [index, context] of meetingContexts.slice(0, 5).entries()) {
-    topics.push({
-      externalId: roadmapContextId(context, index),
-      parentExternalId: '',
-      sourceType: 'meeting-context',
-      title: meetingContextTitle(context, index),
-      text: [
-        '[회의 전사/회의록 맥락]',
-        trimForRoadmap(context, 1200)
-      ].join('\n')
-    });
-  }
-
   return topics;
 }
 
@@ -259,6 +227,7 @@ export function registerIdeaCruiseRoute(receiver, {
   store = null,
   inProcessService = null,
   cardAnalyzer = null,
+  roadmapPatchGenerator = null,
   taskCandidateGenerator = null,
   githubContextProvider = null
 } = {}) {
@@ -270,6 +239,45 @@ export function registerIdeaCruiseRoute(receiver, {
 
   receiver.router.get('/idea-cruise/roadmap-context', async (req, res) => {
     try {
+      const [githubContexts, roadmapReflections] = await Promise.all([
+        githubContextProvider?.listContext ? githubContextProvider.listContext({ repoLimit: 6, issueLimit: 4 }) : [],
+        store?.listRecentRoadmapReflections ? store.listRecentRoadmapReflections({ limit: 10 }) : []
+      ]);
+
+      return res.status(200).json({
+        ok: true,
+        generatedAt: new Date().toISOString(),
+        topics: buildIdeaCruiseRoadmapContext({
+          githubContexts,
+          roadmapReflections
+        })
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: error.message
+      });
+    }
+  });
+
+  receiver.router.post('/idea-cruise/roadmap-patch', async (req, res) => {
+    try {
+      if (!roadmapPatchGenerator?.generate) {
+        return res.status(503).json({
+          ok: false,
+          error: '로드맵 patch 생성 연결이 아직 준비되지 않았습니다.'
+        });
+      }
+
+      const body = await readIdeaCruiseTaskBody(req);
+      const currentRoadmap = Array.isArray(body.roadmapSnapshot) ? body.roadmapSnapshot : [];
+      if (currentRoadmap.length === 0) {
+        return res.status(400).json({
+          ok: false,
+          error: 'patch를 적용할 현재 로드맵이 없습니다.'
+        });
+      }
+
       const [tasks, changeRequests, githubContexts, roadmapReflections, meetingContexts] = await Promise.all([
         store?.listAllTasks ? store.listAllTasks({ limit: 100 }) : [],
         store?.listAllChangeRequests ? store.listAllChangeRequests({ limit: 50 }) : [],
@@ -278,16 +286,28 @@ export function registerIdeaCruiseRoute(receiver, {
         store?.listRecentMeetingContexts ? store.listRecentMeetingContexts({ limit: 5 }) : []
       ]);
 
+      const meetingMaterials = [
+        ...meetingContexts,
+        ...roadmapReflections.map((reflection) => [
+          reflection.title || '회의 반영',
+          reflection.text || '',
+          ...(Array.isArray(reflection.cards) ? reflection.cards.map((card) => [card.title, card.body, card.suggestion].filter(Boolean).join(' / ')) : [])
+        ].filter(Boolean).join('\n'))
+      ].filter(Boolean).join('\n\n---\n\n');
+
+      const roadmapPatch = await roadmapPatchGenerator.generate({
+        currentRoadmap,
+        meetingMaterials,
+        taskSignals: buildIdeaCruiseTaskSignals({ tasks, changeRequests, config }),
+        githubSignals: githubContexts
+      });
+
       return res.status(200).json({
         ok: true,
-        generatedAt: new Date().toISOString(),
+        roadmapPatch,
         topics: buildIdeaCruiseRoadmapContext({
-          tasks,
-          changeRequests,
           githubContexts,
-          roadmapReflections,
-          meetingContexts,
-          config
+          roadmapReflections
         })
       });
     } catch (error) {
@@ -1674,6 +1694,13 @@ export function createSlackApp({
     })
     : null;
 
+  const ideaCruiseRoadmapPatchGenerator = config.openai?.apiKey
+    ? createOpenAiIdeaCruiseRoadmapPatchGenerator({
+      apiKey: config.openai.apiKey,
+      model: config.openai.taskExtractionModel
+    })
+    : null;
+
   const githubContextProvider = createGitHubOrganizationContextProvider({
     organizationUrl: config.github?.organizationUrl,
     repositories: config.github?.repositories,
@@ -1685,6 +1712,7 @@ export function createSlackApp({
     store,
     inProcessService: service,
     cardAnalyzer: ideaCruiseCardAnalyzer,
+    roadmapPatchGenerator: ideaCruiseRoadmapPatchGenerator,
     taskCandidateGenerator: ideaCruiseTaskCandidateGenerator,
     githubContextProvider
   });

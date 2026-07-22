@@ -911,7 +911,10 @@ export function renderIdeaCruisePage() {
             completed: Boolean(topic.completed),
             position: topic.position || null,
             hasTeamOpinion: Boolean(topic.hasTeamOpinion),
-            reflectionSummary: topic.reflectionSummary || ''
+            reflectionSummary: topic.reflectionSummary || '',
+            fixedItems: Array.isArray(topic.fixedItems) ? topic.fixedItems : [],
+            scope: topic.scope || '',
+            meetingEvidence: Array.isArray(topic.meetingEvidence) ? topic.meetingEvidence : []
           };
         }),
         fixedCount: fixedCount,
@@ -933,6 +936,9 @@ export function renderIdeaCruisePage() {
         completed: false,
         splitApplied: false,
         splitDismissed: false,
+        fixedItems: [],
+        scope: '',
+        meetingEvidence: [],
         cards: []
       }, topic, {
         cards: [],
@@ -1189,9 +1195,19 @@ export function renderIdeaCruisePage() {
       return fallback ? [fallback] : [];
     }
 
+    function appendMeetingEvidence(topic, sections) {
+      if (Array.isArray(topic.meetingEvidence) && topic.meetingEvidence.length) {
+        sections.push({
+          title: '회의 근거',
+          items: topic.meetingEvidence
+        });
+      }
+      return sections;
+    }
+
     function roadmapDetailSections(topic) {
       if (topic.fixed) {
-        return [
+        return appendMeetingEvidence(topic, [
           { title: '기준 내용', body: topic.text || '고정된 기준입니다.' },
           {
             title: '회의에서 확정된 근거',
@@ -1201,16 +1217,16 @@ export function renderIdeaCruisePage() {
             title: '적용 범위',
             body: topic.scope || '이 카드와 연결된 하위 브랜치 및 task 후보의 기준으로 사용합니다.'
           }
-        ];
+        ]);
       }
 
-      return [
+      return appendMeetingEvidence(topic, [
         { title: '현재 정리된 내용', body: topic.text || '아직 정리 중인 카드입니다.' },
         {
           title: '아직 결정 안 된 부분',
           items: topicListFrom(topic.openItems, '회의에서 마무리되면 고정 버튼으로 기준화합니다.')
         }
-      ];
+      ]);
     }
 
     function renderRoadmapDetailSections(topic) {
@@ -1241,6 +1257,9 @@ export function renderIdeaCruisePage() {
       if (incoming.sourceType === 'github' && includesAny(incoming.text || '', ['조회 실패', '접근 권한', 'Not Found'])) {
         return true;
       }
+      if (['meeting-context', 'subjector-task', 'subjector-change', 'change-request'].includes(incoming.sourceType)) {
+        return true;
+      }
       return false;
     }
 
@@ -1254,6 +1273,105 @@ export function renderIdeaCruisePage() {
       if (!target.fixedItems) target.fixedItems = [];
       if (summary && !target.fixedItems.includes(summary)) {
         target.fixedItems = target.fixedItems.concat(summary).slice(-4);
+      }
+    }
+
+    function mergeUniqueStrings(current, incoming, limit) {
+      const merged = [];
+      (Array.isArray(current) ? current : []).concat(Array.isArray(incoming) ? incoming : []).forEach(function(item) {
+        const value = compactText(item, 320);
+        if (value && !merged.includes(value)) {
+          merged.push(value);
+        }
+      });
+      return merged.slice(-(limit || 8));
+    }
+
+    function topicPositionNearParent(parentId, index) {
+      const parent = state.topics.find(function(topic) { return topic.id === parentId; });
+      const base = parent?.position || { x: 80, y: 220 };
+      return {
+        x: base.x + 300,
+        y: Math.max(80, base.y + (index * 116))
+      };
+    }
+
+    function applyRoadmapPatch(roadmapPatch) {
+      const updated = [];
+      const created = [];
+      const warningCards = [];
+      const currentIds = new Set(state.topics.map(function(topic) { return topic.id; }));
+
+      (roadmapPatch?.updatedTopics || []).forEach(function(patch) {
+        const target = state.topics.find(function(topic) { return topic.id === patch.targetId; });
+        if (!target) return;
+        if (patch.title) target.title = patch.title;
+        if (patch.text) target.text = patch.text;
+        target.fixedItems = mergeUniqueStrings(target.fixedItems, patch.fixedItems, 8);
+        target.meetingEvidence = mergeUniqueStrings(target.meetingEvidence, patch.meetingEvidence, 8);
+        target.scope = patch.scope || target.scope || '';
+        target.hasTeamOpinion = target.hasTeamOpinion || Boolean(patch.hasTeamOpinion) || target.meetingEvidence.length > 0;
+        target.reflectionSummary = compactText(target.meetingEvidence[0] || patch.text || patch.title || target.reflectionSummary, 140);
+        updated.push(target.title);
+        ensurePriorityCards(target);
+      });
+
+      (roadmapPatch?.createdTopics || []).forEach(function(patch, index) {
+        const requestedId = String(patch.clientId || '').trim();
+        const id = requestedId && !currentIds.has(requestedId) ? requestedId : createId('topic');
+        const parentId = state.topics.some(function(topic) { return topic.id === patch.parentId; }) ? patch.parentId : null;
+        const topic = {
+          id: id,
+          title: patch.title || '새 로드맵 카드',
+          text: patch.text || patch.title || '',
+          parentId: parentId,
+          fixed: false,
+          completed: true,
+          splitApplied: false,
+          splitDismissed: false,
+          cards: [],
+          sourceType: 'roadmap-patch',
+          hasTeamOpinion: true,
+          reflectionSummary: compactText((patch.meetingEvidence || [])[0] || patch.text || '', 140),
+          fixedItems: mergeUniqueStrings([], patch.fixedItems, 8),
+          scope: patch.scope || '',
+          meetingEvidence: mergeUniqueStrings([], patch.meetingEvidence, 8),
+          position: topicPositionNearParent(parentId, index)
+        };
+        state.topics.push(topic);
+        currentIds.add(id);
+        created.push(topic.title);
+        ensurePriorityCards(topic);
+      });
+
+      (roadmapPatch?.warnings || []).forEach(function(warning, index) {
+        (warning.targetIds || []).forEach(function(targetId) {
+          const topic = state.topics.find(function(item) { return item.id === targetId; });
+          if (!topic) return;
+          const cardId = 'roadmap-warning-' + index + '-' + targetId;
+          topic.cards = [{
+            id: cardId,
+            kind: 'conflict',
+            type: '충돌 감지',
+            title: warning.title || '충돌 감지',
+            body: warning.body || '',
+            suggestion: '',
+            impact: '연결 topic: ' + warning.targetIds.join(', '),
+            affectedTopicIds: warning.targetIds || []
+          }].concat((topic.cards || []).filter(function(card) { return card.id !== cardId; }));
+          warningCards.push(topic.title);
+          ensurePriorityCards(topic);
+        });
+      });
+
+      state.refreshMessage = [
+        updated.length ? 'patch 갱신 ' + updated.length + '개' : '',
+        created.length ? 'patch 추가 ' + created.length + '개' : '',
+        warningCards.length ? '충돌 감지 ' + warningCards.length + '개' : ''
+      ].filter(Boolean).join(' · ') || '새로 반영할 roadmapPatch가 없습니다.';
+
+      if (!state.activeTopicId && state.topics.length) {
+        state.activeTopicId = state.topics[0].id;
       }
     }
 
@@ -1367,11 +1485,30 @@ export function renderIdeaCruisePage() {
     }
 
     async function refreshRoadmapContext() {
-      const response = await fetch('/idea-cruise/roadmap-context');
+      const response = await fetch('/idea-cruise/roadmap-patch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roadmapSnapshot: state.topics.map(function(topic) {
+            return {
+              id: topic.id,
+              title: topic.title,
+              text: topic.text,
+              parentId: topic.parentId || '',
+              fixed: Boolean(topic.fixed),
+              fixedItems: Array.isArray(topic.fixedItems) ? topic.fixedItems : [],
+              scope: topic.scope || '',
+              meetingEvidence: Array.isArray(topic.meetingEvidence) ? topic.meetingEvidence : [],
+              position: topic.position || null
+            };
+          })
+        })
+      });
       const result = await response.json().catch(function() { return {}; });
       if (!response.ok) {
         throw new Error(result.error || '로드맵 반영에 실패했습니다.');
       }
+      applyRoadmapPatch(result.roadmapPatch || {});
       mergeRoadmapContext(result.topics || []);
     }
 

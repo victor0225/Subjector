@@ -104,7 +104,7 @@ test('renderIdeaCruisePage keeps roadmap cards as reference criteria instead of 
 test('renderIdeaCruisePage calls existing IDEA CRUISE APIs', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /fetch\('\/idea-cruise\/roadmap-context'/);
+  assert.match(html, /fetch\('\/idea-cruise\/roadmap-patch'/);
   assert.match(html, /fetch\('\/idea-cruise\/cards'/);
   assert.match(html, /fetch\('\/idea-cruise\/questions'/);
   assert.match(html, /fetch\('\/idea-cruise\/task-candidates'/);
@@ -322,6 +322,20 @@ test('renderIdeaCruisePage overlays old roadmap reflections onto existing first-
   assert.match(html, /조회 실패/);
   assert.match(html, /return;\s*\n\s*\}/);
   assert.doesNotMatch(html, /firstReflectedTopicId = topic\.id/);
+});
+
+test('renderIdeaCruisePage applies roadmap patches instead of turning meeting context or tasks into first-floor cards', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /function applyRoadmapPatch\(roadmapPatch\)/);
+  assert.match(html, /fetch\('\/idea-cruise\/roadmap-patch'/);
+  assert.match(html, /method: 'POST'/);
+  assert.match(html, /roadmapSnapshot: state\.topics\.map/);
+  assert.match(html, /applyRoadmapPatch\(result\.roadmapPatch/);
+  assert.match(html, /meetingEvidence/);
+  assert.match(html, /회의 근거/);
+  assert.doesNotMatch(html, /incoming\.sourceType === 'meeting-context'[\s\S]*state\.topics\.push/);
+  assert.doesNotMatch(html, /title: 'Task: '/);
 });
 
 test('renderIdeaCruisePage makes meeting-material task generation the main task workflow', () => {

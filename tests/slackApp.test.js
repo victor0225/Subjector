@@ -64,10 +64,11 @@ test('buildBootHealthStatus reports OpenAI when meeting task extraction uses Ope
   assert.match(status.openai.message, /task extraction/);
 });
 
-test('createSlackApp wires IDEA CRUISE task candidates to OpenAI GPT-5.4 while transcription stays Gemini', () => {
+test('createSlackApp wires IDEA CRUISE roadmap and task candidates to OpenAI GPT-5.4 while transcription stays Gemini', () => {
   const source = readFileSync(new URL('../src/slack/app.js', import.meta.url), 'utf8');
 
   assert.match(source, /createOpenAiIdeaCruiseTaskGenerator/);
+  assert.match(source, /createOpenAiIdeaCruiseRoadmapPatchGenerator/);
   assert.match(source, /model: config\.openai\.taskExtractionModel/);
   assert.doesNotMatch(source, /createGeminiIdeaCruiseTaskGenerator/);
   assert.match(source, /createGeminiMeetingTranscriber/);
@@ -245,14 +246,94 @@ test('registerIdeaCruiseRoute serves roadmap refresh context without a pin', asy
   await route.handler({ query: {} }, accepted);
   assert.equal(accepted.statusCode, 200);
   assert.equal(accepted.body.ok, true);
-  assert.ok(accepted.body.topics.some((topic) => topic.title === 'Task: 하드웨어 후보 비교'));
-  assert.ok(accepted.body.topics.some((topic) => topic.title === '변경 반영: 하드웨어 후보 비교'));
   assert.ok(accepted.body.topics.some((topic) => topic.title === 'GitHub 프로젝트 상태'));
-  assert.ok(accepted.body.topics.some((topic) => topic.sourceType === 'meeting-context'));
-  assert.ok(accepted.body.topics.some((topic) => /Subjector 프로젝트 하드웨어/.test(topic.title)));
+  assert.ok(accepted.body.topics.every((topic) => !String(topic.title).startsWith('Task: ')));
+  assert.ok(accepted.body.topics.every((topic) => topic.sourceType !== 'meeting-context'));
+  assert.ok(accepted.body.topics.every((topic) => topic.sourceType !== 'subjector-task'));
   const reflection = accepted.body.topics.find((topic) => topic.sourceType === 'roadmap-reflection');
   assert.equal(reflection.title, '회의 반영: 소음 차단 범위 결정');
   assert.equal(reflection.cards[0].kind, 'decision');
+});
+
+test('registerIdeaCruiseRoute creates roadmap patches from the current roadmap and meeting evidence', async () => {
+  const routes = [];
+  const generatorCalls = [];
+  const receiver = {
+    router: {
+      get() {},
+      post(path, handler) {
+        routes.push({ path, handler });
+      }
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: teamConfig,
+    store: {
+      async listAllTasks() {
+        return [
+          {
+            id: 'task-1',
+            assigneeUserKey: 'suhyeon',
+            title: '하드웨어 후보 비교',
+            status: '수락',
+            context: {
+              why: 'ESP32 통신 보드를 정해야 함',
+              neededInfo: '거리별 지연',
+              doneCriteria: 'MANET 방식 후보 비교'
+            }
+          }
+        ];
+      },
+      async listAllChangeRequests() {
+        return [];
+      },
+      async listRecentMeetingContexts() {
+        return [
+          '회의: 하드웨어 및 AI 모델 설계\n결정: 기성 차음 귀마개 개조, EfficientAT 검토, MANET 통신 설계'
+        ];
+      }
+    },
+    githubContextProvider: {
+      async listContext() {
+        return ['repo SAFIRA-ondevice/Soohyun | updated'];
+      }
+    },
+    roadmapPatchGenerator: {
+      async generate(input) {
+        generatorCalls.push(input);
+        return {
+          updatedTopics: [
+            {
+              targetId: 'roadmap-sound',
+              text: '기성 차음 귀마개 개조와 ESP32 입력을 기준으로 소리 수집부를 정리한다.',
+              meetingEvidence: ['회의: 기성 차음 귀마개 개조 결정']
+            }
+          ],
+          createdTopics: []
+        };
+      }
+    }
+  });
+
+  const route = routes.find((item) => item.path === '/idea-cruise/roadmap-patch');
+  const response = createJsonResponse();
+  await route.handler({
+    body: {
+      roadmapSnapshot: [
+        { id: 'roadmap-sound', title: '헤드셋, ESP32 연결부', text: '소리 듣는 부분' }
+      ]
+    }
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.ok, true);
+  assert.equal(response.body.roadmapPatch.updatedTopics[0].targetId, 'roadmap-sound');
+  assert.match(generatorCalls[0].meetingMaterials, /기성 차음 귀마개/);
+  assert.match(generatorCalls[0].taskSignals[0].text, /MANET 방식 후보 비교/);
+  assert.equal(generatorCalls[0].currentRoadmap[0].id, 'roadmap-sound');
+  assert.ok(response.body.topics.every((topic) => !String(topic.title).startsWith('Task: ')));
+  assert.ok(response.body.topics.every((topic) => topic.sourceType !== 'meeting-context'));
 });
 
 test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply with an unknown assignee', async () => {
