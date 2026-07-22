@@ -13,7 +13,7 @@ test('renderIdeaCruisePage exposes the two-layer roadmap desk', () => {
   assert.match(html, /Task Candidates/);
   assert.match(html, /Public Questions/);
   assert.match(html, /id="load-roadmap"/);
-  assert.doesNotMatch(html, /id="refresh-roadmap"/);
+  assert.match(html, /id="refresh-roadmap"/);
   assert.doesNotMatch(html, /Meeting Record|generate-record|copy-record/);
   assert.doesNotMatch(html, /간단 메모 붙여넣기/);
   assert.doesNotMatch(html, /라이브 회의/);
@@ -162,9 +162,12 @@ test('renderIdeaCruisePage matches the pinned roadmap card mockup behavior', () 
   assert.match(html, /id="save-roadmap"/);
   assert.match(html, /로드맵 저장/);
   assert.match(html, /id="load-roadmap"/);
-  assert.match(html, /로드맵 불러오기/);
+  assert.match(html, /저장본 불러오기/);
+  assert.match(html, /id="refresh-roadmap"/);
+  assert.match(html, /최신 반영 불러오기/);
   assert.match(html, /saveRoadmapSnapshot\(\)/);
   assert.match(html, /loadRoadmapSnapshot\(\)/);
+  assert.match(html, /refreshRoadmapContext\(\)/);
   assert.match(html, /카드 고정 = 기준 확정/);
   assert.match(html, /로드맵 저장 = 회의 마침 기준 보관/);
   assert.match(html, /function roadmapDetailSections\(topic\)/);
@@ -320,6 +323,7 @@ test('renderIdeaCruisePage binds visible controls without removed DOM references
   const html = renderIdeaCruisePage();
 
   assert.match(html, /document\.getElementById\('add-topic'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('refresh-roadmap'\)\.addEventListener/);
   assert.match(html, /document\.getElementById\('load-roadmap'\)\.addEventListener/);
   assert.match(html, /document\.getElementById\('refresh-tasks'\)\.addEventListener/);
   assert.match(html, /document\.getElementById\('question-form'\)\.addEventListener/);

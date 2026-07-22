@@ -615,7 +615,8 @@ export function renderIdeaCruisePage() {
         </div>
         <div class="actions">
           <button id="add-topic" class="primary" type="button">Topic 추가</button>
-          <button id="load-roadmap" type="button">로드맵 불러오기</button>
+          <button id="refresh-roadmap" type="button">최신 반영 불러오기</button>
+          <button id="load-roadmap" type="button">저장본 불러오기</button>
           <button id="save-roadmap" type="button">로드맵 저장</button>
         </div>
       </div>
@@ -1669,6 +1670,18 @@ export function renderIdeaCruisePage() {
     }
 
     document.getElementById('add-topic').addEventListener('click', openTopicDialog);
+    document.getElementById('refresh-roadmap').addEventListener('click', async function(event) {
+      event.target.disabled = true;
+      try {
+        await refreshRoadmapContext();
+        saveState();
+      } catch (error) {
+        state.refreshMessage = error.message;
+      }
+      event.target.disabled = false;
+      render();
+    });
+
     document.getElementById('load-roadmap').addEventListener('click', function() {
       loadRoadmapSnapshot();
       render();
