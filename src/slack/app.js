@@ -15,13 +15,13 @@ import {
   parseTaskActionMetadata
 } from '../domain/taskActions.js';
 import { createGeminiMeetingTranscriber } from '../services/geminiMeetingTranscriber.js';
-import { createGeminiIdeaCruiseTaskGenerator } from '../services/geminiIdeaCruiseTaskGenerator.js';
 import { createFinalsNarrator } from '../services/finalsNarratorFactory.js';
 import { createGitHubOrganizationContextProvider } from '../services/githubOrganizationContext.js';
 import { createInProcessService } from '../services/inProcessService.js';
 import { createMeetingTaskExtractor } from '../services/meetingTaskExtractorFactory.js';
 import { createMeetingService } from '../services/meetingService.js';
 import { createOpenAiIdeaCruiseCardAnalyzer } from '../services/openaiIdeaCruiseCardAnalyzer.js';
+import { createOpenAiIdeaCruiseTaskGenerator } from '../services/openaiIdeaCruiseTaskGenerator.js';
 import { createSlackFileDownloader } from '../services/slackFileDownloader.js';
 import { createSupabaseStore } from '../services/supabaseStore.js';
 import { createTaskEvaluator } from '../services/taskEvaluatorFactory.js';
@@ -1667,10 +1667,10 @@ export function createSlackApp({
     })
     : null;
 
-  const ideaCruiseTaskCandidateGenerator = config.gemini?.apiKey
-    ? createGeminiIdeaCruiseTaskGenerator({
-      apiKey: config.gemini.apiKey,
-      model: 'gemini-2.5-flash'
+  const ideaCruiseTaskCandidateGenerator = config.openai?.apiKey
+    ? createOpenAiIdeaCruiseTaskGenerator({
+      apiKey: config.openai.apiKey,
+      model: config.openai.taskExtractionModel
     })
     : null;
 

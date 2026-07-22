@@ -122,9 +122,6 @@ export function renderIdeaCruisePage() {
       padding: 18px 22px;
     }
     .side-stack {
-      display: grid;
-      grid-template-rows: minmax(380px, 6fr) minmax(260px, 4fr);
-      gap: 16px;
       height: calc(100vh - 150px);
       min-height: 720px;
     }
@@ -150,7 +147,8 @@ export function renderIdeaCruisePage() {
     .panel-head p { margin-bottom: 0; }
 
     .roadmap-panel { display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 720px; }
-    .ask-panel, .task-panel { height: 100%; min-height: 0; }
+    .ask-panel { height: 100%; min-height: 0; }
+    .task-drawer .task-panel { height: 100%; min-height: 0; }
     .roadmap-shell {
       position: relative;
       flex: 1;
@@ -561,6 +559,38 @@ export function renderIdeaCruisePage() {
     }
     .task-generation textarea { min-height: 82px; }
 
+    .task-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      background: rgba(19, 37, 48, 0.32);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+    .task-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 21;
+      width: min(560px, 100vw);
+      height: 100vh;
+      padding: 16px;
+      background: var(--bg);
+      box-shadow: -22px 0 44px rgba(19, 37, 48, 0.18);
+      transform: translateX(100%);
+      transition: transform 180ms ease;
+    }
+    .task-drawer[aria-hidden="true"] { pointer-events: none; }
+    body.task-drawer-open { overflow: hidden; }
+    body.task-drawer-open .task-drawer-backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    body.task-drawer-open .task-drawer {
+      transform: translateX(0);
+    }
+
     .meeting-panel { margin: 0 22px 22px; }
     .record {
       margin: 14px;
@@ -588,7 +618,8 @@ export function renderIdeaCruisePage() {
       header, .panel-head { flex-direction: column; }
       .app-shell { grid-template-columns: 1fr; }
       .roadmap-panel, .side-stack { height: auto; min-height: auto; }
-      .ask-panel, .task-panel { min-height: 360px; }
+      .ask-panel { min-height: 360px; }
+      .task-drawer { width: 100vw; padding: 10px; }
       .roadmap-shell, .tasks { max-height: none; }
     }
   </style>
@@ -601,8 +632,9 @@ export function renderIdeaCruisePage() {
     </div>
     <div class="status">
       <span>로드맵 생성: GPT-5.4</span>
-      <span>Task 최종 정제: Gemini 2.5 Flash-Lite</span>
+      <span>Task 후보 생성: GPT-5.4</span>
       <span>감지 예민도 기본</span>
+      <button id="open-task-drawer" class="primary" type="button">Task 후보</button>
     </div>
   </header>
 
@@ -659,28 +691,34 @@ export function renderIdeaCruisePage() {
           </form>
         </div>
       </aside>
-
-      <aside class="panel task-panel">
-        <div class="panel-head">
-          <div>
-            <h2>Task Candidates</h2>
-            <p>회의록, 회의 녹음본 전사, 현재 로드맵을 기준으로 자료조사, 검증, 구현처럼 시간이 필요한 일만 task 후보로 만듭니다.</p>
-          </div>
-          <button id="refresh-tasks" class="primary" type="button">회의 자료로 task 생성</button>
-        </div>
-        <div class="tasks">
-          <div class="task-generation">
-            <label>회의 자료 보충<textarea id="task-meeting-record" placeholder="회의-결과록에 올린 회의록/전사문이 있으면 자동 참고합니다. 여기에 보충 메모를 붙여도 됩니다."></textarea></label>
-          </div>
-          <div id="task-filter" class="task-filter"></div>
-          <div id="task-generation-error"></div>
-          <div id="task-list"></div>
-          <div id="task-update-list"></div>
-          <div id="not-task-list"></div>
-        </div>
-      </aside>
     </section>
   </main>
+
+  <div id="task-drawer-backdrop" class="task-drawer-backdrop" hidden></div>
+  <aside id="task-drawer" class="task-drawer" aria-hidden="true">
+    <section class="panel task-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Task Candidates</h2>
+          <p>회의록, 회의 녹음본 전사, 현재 로드맵을 기준으로 자료조사, 검증, 구현처럼 시간이 필요한 일만 task 후보로 만듭니다.</p>
+        </div>
+        <div class="actions">
+          <button id="refresh-tasks" class="primary" type="button">회의 자료로 task 생성</button>
+          <button id="close-task-drawer" type="button">닫기</button>
+        </div>
+      </div>
+      <div class="tasks">
+        <div class="task-generation">
+          <label>회의 자료 보충<textarea id="task-meeting-record" placeholder="회의-결과록에 올린 회의록/전사문이 있으면 자동 참고합니다. 여기에 보충 메모를 붙여도 됩니다."></textarea></label>
+        </div>
+        <div id="task-filter" class="task-filter"></div>
+        <div id="task-generation-error"></div>
+        <div id="task-list"></div>
+        <div id="task-update-list"></div>
+        <div id="not-task-list"></div>
+      </div>
+    </section>
+  </aside>
 
   <dialog id="topic-dialog">
     <form id="topic-form" method="dialog">
@@ -742,6 +780,8 @@ export function renderIdeaCruisePage() {
     const taskUpdateListEl = document.getElementById('task-update-list');
     const notTaskListEl = document.getElementById('not-task-list');
     const taskFilterEl = document.getElementById('task-filter');
+    const taskDrawerEl = document.getElementById('task-drawer');
+    const taskDrawerBackdropEl = document.getElementById('task-drawer-backdrop');
     const topicDialog = document.getElementById('topic-dialog');
     const parentTopicEl = document.getElementById('parent-topic');
     const questionLogEl = document.getElementById('question-log');
@@ -838,7 +878,8 @@ export function renderIdeaCruisePage() {
         roadmapSnapshot: null,
         taskMeetingRecord: '',
         focusedDetailTopicId: null,
-        roadmapScale: 1
+        roadmapScale: 1,
+        taskDrawerOpen: false
       };
     }
 
@@ -1587,6 +1628,12 @@ export function renderIdeaCruisePage() {
       document.getElementById('task-generation-error').innerHTML = state.taskGenerationError ? '<div class="error-log">' + escapeHtml(state.taskGenerationError) + '</div>' : '';
     }
 
+    function renderTaskDrawer() {
+      document.body.classList.toggle('task-drawer-open', Boolean(state.taskDrawerOpen));
+      taskDrawerEl.setAttribute('aria-hidden', state.taskDrawerOpen ? 'false' : 'true');
+      taskDrawerBackdropEl.hidden = !state.taskDrawerOpen;
+    }
+
     function renderQuestions() {
       questionLogEl.innerHTML = questionMessages.length
         ? questionMessages.map(function(message) {
@@ -1641,6 +1688,7 @@ export function renderIdeaCruisePage() {
       renderTasks();
       renderTaskUpdates();
       renderNotTasks();
+      renderTaskDrawer();
       renderQuestions();
       if (document.activeElement !== taskMeetingRecordEl) {
         taskMeetingRecordEl.value = state.taskMeetingRecord || '';
@@ -1670,6 +1718,18 @@ export function renderIdeaCruisePage() {
     }
 
     document.getElementById('add-topic').addEventListener('click', openTopicDialog);
+    document.getElementById('open-task-drawer').addEventListener('click', function() {
+      state.taskDrawerOpen = true;
+      render();
+    });
+    document.getElementById('close-task-drawer').addEventListener('click', function() {
+      state.taskDrawerOpen = false;
+      render();
+    });
+    document.getElementById('task-drawer-backdrop').addEventListener('click', function() {
+      state.taskDrawerOpen = false;
+      render();
+    });
     document.getElementById('refresh-roadmap').addEventListener('click', async function(event) {
       event.target.disabled = true;
       try {

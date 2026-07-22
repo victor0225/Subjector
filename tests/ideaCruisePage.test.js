@@ -24,9 +24,10 @@ test('renderIdeaCruisePage documents the model split at each AI step', () => {
   const html = renderIdeaCruisePage();
 
   assert.match(html, /로드맵 생성: GPT-5\.4/);
-  assert.match(html, /Task 최종 정제: Gemini 2\.5 Flash-Lite/);
+  assert.match(html, /Task 후보 생성: GPT-5\.4/);
   assert.match(html, /자료조사, 검증, 구현/);
   assert.doesNotMatch(html, /회의록 생성: Gemini 2\.5 Flash-Lite/);
+  assert.doesNotMatch(html, /Task 최종 정제: Gemini 2\.5 Flash-Lite/);
 });
 
 test('renderIdeaCruisePage stores topic/root state locally', () => {
@@ -131,16 +132,32 @@ test('renderIdeaCruisePage supports fixed activity panels, anonymous questions, 
   assert.match(html, /\.roadmap-panel \{ display: flex; flex-direction: column; height: calc\(100vh - 150px\)/);
   assert.match(html, /\.roadmap-shell \{[\s\S]*flex: 1/);
   assert.doesNotMatch(html, /height: calc\(100% - 272px\)/);
-  assert.match(html, /\.ask-panel, \.task-panel \{ height:/);
+  assert.match(html, /\.ask-panel \{ height:/);
   assert.match(html, /id="question-log"/);
   assert.match(html, /id="clear-questions"/);
   assert.match(html, /질문 기록 지우기/);
-  assert.match(html, /grid-template-rows: minmax\(380px, 6fr\) minmax\(260px, 4fr\)/);
+  assert.doesNotMatch(html, /grid-template-rows: minmax\(380px, 6fr\) minmax\(260px, 4fr\)/);
   assert.match(html, /감지 예민도 기본/);
   assert.match(html, /id="zoom-in"/);
   assert.match(html, /id="zoom-out"/);
   assert.match(html, /data-move-topic/);
   assert.doesNotMatch(html, /질문자|담당자 지정|질문에서 task/);
+});
+
+test('renderIdeaCruisePage keeps task candidates in a right drawer opened from the top right', () => {
+  const html = renderIdeaCruisePage();
+  const sideStack = html.match(/<section class="side-stack">([\s\S]*?)<\/section>\s*<\/main>/)?.[1] || '';
+
+  assert.match(html, /id="open-task-drawer"[^>]*>Task 후보/);
+  assert.match(html, /id="task-drawer"/);
+  assert.match(html, /class="task-drawer/);
+  assert.match(html, /id="close-task-drawer"/);
+  assert.match(html, /state\.taskDrawerOpen/);
+  assert.match(html, /document\.body\.classList\.toggle\('task-drawer-open'/);
+  assert.match(html, /document\.getElementById\('open-task-drawer'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('close-task-drawer'\)\.addEventListener/);
+  assert.match(html, /document\.getElementById\('task-drawer-backdrop'\)\.addEventListener/);
+  assert.doesNotMatch(sideStack, /Task Candidates|task-panel/);
 });
 
 test('renderIdeaCruisePage color codes roadmap card states', () => {

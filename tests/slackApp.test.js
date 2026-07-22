@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   buildBootHealthStatus,
   registerIdeaCruiseRoute,
@@ -61,6 +62,15 @@ test('buildBootHealthStatus reports OpenAI when meeting task extraction uses Ope
 
   assert.equal(status.openai.ok, true);
   assert.match(status.openai.message, /task extraction/);
+});
+
+test('createSlackApp wires IDEA CRUISE task candidates to OpenAI GPT-5.4 while transcription stays Gemini', () => {
+  const source = readFileSync(new URL('../src/slack/app.js', import.meta.url), 'utf8');
+
+  assert.match(source, /createOpenAiIdeaCruiseTaskGenerator/);
+  assert.match(source, /model: config\.openai\.taskExtractionModel/);
+  assert.doesNotMatch(source, /createGeminiIdeaCruiseTaskGenerator/);
+  assert.match(source, /createGeminiMeetingTranscriber/);
 });
 
 test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
