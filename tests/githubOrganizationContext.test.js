@@ -74,6 +74,54 @@ test('GitHub context still reports explicit repo access failure clearly', async 
   assert.match(context[0], /SAFIRA-ondevice\/Soohyun 조회 실패/);
 });
 
+test('GitHub context explains private repo failures when no token is configured', async () => {
+  const provider = createGitHubOrganizationContextProvider({
+    organizationUrl: 'https://github.com/SAFIRA-ondevice',
+    repositories: ['SAFIRA-ondevice/Soohyun'],
+    token: '',
+    fetchImpl: async (url) => {
+      if (url.includes('/repos/SAFIRA-ondevice/Soohyun')) {
+        return {
+          ok: false,
+          status: 404,
+          async text() {
+            return '{"message":"Not Found"}';
+          }
+        };
+      }
+      return jsonResponse([]);
+    }
+  });
+
+  const context = await provider.listContext();
+
+  assert.match(context[0], /GITHUB_TOKEN 미설정/);
+});
+
+test('GitHub context explains private repo failures when token lacks repo access', async () => {
+  const provider = createGitHubOrganizationContextProvider({
+    organizationUrl: 'https://github.com/SAFIRA-ondevice',
+    repositories: ['SAFIRA-ondevice/Soohyun'],
+    token: 'github_pat_readonly',
+    fetchImpl: async (url) => {
+      if (url.includes('/repos/SAFIRA-ondevice/Soohyun')) {
+        return {
+          ok: false,
+          status: 404,
+          async text() {
+            return '{"message":"Not Found"}';
+          }
+        };
+      }
+      return jsonResponse([]);
+    }
+  });
+
+  const context = await provider.listContext();
+
+  assert.match(context[0], /토큰이 이 private repository에 read-only 접근 권한이 없거나/);
+});
+
 test('GitHub context reads selected private repository files with token auth', async () => {
   const calls = [];
   const provider = createGitHubOrganizationContextProvider({

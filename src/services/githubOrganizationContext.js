@@ -149,6 +149,23 @@ async function fetchJson(fetchImpl, url, headers) {
   return response.json();
 }
 
+function formatRepositoryAccessError(repository, error, hasToken) {
+  const message = error.message || String(error);
+  if (/^404\b/.test(message)) {
+    const hint = hasToken
+      ? '토큰이 이 private repository에 read-only 접근 권한이 없거나 GitHub fine-grained token의 repository access 선택에 포함되지 않았습니다.'
+      : 'GITHUB_TOKEN 미설정 상태라 private repository를 읽을 수 없습니다. Render 환경변수에 SAFIRA-ondevice read-only token을 추가해야 합니다.';
+    return `${repository} 조회 실패: ${message} (${hint})`;
+  }
+  if (/^401\b/.test(message) || /Bad credentials/i.test(message)) {
+    return `${repository} 조회 실패: ${message} (GITHUB_TOKEN이 만료되었거나 잘못되었습니다.)`;
+  }
+  if (/^403\b/.test(message)) {
+    return `${repository} 조회 실패: ${message} (GITHUB_TOKEN 권한 또는 SAFIRA organization 승인 상태를 확인해야 합니다.)`;
+  }
+  return `${repository} 조회 실패: ${message}`;
+}
+
 export function createGitHubOrganizationContextProvider({
   organizationUrl = DEFAULT_ORGANIZATION_URL,
   repositories = DEFAULT_REPOSITORIES,
@@ -243,7 +260,7 @@ export function createGitHubOrganizationContextProvider({
         );
         await addRepositoryContext(repo);
       } catch (error) {
-        contexts.push(`${repository} 조회 실패: ${error.message}`);
+        contexts.push(formatRepositoryAccessError(repository, error, Boolean(token)));
       }
     }
 
