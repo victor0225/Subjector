@@ -1,5 +1,50 @@
 const DEFAULT_ORGANIZATION_URL = 'https://github.com/SAFIRA-ondevice';
 const DEFAULT_REPOSITORIES = ['SAFIRA-ondevice/Soohyun'];
+const DEFAULT_FILE_LIMIT = 8;
+const DEFAULT_FILE_BYTE_LIMIT = 3200;
+const MAX_FETCHABLE_FILE_SIZE = 80_000;
+const EXCLUDED_PATH_SEGMENTS = new Set([
+  '.git',
+  '.next',
+  '.turbo',
+  'build',
+  'coverage',
+  'dist',
+  'node_modules',
+  'target',
+  'vendor',
+  '__pycache__'
+]);
+const EXCLUDED_FILENAMES = new Set([
+  '.env',
+  '.env.local',
+  '.env.production',
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'bun.lockb'
+]);
+const TEXT_EXTENSIONS = new Set([
+  '.c',
+  '.cc',
+  '.cpp',
+  '.css',
+  '.h',
+  '.hpp',
+  '.html',
+  '.ino',
+  '.js',
+  '.json',
+  '.jsx',
+  '.md',
+  '.py',
+  '.ts',
+  '.tsx',
+  '.txt',
+  '.toml',
+  '.yaml',
+  '.yml'
+]);
 
 function parseOrganizationName(organizationUrl = DEFAULT_ORGANIZATION_URL) {
   const trimmed = String(organizationUrl || DEFAULT_ORGANIZATION_URL).trim();
@@ -18,6 +63,81 @@ function normalizeRepositoryName(repository) {
     .replace(/^https:\/\/github\.com\//i, '')
     .replace(/\.git$/i, '')
     .replace(/^\/+|\/+$/g, '');
+}
+
+function basename(path) {
+  return path.split('/').filter(Boolean).at(-1) || '';
+}
+
+function extensionOf(path) {
+  const name = basename(path).toLowerCase();
+  const index = name.lastIndexOf('.');
+  return index >= 0 ? name.slice(index) : '';
+}
+
+function encodeContentPath(path) {
+  return path.split('/').map((part) => encodeURIComponent(part)).join('/');
+}
+
+function isExcludedPath(path) {
+  const normalized = String(path || '').trim();
+  if (!normalized) return true;
+  const lowerPath = normalized.toLowerCase();
+  const parts = lowerPath.split('/').filter(Boolean);
+  const fileName = parts.at(-1) || '';
+  if (parts.some((part) => EXCLUDED_PATH_SEGMENTS.has(part))) return true;
+  if (EXCLUDED_FILENAMES.has(fileName)) return true;
+  if (/(^|\/)(secret|secrets|credentials?|private-key)(\/|\.|$)/i.test(normalized)) return true;
+  if (/\.(aac|avif|bin|bmp|dll|exe|gif|ico|jpg|jpeg|mp3|mp4|ogg|pdf|png|so|wav|webp|zip)$/i.test(normalized)) return true;
+  return false;
+}
+
+function isUsefulTextFile(entry) {
+  if (!entry || entry.type !== 'blob' || !entry.path) return false;
+  if (isExcludedPath(entry.path)) return false;
+  if (Number(entry.size || 0) > MAX_FETCHABLE_FILE_SIZE) return false;
+  const fileName = basename(entry.path).toLowerCase();
+  if (fileName === 'readme' || fileName.startsWith('readme.')) return true;
+  if (fileName === 'dockerfile' || fileName === 'makefile') return true;
+  return TEXT_EXTENSIONS.has(extensionOf(entry.path));
+}
+
+function filePriority(entry) {
+  const path = entry.path.toLowerCase();
+  const fileName = basename(path);
+  if (fileName.startsWith('readme')) return 0;
+  if (path.startsWith('docs/')) return 1;
+  if (path.includes('roadmap') || path.includes('meeting')) return 2;
+  if (['package.json', 'pyproject.toml', 'requirements.txt'].includes(fileName)) return 3;
+  if (path.startsWith('src/')) return 4;
+  return 5;
+}
+
+function selectRepositoryFiles(tree, limit) {
+  return (Array.isArray(tree) ? tree : [])
+    .filter(isUsefulTextFile)
+    .sort((a, b) => filePriority(a) - filePriority(b) || a.path.localeCompare(b.path))
+    .slice(0, Math.max(0, limit));
+}
+
+function decodeGitHubContent(payload) {
+  if (!payload || payload.type !== 'file' || payload.encoding !== 'base64' || !payload.content) {
+    return '';
+  }
+  const normalized = String(payload.content).replace(/\s/g, '');
+  const text = Buffer.from(normalized, 'base64').toString('utf8');
+  if (text.includes('\u0000')) return '';
+  return text;
+}
+
+function compactExcerpt(text, byteLimit) {
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, Math.max(0, byteLimit));
 }
 
 async function fetchJson(fetchImpl, url, headers) {
@@ -47,7 +167,12 @@ export function createGitHubOrganizationContextProvider({
     headers.Authorization = `Bearer ${token}`;
   }
 
-  async function listContext({ repoLimit = 6, issueLimit = 4 } = {}) {
+  async function listContext({
+    repoLimit = 6,
+    issueLimit = 4,
+    fileLimit = DEFAULT_FILE_LIMIT,
+    fileByteLimit = DEFAULT_FILE_BYTE_LIMIT
+  } = {}) {
     if (!fetchImpl) {
       return [`GitHub organization ${organizationUrl} 조회 불가: fetch unavailable`];
     }
@@ -80,6 +205,33 @@ export function createGitHubOrganizationContextProvider({
       } catch (error) {
         contexts.push(`${repo.full_name} issue 조회 실패: ${error.message}`);
       }
+
+      try {
+        const branch = repo.default_branch || 'main';
+        const tree = await fetchJson(
+          fetchImpl,
+          `https://api.github.com/repos/${repo.full_name}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+          headers
+        );
+        const files = selectRepositoryFiles(tree.tree, fileLimit);
+        for (const file of files) {
+          try {
+            const payload = await fetchJson(
+              fetchImpl,
+              `https://api.github.com/repos/${repo.full_name}/contents/${encodeContentPath(file.path)}?ref=${encodeURIComponent(branch)}`,
+              headers
+            );
+            const excerpt = compactExcerpt(decodeGitHubContent(payload), fileByteLimit);
+            if (excerpt) {
+              contexts.push(`${repo.full_name} file ${file.path}: ${excerpt}`);
+            }
+          } catch (error) {
+            contexts.push(`${repo.full_name} file ${file.path} 조회 실패: ${error.message}`);
+          }
+        }
+      } catch (error) {
+        contexts.push(`${repo.full_name} 파일 목록 조회 실패: ${error.message}`);
+      }
     }
 
     for (const repository of explicitRepositories) {
@@ -98,13 +250,13 @@ export function createGitHubOrganizationContextProvider({
     try {
       const repos = await fetchJson(
         fetchImpl,
-        `https://api.github.com/orgs/${organization}/repos?per_page=${repoLimit}&sort=updated`,
+        `https://api.github.com/orgs/${organization}/repos?type=all&per_page=${repoLimit}&sort=updated`,
         headers
       );
 
       if (!Array.isArray(repos) || repos.length === 0) {
         if (contexts.length > 0) return contexts;
-        return [`GitHub organization ${organizationUrl}: 공개 repository가 없거나 접근 권한이 없습니다.`];
+        return [`GitHub organization ${organizationUrl}: repository가 없거나 read-only 접근 권한이 없습니다.`];
       }
 
       for (const repo of repos.slice(0, repoLimit)) {

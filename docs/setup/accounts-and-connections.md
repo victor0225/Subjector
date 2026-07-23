@@ -14,6 +14,21 @@ Needed:
 
 - Push permission from this PC.
 - Private repo access from any future laptop/session that will continue development.
+- A fine-grained read-only GitHub personal access token for IDEA CRUISE roadmap context:
+  - Resource owner: `SAFIRA-ondevice`.
+  - Repository access: selected SAFIRA repos, starting with `SAFIRA-ondevice/Soohyun`.
+  - Required permissions: `Metadata: Read-only`, `Contents: Read-only`.
+  - Optional permissions: `Issues: Read-only`, `Pull requests: Read-only`.
+
+Store only in Render/local `.env`:
+
+```text
+GITHUB_ORGANIZATION_URL=https://github.com/SAFIRA-ondevice
+GITHUB_REPOSITORIES=SAFIRA-ondevice/Soohyun
+GITHUB_TOKEN=github_pat_...
+```
+
+Subjector reads the private repositories server-side and passes bounded file excerpts to IDEA CRUISE. Do not paste the token into Slack, prompts, screenshots, or committed files.
 
 ## 2. Slack
 

@@ -58,6 +58,10 @@ GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-flash
 GEMINI_TASK_EXTRACTION_MODEL=gemini-3.5-flash
 GEMINI_FINALS_SUMMARY_MODEL=gemini-3.5-flash
 
+GITHUB_ORGANIZATION_URL=https://github.com/SAFIRA-ondevice
+GITHUB_REPOSITORIES=SAFIRA-ondevice/Soohyun
+GITHUB_TOKEN=github_pat_read_only_contents_for_private_safira_repos
+
 MEETING_CHANNEL_ID=C...
 IN_PROCESS_CHANNEL_ID=C...
 FINALS_CHANNEL_ID=C...
@@ -67,6 +71,8 @@ USERS_JSON=[{"key":"suhyeon","slack_id":"U...","full_name":"조수현","display_
 ```
 
 `USERS_JSON` must stay on one line.
+
+`GITHUB_TOKEN` is only for the Subjector server. Use a fine-grained GitHub personal access token owned by the `SAFIRA-ondevice` organization with read-only repository access. Grant at least `Metadata: Read-only` and `Contents: Read-only`; add `Issues: Read-only` and `Pull requests: Read-only` if IDEA CRUISE should include open work signals.
 
 Do not commit or paste secret values into GitHub, Slack, or public screenshots.
 
