@@ -410,6 +410,13 @@ export function renderIdeaCruisePage() {
       background: #fbfcfd;
       padding: 10px;
     }
+    .detail-sections article.conflict-detail {
+      border-color: #efbdc2;
+      background: #fff0f1;
+    }
+    .detail-sections article.conflict-detail strong {
+      color: var(--red);
+    }
     .detail-sections strong {
       display: block;
       margin-bottom: 7px;
@@ -1205,9 +1212,34 @@ export function renderIdeaCruisePage() {
       return sections;
     }
 
+    function titleForTopicId(topicId) {
+      const target = state.topics.find(function(item) { return item.id === topicId; });
+      return target ? target.title : topicId;
+    }
+
+    function conflictDetailSections(topic) {
+      const conflicts = (topic.cards || []).filter(function(card) { return card.kind === 'conflict'; });
+      if (!conflicts.length) return [];
+      return conflicts.map(function(card) {
+        const connectedTopics = (card.affectedTopicIds || [])
+          .filter(function(topicId) { return topicId && topicId !== topic.id; })
+          .map(titleForTopicId)
+          .filter(Boolean);
+        return {
+          title: card.title || '충돌 발생 내용',
+          className: 'conflict-detail conflict-meeting-question',
+          items: [
+            card.body ? '감지 내용: ' + card.body : '',
+            connectedTopics.length ? '연결된 충돌 카드: ' + connectedTopics.join(', ') : (card.impact || ''),
+            '회의에서 확인할 것: 어떤 기준을 유지할지, 어느 topic을 수정할지, 별도 브랜치로 분리할지 결정합니다.'
+          ].filter(Boolean)
+        };
+      });
+    }
     function roadmapDetailSections(topic) {
+      const conflictSections = conflictDetailSections(topic);
       if (topic.fixed) {
-        return appendMeetingEvidence(topic, [
+        return appendMeetingEvidence(topic, conflictSections.concat([
           { title: '기준 내용', body: topic.text || '고정된 기준입니다.' },
           {
             title: '회의에서 확정된 근거',
@@ -1217,21 +1249,21 @@ export function renderIdeaCruisePage() {
             title: '적용 범위',
             body: topic.scope || '이 카드와 연결된 하위 브랜치 및 task 후보의 기준으로 사용합니다.'
           }
-        ]);
+        ]));
       }
 
-      return appendMeetingEvidence(topic, [
+      return appendMeetingEvidence(topic, conflictSections.concat([
         { title: '현재 정리된 내용', body: topic.text || '아직 정리 중인 카드입니다.' },
         {
           title: '아직 결정 안 된 부분',
           items: topicListFrom(topic.openItems, '회의에서 마무리되면 고정 버튼으로 기준화합니다.')
         }
-      ]);
+      ]));
     }
 
     function renderRoadmapDetailSections(topic) {
       return '<div class="detail-sections">' + roadmapDetailSections(topic).map(function(section) {
-        return '<article><strong>' + escapeHtml(section.title) + '</strong>' +
+        return '<article class="' + escapeHtml(section.className || '') + '"><strong>' + escapeHtml(section.title) + '</strong>' +
           (section.items
             ? '<ul>' + section.items.map(function(item) { return '<li>' + escapeHtml(item) + '</li>'; }).join('') + '</ul>'
             : '<p>' + escapeHtml(section.body) + '</p>') +

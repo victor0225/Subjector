@@ -73,6 +73,15 @@ test('renderIdeaCruisePage keeps second floor as roadmap detail without old topi
   assert.doesNotMatch(html, /AI 수정안 초안|우리가 하기로 한 것|대기 카드/);
 });
 
+test('renderIdeaCruisePage shows conflict explanation in the second floor detail', () => {
+  const html = renderIdeaCruisePage();
+
+  assert.match(html, /function conflictDetailSections\(topic\)/);
+  assert.match(html, /conflict-detail/);
+  assert.match(html, /conflict-meeting-question/);
+  assert.match(html, /affectedTopicIds/);
+});
+
 test('renderIdeaCruisePage clamps topic nodes and opens details from the fixed card size', () => {
   const html = renderIdeaCruisePage();
 
