@@ -620,13 +620,9 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
 
   if (response.openPersonalTaskBoard && inProcessService) {
     try {
-      const result = await inProcessService.handleStartWork({
+      await inProcessService.handleStartWork({
         user,
         dmChannelId: message.channel
-      });
-      await say({
-        text: result.dmText,
-        blocks: buildTextMessageBlocks(result.dmText)
       });
       return;
     } catch (error) {

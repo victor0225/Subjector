@@ -791,8 +791,7 @@ test('handleDirectDmMessage opens the personal task board for 출근', async () 
   assert.equal(serviceCalls.length, 1);
   assert.equal(serviceCalls[0].user.key, 'suhyeon');
   assert.equal(serviceCalls[0].dmChannelId, 'D_SUHYEON');
-  assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /개인 task 보드/);
+  assert.equal(replies.length, 0);
 });
 
 test('handleDirectDmMessage reports personal task board open failures to the user', async () => {

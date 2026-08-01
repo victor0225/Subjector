@@ -256,7 +256,7 @@ export function createInProcessService({
     }
   }
 
-  async function renderPersonalTaskBoard({ user, dmChannelId = null, now = clock() }) {
+  async function renderPersonalTaskBoard({ user, dmChannelId = null, now = clock(), forcePost = false }) {
     const workDate = formatKstDate(now);
     const purpose = buildPersonalTaskBoardMessagePurpose(user);
     const existingMessage = await store.findSlackMessage({
@@ -280,7 +280,7 @@ export function createInProcessService({
       boardLabel: '개인 task 보드'
     });
 
-    if (existingMessage?.messageTs) {
+    if (existingMessage?.messageTs && !forcePost) {
       try {
         await slackClient.chat.update({
           channel: channelId,
@@ -514,7 +514,12 @@ export function createInProcessService({
       startedAt: now.toISOString()
     });
 
-    const personalResult = await renderPersonalTaskBoard({ user, dmChannelId, now });
+    const personalResult = await renderPersonalTaskBoard({
+      user,
+      dmChannelId,
+      now,
+      forcePost: Boolean(dmChannelId)
+    });
     const teamResult = await renderBoard({ user, now });
     const action = personalResult.action === 'skipped' ? teamResult.action : personalResult.action;
     const verbByAction = {

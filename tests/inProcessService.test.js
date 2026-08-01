@@ -340,6 +340,52 @@ test('handleStartWork opens a personal DM task board and refreshes the team prog
   assert.doesNotMatch(teamUpdate[1].text, /소리 데이터셋 후보 정리/);
   assert.doesNotMatch(teamUpdate[1].text, /작업 제출/);
 });
+test('handleStartWork posts a fresh personal DM task board when a previous DM board exists', async () => {
+  const store = createFakeStore({
+    existingMessagesByPurpose: {
+      'dm_task_board:suhyeon': {
+        channelId: 'D_SUHYEON',
+        messageTs: '1700000000.000010',
+        threadTs: '1700000000.000010'
+      },
+      'in_process:suhyeon': {
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000001'
+      }
+    },
+    tasks: [
+      {
+        id: 'task-1',
+        title: '시연 검증용 스펙트럼·필터링 시각화 방식 초안 정리',
+        assigneeUserKey: 'suhyeon',
+        status: '수락',
+        importance: '보통',
+        coordination: '🟡 중',
+        context: {
+          why: '회의에서 피실험자 체감만으로는 부족하므로 시각화가 필요하다고 했고, 구체적인 시연 화면 설계는 회의 밖에서 검토 시간이 필요한 작업임.'
+        }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T01:00:00.000Z')
+  });
+
+  const result = await service.handleStartWork({ user, dmChannelId: 'D_SUHYEON' });
+
+  const dmPosts = slackClient.calls.filter(([name, input]) => name === 'postMessage' && input.channel === 'D_SUHYEON' && !input.thread_ts);
+  assert.equal(dmPosts.length, 1);
+  assert.match(dmPosts[0][1].text, /개인 task 보드/);
+  assert.match(dmPosts[0][1].text, /시연 검증용 스펙트럼/);
+  assert.ok(JSON.stringify(dmPosts[0][1].blocks).includes('작업 제출'));
+  const activeBoardUpsert = store.calls.find(([name, input]) => name === 'upsertSlackMessage' && input.purpose === 'dm_task_board:suhyeon');
+  assert.equal(activeBoardUpsert[1].messageTs, '1710000000.000001');
+});
 test('handleStartWork updates an existing #in-process message', async () => {
   const store = createFakeStore({
     existingMessage: {
