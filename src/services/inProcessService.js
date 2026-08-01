@@ -400,7 +400,7 @@ export function createInProcessService({
       user,
       tasks,
       workDate,
-      boardLabel: '진행 상태'
+      boardLabel: '팀 진행 과정 보드'
     });
 
     const existingMessage = await store.findSlackMessage({

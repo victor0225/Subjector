@@ -200,7 +200,7 @@ export function formatKstDate(date = new Date()) {
   }).format(date);
 }
 
-export function buildInProcessBoardMessage({ user, tasks = [], workDate = formatKstDate(), boardLabel = '진행 상태' }) {
+export function buildInProcessBoardMessage({ user, tasks = [], workDate = formatKstDate(), boardLabel = '팀 진행 과정 보드' }) {
   const displayName = formatDisplayName(user);
   const sortedTasks = sortTasksForDisplay(tasks);
   const header = [
