@@ -47,6 +47,7 @@ function createFakeStore({
   existingMessagesByPurpose = {},
   taskDetailMessages = [],
   tasks = [],
+  allOpenTasks = tasks,
   endedSessions = [],
   finalsUpdateForDate = null,
   latestCodexPrompt = { prompt: 'Subjector Codex prompt' }
@@ -60,7 +61,11 @@ function createFakeStore({
     },
     async listOpenTasksForUser(userKey) {
       calls.push(['listOpenTasksForUser', userKey]);
-      return tasks;
+      return tasks.filter((task) => !task.assigneeUserKey || task.assigneeUserKey === userKey);
+    },
+    async listOpenTasks(input) {
+      calls.push(['listOpenTasks', input]);
+      return allOpenTasks;
     },
     async findSlackMessage(input) {
       calls.push(['findSlackMessage', input]);
@@ -282,10 +287,31 @@ test('handleStartWork opens a personal DM task board and refreshes the team prog
       {
         id: 'task-1',
         title: '라즈베리파이 통신 방식 정리',
+        assigneeUserKey: 'suhyeon',
         status: '미시작',
         importance: '🔴 상',
         coordination: '🟡 중',
         context: { source: '회의 결과록' }
+      }
+    ],
+    allOpenTasks: [
+      {
+        id: 'task-1',
+        title: '라즈베리파이 통신 방식 정리',
+        assigneeUserKey: 'suhyeon',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      },
+      {
+        id: 'task-2',
+        title: '소리 데이터셋 후보 정리',
+        assigneeUserKey: 'joeun',
+        status: '추가 진행 예정',
+        importance: '🟡 중',
+        coordination: '🟢 하',
+        context: { why: '드론 소리와 말소리 데이터셋 후보를 비교한다.' }
       }
     ]
   });
@@ -301,14 +327,18 @@ test('handleStartWork opens a personal DM task board and refreshes the team prog
   const result = await service.handleStartWork({ user, dmChannelId: 'D_SUHYEON' });
 
   assert.equal(result.personalTaskCount, 1);
+  assert.equal(result.teamTaskCount, 2);
   assert.match(result.dmText, /개인 task 보드/);
   const dmPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.channel === 'D_SUHYEON');
   assert.ok(dmPost);
   assert.match(dmPost[1].text, /라즈베리파이 통신 방식 정리/);
   assert.match(dmPost[1].text, /개인 task 보드/);
+  assert.doesNotMatch(dmPost[1].text, /소리 데이터셋 후보 정리/);
   const teamUpdate = slackClient.calls.find(([name, input]) => name === 'update' && input.channel === 'C_IN_PROCESS');
   assert.ok(teamUpdate);
   assert.match(teamUpdate[1].text, /라즈베리파이 통신 방식 정리/);
+  assert.match(teamUpdate[1].text, /소리 데이터셋 후보 정리/);
+  assert.doesNotMatch(teamUpdate[1].text, /작업 제출/);
 });
 test('handleStartWork updates an existing #in-process message', async () => {
   const store = createFakeStore({
@@ -1162,7 +1192,7 @@ test('handleTaskActionSubmission marks a task cleaned up with type, reason, and 
     rawText: '[정리 유형]\ntask로 하지 않음\n\n[정리 사유]\n오늘 회의에서 정리한 내용이라 별도 진행 부담을 만들지 않기로 함'
   });
   assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '정리됨');
-  assert.ok(store.calls.some(([name]) => name === 'listOpenTasksForUser'));
+  assert.ok(store.calls.some(([name]) => name === 'listOpenTasks'));
 });
 
 test('handleTaskActionSubmission stores change request output', async () => {

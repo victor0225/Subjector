@@ -32,6 +32,17 @@ function isSlackMessageNotFound(error) {
 function buildPersonalTaskBoardMessagePurpose(user) {
   return `dm_task_board:${user.key}`;
 }
+const TEAM_IN_PROCESS_MESSAGE_PURPOSE = 'in_process:team';
+const OPEN_TASK_STATUSES = new Set([
+  '미시작',
+  '수락',
+  '오늘은 여기까지',
+  '추가 진행 예정',
+  '보완 필요',
+  '미정리',
+  '변경 요청 중',
+  '회의 필요'
+]);
 
 function buildPersonalTaskBoardClosedMessage({ user, workDate }) {
   const text = [
@@ -167,6 +178,37 @@ export function createInProcessService({
   finalsNarrator = null,
   logger = console
 }) {
+  async function listTeamOpenTasks() {
+    if (store.listOpenTasks) {
+      return store.listOpenTasks({ limit: 50 });
+    }
+
+    const tasks = await store.listAllTasks({ limit: 100 });
+    return tasks.filter((task) => OPEN_TASK_STATUSES.has(task.status));
+  }
+
+  async function findTeamBoardMessage({ user, channelId }) {
+    const teamMessage = await store.findSlackMessage({
+      purpose: TEAM_IN_PROCESS_MESSAGE_PURPOSE,
+      channelId
+    });
+
+    if (teamMessage) {
+      return { message: teamMessage, migrated: false };
+    }
+
+    const legacyMessage = user
+      ? await store.findSlackMessage({
+          purpose: buildInProcessMessagePurpose(user),
+          channelId
+        })
+      : null;
+
+    return {
+      message: legacyMessage,
+      migrated: Boolean(legacyMessage)
+    };
+  }
   async function postBoardMessage({ channelId, message, purpose }) {
     const posted = await slackClient.chat.postMessage({
       channel: channelId,
@@ -433,9 +475,9 @@ export function createInProcessService({
   async function renderBoard({ user, now = clock() }) {
     const workDate = formatKstDate(now);
     const channelId = config.channels.inProcess;
-    const purpose = buildInProcessMessagePurpose(user);
+    const purpose = TEAM_IN_PROCESS_MESSAGE_PURPOSE;
 
-    const tasks = await store.listOpenTasksForUser(user.key);
+    const tasks = await listTeamOpenTasks();
     const message = buildInProcessBoardMessage({
       user,
       tasks,
@@ -443,8 +485,8 @@ export function createInProcessService({
       boardLabel: '팀 진행 과정 보드'
     });
 
-    const existingMessage = await store.findSlackMessage({
-      purpose,
+    const { message: existingMessage, migrated } = await findTeamBoardMessage({
+      user,
       channelId
     });
 
@@ -477,6 +519,15 @@ export function createInProcessService({
           action: 'reposted',
           taskCount: tasks.length
         };
+      }
+
+      if (migrated) {
+        await store.upsertSlackMessage({
+          purpose,
+          channelId,
+          messageTs: existingMessage.messageTs,
+          threadTs: existingMessage.threadTs ?? existingMessage.messageTs
+        });
       }
 
       await cleanupStaleTaskDetailThreads({
