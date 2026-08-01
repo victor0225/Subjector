@@ -74,6 +74,14 @@ test('createSlackApp wires IDEA CRUISE roadmap and task candidates to OpenAI GPT
   assert.match(source, /createGeminiMeetingTranscriber/);
 });
 
+
+test('createSlackApp logs Slack handler errors instead of letting them escape silently', () => {
+  const source = readFileSync(new URL('../src/slack/app.js', import.meta.url), 'utf8');
+
+  assert.match(source, /Direct DM handler failed/);
+  assert.match(source, /app\.error\(async/);
+  assert.match(source, /Slack app error/);
+});
 test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
   const routes = [];
   const receiver = {
@@ -798,7 +806,7 @@ test('handleDirectDmMessage reports personal task board open failures to the use
     config,
     logger: { info() {}, error(error) { errors.push(error); } },
     inProcessService: {
-      async handleRefreshInProcess() {
+      async handleStartWork() {
         throw new Error('Slack post failed');
       }
     }

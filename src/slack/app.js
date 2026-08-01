@@ -789,17 +789,25 @@ async function sendDirectMessages({ client, messages = [] }) {
   }
 }
 
+function logHandlerError(logger, label, error) {
+  logger.error?.(`${label}: ${error?.message ?? error}`);
+  logger.error?.(error);
+}
 function registerDmHandlers(app, config, logger, inProcessService, meetingService) {
   app.message(async ({ message, say, client }) => {
-    await handleDirectDmMessage({
-      message,
-      say,
-      client,
-      config,
-      logger,
-      inProcessService,
-      meetingService
-    });
+    try {
+      await handleDirectDmMessage({
+        message,
+        say,
+        client,
+        config,
+        logger,
+        inProcessService,
+        meetingService
+      });
+    } catch (error) {
+      logHandlerError(logger, 'Direct DM handler failed', error);
+    }
   });
 }
 
@@ -1689,6 +1697,10 @@ export function createSlackApp({
     token: config.slack.botToken,
     receiver,
     deferInitialization
+  });
+
+  app.error(async (error) => {
+    logHandlerError(logger, 'Slack app error', error);
   });
 
   const store = createSupabaseStore(createClient(config.supabase.url, config.supabase.serviceRoleKey, {
