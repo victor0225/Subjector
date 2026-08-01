@@ -598,7 +598,7 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 }
 
-export async function handleDirectDmMessage({ message, say, client = null, config, logger = console, inProcessService, meetingService = null, backgroundRunner = (task) => runInBackground(task, logger) }) {
+export async function handleDirectDmMessage({ message, say, config, logger = console, inProcessService, meetingService = null }) {
   if (!isDirectUserMessage(message)) {
     return;
   }
@@ -652,52 +652,6 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
     }
   }
 
-  if (response.updateInProcess && inProcessService) {
-    try {
-      const result = await inProcessService.handleStartWork({ user });
-      await say({
-        text: result.dmText,
-        blocks: buildTextMessageBlocks(result.dmText)
-      });
-      return;
-    } catch (error) {
-      logger.error?.(error);
-      const text = `${formatDisplayName(user)}, #in-process 팀 진행 과정 보드 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
-      await say({ text, blocks: buildTextMessageBlocks(text) });
-      return;
-    }
-  }
-
-  if (response.refreshInProcess && inProcessService) {
-    const text = `${formatDisplayName(user)}, #in-process 팀 진행 과정 보드 최신화를 시작했습니다. 완료되면 이 DM에 알려드릴게요.`;
-    await say({ text, blocks: buildTextMessageBlocks(text) });
-
-    backgroundRunner(async () => {
-      try {
-        const result = await inProcessService.handleRefreshInProcess({ user });
-        logger.info?.(`In-process refresh completed: user=${user.key} action=${result.action} taskCount=${result.taskCount}`);
-        if (client?.chat?.postMessage && message.channel) {
-          await client.chat.postMessage({
-            channel: message.channel,
-            text: result.dmText,
-            blocks: buildTextMessageBlocks(result.dmText)
-          });
-        }
-      } catch (error) {
-        logHandlerError(logger, 'Refresh in-process background job failed', error);
-        if (client?.chat?.postMessage && message.channel) {
-          const failureText = `${formatDisplayName(user)}, #in-process 팀 진행 과정 보드 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
-          await client.chat.postMessage({
-            channel: message.channel,
-            text: failureText,
-            blocks: buildTextMessageBlocks(failureText)
-          });
-        }
-      }
-    });
-    return;
-  }
-
   if (response.refreshAllInProcess && inProcessService?.refreshBoardForUser) {
     try {
       const results = [];
@@ -717,7 +671,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
       return;
     } catch (error) {
       logger.error?.(error);
-      const text = `${formatDisplayName(user)}, 팀 전체 #in-process 팀 진행 과정 보드 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '전체 최신화'를 보내 주세요.`;
+      const text = `${formatDisplayName(user)}, 팀 전체 #in-process 팀 진행 과정 보드 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
       await say({ text, blocks: buildTextMessageBlocks(text) });
       return;
     }

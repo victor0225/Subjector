@@ -23,7 +23,6 @@ test('출근 opens the personal DM task board', () => {
 
   assert.equal(result.type, 'start_work');
   assert.equal(result.openPersonalTaskBoard, true);
-  assert.equal(result.refreshInProcess, undefined);
   assert.match(result.text, /수현님/);
   assert.match(result.text, /개인 task 보드/);
 });
@@ -37,7 +36,6 @@ test('최신화 refreshes every team member board for any user', () => {
 
   assert.equal(result.type, 'refresh_all_in_process');
   assert.equal(result.refreshAllInProcess, true);
-  assert.equal(result.refreshInProcess, undefined);
   assert.match(result.text, /조은님/);
   assert.match(result.text, /팀 진행 과정 보드/);
 });

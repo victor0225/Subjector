@@ -542,16 +542,6 @@ export function createInProcessService({
     };
   }
 
-  async function handleRefreshInProcess({ user }) {
-    const now = clock();
-    const result = await renderBoard({ user, now });
-
-    return {
-      ...result,
-      dmText: `${formatDisplayName(user)}, #in-process 팀 진행 과정 보드를 최신화했습니다.`
-    };
-  }
-
   async function refreshBoardForUser({ user }) {
     return renderBoard({ user, now: clock() });
   }
@@ -1032,7 +1022,6 @@ export function createInProcessService({
 
   return {
     handleStartWork,
-    handleRefreshInProcess,
     refreshBoardForUser,
     handleArchiveTestTasks,
     handleDailySummary,

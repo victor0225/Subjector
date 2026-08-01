@@ -421,39 +421,6 @@ test('handleStartWork updates an existing #in-process message', async () => {
   assert.equal(store.calls.some(([name]) => name === 'upsertSlackMessage'), false);
 });
 
-test('handleRefreshInProcess updates #in-process without starting a work session', async () => {
-  const store = createFakeStore({
-    existingMessage: {
-      channelId: 'C_IN_PROCESS',
-      messageTs: '1700000000.000001'
-    },
-    tasks: [
-      {
-        title: '회의 기반 신규 task',
-        status: '미시작',
-        importance: '🔴 상',
-        coordination: '🟡 중',
-        context: { source: '회의 결과록' }
-      }
-    ]
-  });
-  const slackClient = createFakeSlackClient();
-  const service = createInProcessService({
-    store,
-    slackClient,
-    config,
-    clock: () => new Date('2026-06-28T01:30:00.000Z')
-  });
-
-  const result = await service.handleRefreshInProcess({ user });
-
-  assert.equal(result.action, 'updated');
-  assert.equal(result.taskCount, 1);
-  assert.match(result.dmText, /최신화했습니다/);
-  assert.equal(store.calls.some(([name]) => name === 'startWorkSession'), false);
-  assert.equal(slackClient.calls[0][0], 'update');
-  assert.match(slackClient.calls[0][1].text, /회의 기반 신규 task/);
-});
 
 test('refreshBoardForUser updates #in-process without starting a work session', async () => {
   const store = createFakeStore({
@@ -488,7 +455,8 @@ test('refreshBoardForUser updates #in-process without starting a work session', 
   assert.match(slackClient.calls[0][1].text, /IDEA CRUISE task 반영/);
 });
 
-test('handleRefreshInProcess removes task detail thread messages from the team board', async () => {
+
+test('refreshBoardForUser removes task detail thread messages from the team board', async () => {
   const store = createFakeStore({
     existingMessagesByPurpose: {
       'in_process:suhyeon': {
@@ -530,7 +498,7 @@ test('handleRefreshInProcess removes task detail thread messages from the team b
     clock: () => new Date('2026-06-28T01:30:00.000Z')
   });
 
-  await service.handleRefreshInProcess({ user });
+  await service.refreshBoardForUser({ user });
 
   const deletedSlackMessages = slackClient.calls.filter(([name]) => name === 'delete');
   assert.equal(deletedSlackMessages.length, 2);
@@ -546,7 +514,6 @@ test('handleRefreshInProcess removes task detail thread messages from the team b
     '1700000000.000012'
   ]);
 });
-
 test('handleArchiveTestTasks archives test tasks and refreshes the board', async () => {
   const store = createFakeStore({
     existingMessage: {

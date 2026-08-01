@@ -824,7 +824,6 @@ test('handleDirectDmMessage refreshes every team member board for 최신화', as
   const replies = [];
   const serviceCalls = [];
 
-
   await handleDirectDmMessage({
     message: {
       channel_type: 'im',
@@ -852,6 +851,30 @@ test('handleDirectDmMessage refreshes every team member board for 최신화', as
   assert.match(replies[0].text, /3명/);
 });
 
+test('handleDirectDmMessage reports team refresh failures with the visible 최신화 command', async () => {
+  const replies = [];
+
+  await handleDirectDmMessage({
+    message: {
+      channel_type: 'im',
+      channel: 'D_SUHYEON',
+      user: 'U1',
+      text: '최신화'
+    },
+    say: async (payload) => replies.push(payload),
+    config: teamConfig,
+    logger: { info() {}, error() {} },
+    inProcessService: {
+      async refreshBoardForUser() {
+        throw new Error('slack failed');
+      }
+    }
+  });
+
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /다시 '최신화'/);
+  assert.doesNotMatch(replies[0].text, /전체 최신화/);
+});
 test('handleDirectDmMessage lets the lead refresh every team member board', async () => {
   const replies = [];
   const serviceCalls = [];
