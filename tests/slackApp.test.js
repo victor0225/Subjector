@@ -751,14 +751,14 @@ test('registerIdeaCruiseRoute rejects live intervention card analysis when analy
   assert.match(response.body.error, /AI Analysis/);
 });
 
-test('handleDirectDmMessage treats 출근 as #in-process refresh compatibility alias', async () => {
+test('handleDirectDmMessage opens the personal task board for 출근', async () => {
   const replies = [];
   const serviceCalls = [];
-  let startWorkCalled = false;
 
   await handleDirectDmMessage({
     message: {
       channel_type: 'im',
+      channel: 'D_SUHYEON',
       user: 'U1',
       text: '출근'
     },
@@ -766,30 +766,25 @@ test('handleDirectDmMessage treats 출근 as #in-process refresh compatibility a
     config,
     logger: { info() {}, error() {} },
     inProcessService: {
-      async handleStartWork() {
-        startWorkCalled = true;
-      },
-      async handleRefreshInProcess(input) {
+      async handleStartWork(input) {
         serviceCalls.push(input);
         return {
-          action: 'updated',
-          taskCount: 0,
-          dmText: '수현님, #in-process task 영역을 최신화했습니다.'
+          action: 'posted',
+          personalTaskCount: 2,
+          dmText: '수현님, 개인 task 보드를 열었습니다.'
         };
       }
     }
   });
 
-  assert.equal(startWorkCalled, false);
   assert.equal(serviceCalls.length, 1);
   assert.equal(serviceCalls[0].user.key, 'suhyeon');
+  assert.equal(serviceCalls[0].dmChannelId, 'D_SUHYEON');
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /#in-process/);
-  assert.match(replies[0].text, /최신화했습니다/);
-  assert.doesNotMatch(replies[0].text, /출근 확인/);
+  assert.match(replies[0].text, /개인 task 보드/);
 });
 
-test('handleDirectDmMessage reports #in-process update failures to the user', async () => {
+test('handleDirectDmMessage reports personal task board open failures to the user', async () => {
   const replies = [];
   const errors = [];
 
@@ -811,7 +806,7 @@ test('handleDirectDmMessage reports #in-process update failures to the user', as
 
   assert.equal(errors.length, 1);
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /#in-process 최신화에 실패했습니다/);
+  assert.match(replies[0].text, /개인 task 보드를 열지 못했습니다/);
   assert.match(replies[0].text, /Render 로그/);
 });
 
@@ -834,7 +829,7 @@ test('handleDirectDmMessage refreshes #in-process for 최신화 commands', async
         return {
           action: 'updated',
           taskCount: 2,
-          dmText: '수현님, #in-process task 영역을 최신화했습니다.'
+          dmText: '수현님, #in-process 팀 진행 과정 보드를 최신화했습니다.'
         };
       }
     }
@@ -930,13 +925,14 @@ test('handleDirectDmMessage sends a daily summary for 오늘 요약 commands', a
   assert.match(replies[0].text, /오늘 한 일 요약/);
 });
 
-test('handleDirectDmMessage keeps 퇴근 as a daily summary compatibility alias', async () => {
+test('handleDirectDmMessage folds the personal task board for 퇴근', async () => {
   const replies = [];
   const serviceCalls = [];
 
   await handleDirectDmMessage({
     message: {
       channel_type: 'im',
+      channel: 'D_SUHYEON',
       user: 'U1',
       text: '퇴근'
     },
@@ -944,20 +940,20 @@ test('handleDirectDmMessage keeps 퇴근 as a daily summary compatibility alias'
     config,
     logger: { info() {}, error() {} },
     inProcessService: {
-      async handleDailySummary(input) {
+      async handleEndWork(input) {
         serviceCalls.push(input);
         return {
-          dmText: `${input.user.displayName}님, 오늘 한 일 요약입니다.`
+          dmText: '수현님, 오늘 작업을 종료했습니다. 미완료 task는 다음 출근 때 다시 표시됩니다.'
         };
       }
     }
   });
 
   assert.equal(serviceCalls.length, 1);
+  assert.equal(serviceCalls[0].dmChannelId, 'D_SUHYEON');
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /수현님, 오늘 한 일 요약입니다/);
-  assert.doesNotMatch(replies[0].text, /퇴근/);
-  assert.doesNotMatch(replies[0].text, /#finals 누적 정리도 업데이트/);
+  assert.match(replies[0].text, /오늘 작업을 종료했습니다/);
+  assert.doesNotMatch(replies[0].text, /오늘 한 일 요약/);
 });
 
 test('handleDirectDmMessage reports daily summary failures to the user', async () => {

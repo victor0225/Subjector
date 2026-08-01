@@ -10,8 +10,10 @@ export function buildHelpText(displayName) {
   return [
     `${displayName}, 사용할 수 있는 명령어입니다.`,
     '',
-    '- `최신화`: #in-process task 영역을 갱신합니다.',
-    '- `전체 최신화`: 수현님만 사용할 수 있는 명령입니다. 팀 전체 #in-process task 영역을 한 번에 갱신합니다.',
+    '- `출근`: DM 개인 task 보드를 엽니다.',
+    '- `퇴근`: DM 개인 task 보드를 접습니다.',
+    '- `최신화`: #in-process 팀 진행 과정 보드를 갱신합니다.',
+    '- `전체 최신화`: 수현님만 사용할 수 있는 명령입니다. 팀 전체 #in-process 진행 과정 보드를 한 번에 갱신합니다.',
     '- `로드맵 반영`: 수현님만 사용할 수 있는 명령입니다. #회의-결과록의 일반 메시지 "로드맵 반영 완료" 이후 자료를 IDEA CRUISE에 반영합니다.',
     '- `오늘 요약` 또는 `일일 정리`: 오늘 한 일 요약을 DM으로 받습니다.',
     '- `finals 업데이트`: 수현님만 사용할 수 있는 명령입니다. #finals 누적 정리를 바로 업데이트합니다.'
@@ -22,10 +24,18 @@ export function handleDmCommand({ text, user, config }) {
   const command = normalizeCommand(text);
   const displayName = formatDisplayName(user);
 
-  if (command === '출근' || command === '최신화') {
+  if (command === '출근') {
+    return {
+      type: 'start_work',
+      text: `${displayName}, 출근 명령을 확인했습니다. DM 개인 task 보드를 열겠습니다.`,
+      openPersonalTaskBoard: true
+    };
+  }
+
+  if (command === '최신화') {
     return {
       type: 'refresh_in_process',
-      text: `${displayName}, 최신화 명령을 확인했습니다. #in-process task 영역을 갱신하겠습니다.`,
+      text: `${displayName}, 최신화 명령을 확인했습니다. #in-process 팀 진행 과정 보드를 갱신하겠습니다.`,
       refreshInProcess: true
     };
   }
@@ -40,7 +50,7 @@ export function handleDmCommand({ text, user, config }) {
 
     return {
       type: 'refresh_all_in_process',
-      text: `${displayName}, 팀 전체 최신화 명령을 확인했습니다. #in-process task 영역을 모두 갱신하겠습니다.`,
+      text: `${displayName}, 팀 전체 최신화 명령을 확인했습니다. #in-process 팀 진행 과정 보드를 모두 갱신하겠습니다.`,
       refreshAllInProcess: true
     };
   }
@@ -60,11 +70,19 @@ export function handleDmCommand({ text, user, config }) {
     };
   }
 
-  if (command === '오늘 요약' || command === '일일 정리' || command === '퇴근') {
+  if (command === '오늘 요약' || command === '일일 정리') {
     return {
       type: 'daily_summary',
       text: `${displayName}, 오늘 한 일 요약을 생성하겠습니다.`,
       createDailySummary: true
+    };
+  }
+
+  if (command === '퇴근') {
+    return {
+      type: 'end_work',
+      text: `${displayName}, 퇴근 명령을 확인했습니다. DM 개인 task 보드를 접겠습니다.`,
+      closePersonalTaskBoard: true
     };
   }
 

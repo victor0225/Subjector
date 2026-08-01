@@ -29,6 +29,24 @@ function isSlackMessageNotFound(error) {
     || error?.message === 'message_not_found';
 }
 
+function buildPersonalTaskBoardMessagePurpose(user) {
+  return `dm_task_board:${user.key}`;
+}
+
+function buildPersonalTaskBoardClosedMessage({ user, workDate }) {
+  const text = [
+    `${formatDisplayName(user)}, 오늘 작업을 종료했습니다.`,
+    `기준일: ${workDate}`,
+    '',
+    '미완료 task는 다음 출근 때 다시 표시됩니다.'
+  ].join('\n');
+
+  return {
+    text,
+    blocks: buildTextMessageBlocks(text)
+  };
+}
+
 function kstHour(date) {
   const hour = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Seoul',
@@ -238,6 +256,140 @@ export function createInProcessService({
     }
   }
 
+  async function renderPersonalTaskBoard({ user, dmChannelId = null, now = clock() }) {
+    const workDate = formatKstDate(now);
+    const purpose = buildPersonalTaskBoardMessagePurpose(user);
+    const existingMessage = await store.findSlackMessage({
+      purpose,
+      channelId: dmChannelId
+    });
+    const channelId = dmChannelId ?? existingMessage?.channelId;
+
+    if (!channelId) {
+      return {
+        action: 'skipped',
+        taskCount: 0
+      };
+    }
+
+    const tasks = await store.listOpenTasksForUser(user.key);
+    const message = buildInProcessBoardMessage({
+      user,
+      tasks,
+      workDate,
+      boardLabel: '개인 task 보드'
+    });
+
+    if (existingMessage?.messageTs) {
+      try {
+        await slackClient.chat.update({
+          channel: channelId,
+          ts: existingMessage.messageTs,
+          text: message.text,
+          blocks: message.blocks
+        });
+      } catch (error) {
+        if (!isSlackMessageNotFound(error)) {
+          throw error;
+        }
+
+        const posted = await postBoardMessage({
+          channelId,
+          message,
+          purpose
+        });
+
+        return {
+          action: 'reposted',
+          taskCount: tasks.length,
+          messageTs: posted.ts
+        };
+      }
+
+      return {
+        action: 'updated',
+        taskCount: tasks.length,
+        messageTs: existingMessage.messageTs
+      };
+    }
+
+    const posted = await postBoardMessage({
+      channelId,
+      message,
+      purpose
+    });
+
+    return {
+      action: 'posted',
+      taskCount: tasks.length,
+      messageTs: posted.ts
+    };
+  }
+
+  async function closePersonalTaskBoard({ user, dmChannelId = null, now = clock() }) {
+    const workDate = formatKstDate(now);
+    const purpose = buildPersonalTaskBoardMessagePurpose(user);
+    const existingMessage = await store.findSlackMessage({
+      purpose,
+      channelId: dmChannelId
+    });
+    const channelId = dmChannelId ?? existingMessage?.channelId;
+
+    if (!channelId) {
+      return {
+        action: 'skipped'
+      };
+    }
+
+    const message = buildPersonalTaskBoardClosedMessage({ user, workDate });
+
+    if (existingMessage?.messageTs) {
+      try {
+        await slackClient.chat.update({
+          channel: channelId,
+          ts: existingMessage.messageTs,
+          text: message.text,
+          blocks: message.blocks
+        });
+      } catch (error) {
+        if (!isSlackMessageNotFound(error)) {
+          throw error;
+        }
+
+        const posted = await postBoardMessage({
+          channelId,
+          message,
+          purpose
+        });
+
+        return {
+          action: 'reposted',
+          messageTs: posted.ts
+        };
+      }
+
+      return {
+        action: 'updated',
+        messageTs: existingMessage.messageTs
+      };
+    }
+
+    const posted = await postBoardMessage({
+      channelId,
+      message,
+      purpose
+    });
+
+    return {
+      action: 'posted',
+      messageTs: posted.ts
+    };
+  }
+
+  async function refreshPersonalTaskBoardIfOpen({ user, now = clock() }) {
+    return renderPersonalTaskBoard({ user, now });
+  }
+
   async function renderBoard({ user, now = clock() }) {
     const workDate = formatKstDate(now);
     const channelId = config.channels.inProcess;
@@ -247,7 +399,8 @@ export function createInProcessService({
     const message = buildInProcessBoardMessage({
       user,
       tasks,
-      workDate
+      workDate,
+      boardLabel: '진행 상태'
     });
 
     const existingMessage = await store.findSlackMessage({
@@ -325,7 +478,7 @@ export function createInProcessService({
     };
   }
 
-  async function handleStartWork({ user }) {
+  async function handleStartWork({ user, dmChannelId = null }) {
     const now = clock();
     const workDate = formatKstDate(now);
 
@@ -335,17 +488,26 @@ export function createInProcessService({
       startedAt: now.toISOString()
     });
 
-    const result = await renderBoard({ user, now });
+    const personalResult = await renderPersonalTaskBoard({ user, dmChannelId, now });
+    const teamResult = await renderBoard({ user, now });
+    const action = personalResult.action === 'skipped' ? teamResult.action : personalResult.action;
     const verbByAction = {
       updated: '업데이트했습니다',
-      posted: '만들었습니다',
-      reposted: '다시 만들었습니다'
+      posted: personalResult.action === 'skipped' ? '만들었습니다' : '열었습니다',
+      reposted: personalResult.action === 'skipped' ? '다시 만들었습니다' : '다시 열었습니다',
+      skipped: '확인했습니다'
     };
-    const verb = verbByAction[result.action] ?? '업데이트했습니다';
+    const verb = verbByAction[action] ?? '열었습니다';
+    const target = personalResult.action === 'skipped' ? '#in-process 팀 진행 과정 보드' : '개인 task 보드';
+    const suffix = personalResult.action === 'skipped' ? '' : ' #in-process 팀 진행 과정 보드도 갱신했습니다.';
 
     return {
-      ...result,
-      dmText: `${formatDisplayName(user)}, #in-process task 영역을 ${verb}.`
+      action,
+      taskCount: personalResult.action === 'skipped' ? teamResult.taskCount : personalResult.taskCount,
+      teamAction: teamResult.action,
+      personalTaskCount: personalResult.taskCount,
+      teamTaskCount: teamResult.taskCount,
+      dmText: `${formatDisplayName(user)}, ${target}를 ${verb}.${suffix}`
     };
   }
 
@@ -355,7 +517,7 @@ export function createInProcessService({
 
     return {
       ...result,
-      dmText: `${formatDisplayName(user)}, #in-process task 영역을 최신화했습니다.`
+      dmText: `${formatDisplayName(user)}, #in-process 팀 진행 과정 보드를 최신화했습니다.`
     };
   }
 
@@ -369,7 +531,7 @@ export function createInProcessService({
     await renderBoard({ user, now });
 
     return {
-      dmText: `${formatDisplayName(user)}, 테스트 task를 보관 처리하고 #in-process task 영역을 최신화했습니다.`
+      dmText: `${formatDisplayName(user)}, 테스트 task를 보관 처리하고 #in-process 팀 진행 과정 보드를 최신화했습니다.`
     };
   }
 
@@ -498,8 +660,24 @@ export function createInProcessService({
     };
   }
 
-  async function handleEndWork({ user }) {
-    return handleDailySummary({ user });
+  async function handleEndWork({ user, dmChannelId = null }) {
+    const now = clock();
+    const workDate = formatKstDate(now);
+
+    if (store.endWorkSession) {
+      await store.endWorkSession({
+        userKey: user.key,
+        workDate,
+        endedAt: now.toISOString()
+      });
+    }
+
+    await closePersonalTaskBoard({ user, dmChannelId, now });
+    await renderBoard({ user, now });
+
+    return {
+      dmText: `${formatDisplayName(user)}, 오늘 작업을 종료했습니다. 미완료 task는 다음 출근 때 다시 표시됩니다.`
+    };
   }
 
   async function handleCodexPromptCopyRequest({ taskId }) {
@@ -638,6 +816,7 @@ export function createInProcessService({
     });
 
     await renderBoard({ user: owner, now });
+    await refreshPersonalTaskBoardIfOpen({ user: owner, now });
 
     return {
       status: '수락',
@@ -662,6 +841,7 @@ export function createInProcessService({
     });
 
     await renderBoard({ user: owner, now });
+    await refreshPersonalTaskBoardIfOpen({ user: owner, now });
 
     return {
       status: '수락',
@@ -786,6 +966,7 @@ export function createInProcessService({
       }
 
       await renderBoard({ user: owner, now });
+    await refreshPersonalTaskBoardIfOpen({ user: owner, now });
     }
 
     if (evaluation) {

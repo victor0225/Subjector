@@ -878,12 +878,17 @@ export function createSupabaseStore(supabase) {
     };
   }
 
-  async function findSlackMessage({ purpose, channelId }) {
-    const result = await supabase
+  async function findSlackMessage({ purpose, channelId = null }) {
+    let query = supabase
       .from('slack_messages')
       .select('purpose,channel_id,message_ts,thread_ts')
-      .eq('purpose', purpose)
-      .eq('channel_id', channelId)
+      .eq('purpose', purpose);
+
+    if (channelId) {
+      query = query.eq('channel_id', channelId);
+    }
+
+    const result = await query
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();

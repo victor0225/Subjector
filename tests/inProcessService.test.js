@@ -266,10 +266,50 @@ test('handleStartWork posts a new #in-process message when one does not exist', 
   assert.equal(store.calls[0][1].workDate, '2026-06-28');
   assert.equal(slackClient.calls[0][0], 'postMessage');
   assert.equal(slackClient.calls[0][1].channel, 'C_IN_PROCESS');
-  assert.match(slackClient.calls[0][1].text, /현재 배정된 task가 없습니다/);
+  assert.match(slackClient.calls[0][1].text, /현재 공유할 진행 task가 없습니다/);
   assert.equal(store.calls.at(-1)[0], 'upsertSlackMessage');
 });
 
+test('handleStartWork opens a personal DM task board and refreshes the team progress board', async () => {
+  const store = createFakeStore({
+    existingMessagesByPurpose: {
+      'in_process:suhyeon': {
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000001'
+      }
+    },
+    tasks: [
+      {
+        id: 'task-1',
+        title: '라즈베리파이 통신 방식 정리',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T01:00:00.000Z')
+  });
+
+  const result = await service.handleStartWork({ user, dmChannelId: 'D_SUHYEON' });
+
+  assert.equal(result.personalTaskCount, 1);
+  assert.match(result.dmText, /개인 task 보드/);
+  const dmPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.channel === 'D_SUHYEON');
+  assert.ok(dmPost);
+  assert.match(dmPost[1].text, /라즈베리파이 통신 방식 정리/);
+  assert.match(dmPost[1].text, /개인 task 보드/);
+  const teamUpdate = slackClient.calls.find(([name, input]) => name === 'update' && input.channel === 'C_IN_PROCESS');
+  assert.ok(teamUpdate);
+  assert.match(teamUpdate[1].text, /라즈베리파이 통신 방식 정리/);
+});
 test('handleStartWork updates an existing #in-process message', async () => {
   const store = createFakeStore({
     existingMessage: {
@@ -583,6 +623,49 @@ test('handleStartWork reposts task details when the board thread was recreated',
   assert.match(detailPost[1].text, /task 실행 정보/);
 });
 
+test('handleTaskActionSubmission refreshes the personal DM board and team progress board', async () => {
+  const store = createFakeStore({
+    existingMessagesByPurpose: {
+      'in_process:suhyeon': {
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000001'
+      },
+      'dm_task_board:suhyeon': {
+        channelId: 'D_SUHYEON',
+        messageTs: '1700000000.000010'
+      }
+    },
+    tasks: [
+      {
+        id: 'task-1',
+        title: '센서 후보 정리',
+        status: '추가 진행 예정',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T02:00:00.000Z')
+  });
+
+  await service.handleTaskActionSubmission({
+    actionId: 'task_complete',
+    taskId: 'task-1',
+    assigneeUserKey: 'suhyeon',
+    submittedByUserKey: 'suhyeon',
+    rawText: '[완료 제출 결과]'
+  });
+
+  assert.ok(slackClient.calls.some(([name, input]) => name === 'update' && input.channel === 'C_IN_PROCESS'));
+  assert.ok(slackClient.calls.some(([name, input]) => name === 'update' && input.channel === 'D_SUHYEON'));
+});
 test('handleTaskActionSubmission stores completed task output and refreshes the board', async () => {
   const store = createFakeStore({ existingMessage: { channelId: 'C_IN_PROCESS', messageTs: '1700000000.000001' } });
   const slackClient = createFakeSlackClient();
@@ -1114,6 +1197,43 @@ test('handleTaskActionSubmission stores change request output', async () => {
   assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '수락');
 });
 
+test('handleEndWork folds the personal DM task board without deleting tasks', async () => {
+  const store = createFakeStore({
+    existingMessagesByPurpose: {
+      'dm_task_board:suhyeon': {
+        channelId: 'D_SUHYEON',
+        messageTs: '1700000000.000010'
+      }
+    },
+    tasks: [
+      {
+        id: 'task-1',
+        title: '센서 후보 정리',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: { source: '회의 결과록' }
+      }
+    ]
+  });
+  const slackClient = createFakeSlackClient();
+  const service = createInProcessService({
+    store,
+    slackClient,
+    config,
+    users: [user],
+    clock: () => new Date('2026-06-28T12:00:00.000Z')
+  });
+
+  const result = await service.handleEndWork({ user, dmChannelId: 'D_SUHYEON' });
+
+  assert.match(result.dmText, /오늘 작업을 종료했습니다/);
+  assert.equal(store.calls.some(([name]) => name === 'markAcceptedTasksUnresolvedForUser'), false);
+  assert.equal(store.calls.some(([name]) => name === 'updateTaskStatus'), false);
+  const dmUpdate = slackClient.calls.find(([name, input]) => name === 'update' && input.channel === 'D_SUHYEON');
+  assert.ok(dmUpdate);
+  assert.match(dmUpdate[1].text, /미완료 task는 다음 출근 때 다시 표시됩니다/);
+});
 test('handleDailySummary returns a daily summary without recording attendance', async () => {
   const store = createFakeStore();
   const service = createInProcessService({

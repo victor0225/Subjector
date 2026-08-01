@@ -614,6 +614,44 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
 
   logger.info?.(`DM command handled: ${response.type}`);
 
+  if (response.openPersonalTaskBoard && inProcessService) {
+    try {
+      const result = await inProcessService.handleStartWork({
+        user,
+        dmChannelId: message.channel
+      });
+      await say({
+        text: result.dmText,
+        blocks: buildTextMessageBlocks(result.dmText)
+      });
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, 개인 task 보드를 열지 못했습니다. Render 로그를 확인한 뒤 다시 '출근'을 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
+  if (response.closePersonalTaskBoard && inProcessService) {
+    try {
+      const result = await inProcessService.handleEndWork({
+        user,
+        dmChannelId: message.channel
+      });
+      await say({
+        text: result.dmText,
+        blocks: buildTextMessageBlocks(result.dmText)
+      });
+      return;
+    } catch (error) {
+      logger.error?.(error);
+      const text = `${formatDisplayName(user)}, 개인 task 보드를 접지 못했습니다. Render 로그를 확인한 뒤 다시 '퇴근'을 보내 주세요.`;
+      await say({ text, blocks: buildTextMessageBlocks(text) });
+      return;
+    }
+  }
+
   if (response.updateInProcess && inProcessService) {
     try {
       const result = await inProcessService.handleStartWork({ user });
@@ -624,7 +662,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
       return;
     } catch (error) {
       logger.error?.(error);
-      const text = `${formatDisplayName(user)}, #in-process 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
+      const text = `${formatDisplayName(user)}, #in-process 팀 진행 과정 보드 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
       await say({ text, blocks: buildTextMessageBlocks(text) });
       return;
     }
@@ -640,7 +678,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
       return;
     } catch (error) {
       logger.error?.(error);
-      const text = `${formatDisplayName(user)}, #in-process 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
+      const text = `${formatDisplayName(user)}, #in-process 팀 진행 과정 보드 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '최신화'를 보내 주세요.`;
       await say({ text, blocks: buildTextMessageBlocks(text) });
       return;
     }
@@ -655,7 +693,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
       }
 
       const text = [
-        `${formatDisplayName(user)}, 팀 전체 #in-process task 영역을 최신화했습니다.`,
+        `${formatDisplayName(user)}, 팀 전체 #in-process 팀 진행 과정 보드를 최신화했습니다.`,
         `대상: ${results.length}명`
       ].join('\n');
       await say({
@@ -665,7 +703,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
       return;
     } catch (error) {
       logger.error?.(error);
-      const text = `${formatDisplayName(user)}, 팀 전체 #in-process 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '전체 최신화'를 보내 주세요.`;
+      const text = `${formatDisplayName(user)}, 팀 전체 #in-process 팀 진행 과정 보드 최신화에 실패했습니다. Render 로그를 확인한 뒤 다시 '전체 최신화'를 보내 주세요.`;
       await say({ text, blocks: buildTextMessageBlocks(text) });
       return;
     }

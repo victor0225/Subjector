@@ -14,19 +14,18 @@ test('normalizeCommand trims text and collapses whitespace', () => {
   assert.equal(normalizeCommand('  finals   업데이트  '), 'finals 업데이트');
 });
 
-test('출근 is a compatibility alias for #in-process refresh', () => {
+test('출근 opens the personal DM task board', () => {
   const result = handleDmCommand({
     text: '출근',
     user: config.users[0],
     config
   });
 
-  assert.equal(result.type, 'refresh_in_process');
-  assert.equal(result.refreshInProcess, true);
-  assert.equal(result.updateInProcess, undefined);
+  assert.equal(result.type, 'start_work');
+  assert.equal(result.openPersonalTaskBoard, true);
+  assert.equal(result.refreshInProcess, undefined);
   assert.match(result.text, /수현님/);
-  assert.match(result.text, /#in-process/);
-  assert.doesNotMatch(result.text, /출근 확인|업무 시작/);
+  assert.match(result.text, /개인 task 보드/);
 });
 
 test('최신화 refreshes #in-process without starting work', () => {
@@ -40,7 +39,7 @@ test('최신화 refreshes #in-process without starting work', () => {
   assert.equal(result.refreshInProcess, true);
   assert.equal(result.updateInProcess, undefined);
   assert.match(result.text, /수현님/);
-  assert.match(result.text, /#in-process/);
+  assert.match(result.text, /팀 진행 과정 보드/);
 });
 
 test('전체 최신화 refreshes every team member board for the lead', () => {
@@ -105,18 +104,30 @@ test('오늘 요약 requests daily summary generation', () => {
   assert.doesNotMatch(result.text, /퇴근/);
 });
 
-test('일일 정리 and legacy 퇴근 request daily summary generation', () => {
-  for (const text of ['일일 정리', '퇴근']) {
-    const result = handleDmCommand({
-      text,
-      user: config.users[1],
-      config
-    });
+test('일일 정리 requests daily summary generation', () => {
+  const result = handleDmCommand({
+    text: '일일 정리',
+    user: config.users[1],
+    config
+  });
 
-    assert.equal(result.type, 'daily_summary');
-    assert.equal(result.createDailySummary, true);
-    assert.match(result.text, /오늘 한 일 요약/);
-  }
+  assert.equal(result.type, 'daily_summary');
+  assert.equal(result.createDailySummary, true);
+  assert.match(result.text, /오늘 한 일 요약/);
+});
+
+test('퇴근 folds the personal DM task board without creating a daily summary', () => {
+  const result = handleDmCommand({
+    text: '퇴근',
+    user: config.users[1],
+    config
+  });
+
+  assert.equal(result.type, 'end_work');
+  assert.equal(result.closePersonalTaskBoard, true);
+  assert.equal(result.createDailySummary, undefined);
+  assert.match(result.text, /개인 task 보드/);
+  assert.match(result.text, /접겠습니다/);
 });
 
 test('finals 업데이트 is allowed for lead user', () => {
@@ -181,5 +192,7 @@ test('unknown command returns short help text', () => {
   assert.match(result.text, /오늘 요약/);
   assert.match(result.text, /일일 정리/);
   assert.doesNotMatch(result.text, /회의 기록|테스트 task 정리/);
-  assert.doesNotMatch(result.text, /업무 시작|출근 기록|퇴근/);
+  assert.match(result.text, /출근/);
+  assert.match(result.text, /퇴근/);
+  assert.doesNotMatch(result.text, /업무 시작|출근 기록/);
 });

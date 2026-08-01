@@ -832,6 +832,28 @@ test('findSlackMessage maps the latest stored Slack message', async () => {
   });
 });
 
+test('findSlackMessage can find a personal DM board by purpose only', async () => {
+  const supabase = createFakeSupabase({
+    singleData: {
+      slack_messages: {
+        purpose: 'dm_task_board:suhyeon',
+        channel_id: 'D_SUHYEON',
+        message_ts: '1700000000.000010',
+        thread_ts: '1700000000.000010'
+      }
+    }
+  });
+  const store = createSupabaseStore(supabase);
+
+  const message = await store.findSlackMessage({
+    purpose: 'dm_task_board:suhyeon'
+  });
+
+  assert.equal(message.channelId, 'D_SUHYEON');
+  assert.equal(message.messageTs, '1700000000.000010');
+  assert.ok(supabase.calls.some((call) => call[0] === 'slack_messages' && call[1] === 'eq' && call[2] === 'purpose'));
+  assert.equal(supabase.calls.some((call) => call[0] === 'slack_messages' && call[1] === 'eq' && call[2] === 'channel_id'), false);
+});
 test('listTaskDetailMessagesForThread reads stored task detail messages', async () => {
   const supabase = createFakeSupabase({
     tableData: {

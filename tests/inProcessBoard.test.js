@@ -30,11 +30,11 @@ test('buildInProcessBoardMessage shows an empty task state', () => {
     workDate: '2026-06-28'
   });
 
-  assert.match(message.text, /수현님 task/);
+  assert.match(message.text, /수현님 진행 상태/);
   assert.doesNotMatch(message.text, /상태: 출근 확인됨/);
   assert.match(message.text, /기준일: 2026-06-28/);
-  assert.match(message.text, /현재 배정된 task가 없습니다/);
-  assert.match(message.text, /회의 결과나 변경 제안/);
+  assert.match(message.text, /현재 공유할 진행 task가 없습니다/);
+  assert.match(message.text, /개인 task 진행 상태/);
   assert.equal(message.blocks[0].type, 'section');
 });
 

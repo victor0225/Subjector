@@ -200,18 +200,18 @@ export function formatKstDate(date = new Date()) {
   }).format(date);
 }
 
-export function buildInProcessBoardMessage({ user, tasks = [], workDate = formatKstDate() }) {
+export function buildInProcessBoardMessage({ user, tasks = [], workDate = formatKstDate(), boardLabel = '진행 상태' }) {
   const displayName = formatDisplayName(user);
   const sortedTasks = sortTasksForDisplay(tasks);
   const header = [
-    `*${displayName} task*`,
+    `*${displayName} ${boardLabel}*`,
     `기준일: ${workDate}`
   ].join('\n');
 
   const body = sortedTasks.length === 0
     ? [
-        '현재 배정된 task가 없습니다.',
-        '회의 결과나 변경 제안이 반영되면 여기에 표시됩니다.'
+        boardLabel === '개인 task 보드' ? '현재 배정된 개인 task가 없습니다.' : '현재 공유할 진행 task가 없습니다.',
+        boardLabel === '개인 task 보드' ? '회의 결과나 변경 제안이 반영되면 다음 출근 때 다시 표시됩니다.' : '개인 task 진행 상태가 바뀌면 여기에 공유됩니다.'
       ].join('\n')
     : sortedTasks.map(formatTask).join('\n\n');
 
