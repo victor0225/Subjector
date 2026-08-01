@@ -818,19 +818,30 @@ test('handleDirectDmMessage reports personal task board open failures to the use
   assert.match(replies[0].text, /Render 로그/);
 });
 
-test('handleDirectDmMessage refreshes #in-process for 최신화 commands', async () => {
+test('handleDirectDmMessage refreshes #in-process for 최신화 commands in the background', async () => {
   const replies = [];
   const serviceCalls = [];
+  const dmMessages = [];
+  let scheduledTask = null;
 
   await handleDirectDmMessage({
     message: {
       channel_type: 'im',
+      channel: 'D_SUHYEON',
       user: 'U1',
       text: '최신화'
     },
     say: async (payload) => replies.push(payload),
+    client: {
+      chat: {
+        postMessage: async (payload) => dmMessages.push(payload)
+      }
+    },
     config,
     logger: { info() {}, error() {} },
+    backgroundRunner(task) {
+      scheduledTask = task;
+    },
     inProcessService: {
       async handleRefreshInProcess(input) {
         serviceCalls.push(input);
@@ -843,10 +854,18 @@ test('handleDirectDmMessage refreshes #in-process for 최신화 commands', async
     }
   });
 
+  assert.equal(serviceCalls.length, 0);
+  assert.equal(replies.length, 1);
+  assert.match(replies[0].text, /최신화를 시작했습니다/);
+  assert.ok(scheduledTask);
+
+  await scheduledTask();
+
   assert.equal(serviceCalls.length, 1);
   assert.equal(serviceCalls[0].user.key, 'suhyeon');
-  assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /최신화했습니다/);
+  assert.equal(dmMessages.length, 1);
+  assert.equal(dmMessages[0].channel, 'D_SUHYEON');
+  assert.match(dmMessages[0].text, /최신화했습니다/);
 });
 
 test('handleDirectDmMessage lets the lead refresh every team member board', async () => {
