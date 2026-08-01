@@ -820,11 +820,10 @@ test('handleDirectDmMessage reports personal task board open failures to the use
   assert.match(replies[0].text, /Render 로그/);
 });
 
-test('handleDirectDmMessage refreshes #in-process for 최신화 commands in the background', async () => {
+test('handleDirectDmMessage refreshes every team member board for 최신화', async () => {
   const replies = [];
   const serviceCalls = [];
-  const dmMessages = [];
-  let scheduledTask = null;
+
 
   await handleDirectDmMessage({
     message: {
@@ -834,40 +833,23 @@ test('handleDirectDmMessage refreshes #in-process for 최신화 commands in the 
       text: '최신화'
     },
     say: async (payload) => replies.push(payload),
-    client: {
-      chat: {
-        postMessage: async (payload) => dmMessages.push(payload)
-      }
-    },
-    config,
+    config: teamConfig,
     logger: { info() {}, error() {} },
-    backgroundRunner(task) {
-      scheduledTask = task;
-    },
     inProcessService: {
-      async handleRefreshInProcess(input) {
+      async refreshBoardForUser(input) {
         serviceCalls.push(input);
         return {
           action: 'updated',
-          taskCount: 2,
-          dmText: '수현님, #in-process 팀 진행 과정 보드를 최신화했습니다.'
+          taskCount: 1
         };
       }
     }
   });
 
-  assert.equal(serviceCalls.length, 0);
+  assert.deepEqual(serviceCalls.map((call) => call.user.key), ['suhyeon', 'joeun', 'minsung']);
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /최신화를 시작했습니다/);
-  assert.ok(scheduledTask);
-
-  await scheduledTask();
-
-  assert.equal(serviceCalls.length, 1);
-  assert.equal(serviceCalls[0].user.key, 'suhyeon');
-  assert.equal(dmMessages.length, 1);
-  assert.equal(dmMessages[0].channel, 'D_SUHYEON');
-  assert.match(dmMessages[0].text, /최신화했습니다/);
+  assert.match(replies[0].text, /팀 전체/);
+  assert.match(replies[0].text, /3명/);
 });
 
 test('handleDirectDmMessage lets the lead refresh every team member board', async () => {
@@ -900,7 +882,7 @@ test('handleDirectDmMessage lets the lead refresh every team member board', asyn
   assert.match(replies[0].text, /3명/);
 });
 
-test('handleDirectDmMessage rejects team refresh from non-lead users', async () => {
+test('handleDirectDmMessage lets non-lead users refresh every team member board through the compatibility alias', async () => {
   const replies = [];
   const serviceCalls = [];
 
@@ -920,9 +902,9 @@ test('handleDirectDmMessage rejects team refresh from non-lead users', async () 
     }
   });
 
-  assert.equal(serviceCalls.length, 0);
+  assert.deepEqual(serviceCalls.map((call) => call.user.key), ['suhyeon', 'joeun', 'minsung']);
   assert.equal(replies.length, 1);
-  assert.match(replies[0].text, /수현님만/);
+  assert.match(replies[0].text, /팀 전체/);
 });
 
 test('handleDirectDmMessage sends a daily summary for 오늘 요약 commands', async () => {

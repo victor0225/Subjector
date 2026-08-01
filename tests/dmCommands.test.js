@@ -28,17 +28,17 @@ test('출근 opens the personal DM task board', () => {
   assert.match(result.text, /개인 task 보드/);
 });
 
-test('최신화 refreshes #in-process without starting work', () => {
+test('최신화 refreshes every team member board for any user', () => {
   const result = handleDmCommand({
     text: '최신화',
-    user: config.users[0],
+    user: config.users[1],
     config
   });
 
-  assert.equal(result.type, 'refresh_in_process');
-  assert.equal(result.refreshInProcess, true);
-  assert.equal(result.updateInProcess, undefined);
-  assert.match(result.text, /수현님/);
+  assert.equal(result.type, 'refresh_all_in_process');
+  assert.equal(result.refreshAllInProcess, true);
+  assert.equal(result.refreshInProcess, undefined);
+  assert.match(result.text, /조은님/);
   assert.match(result.text, /팀 진행 과정 보드/);
 });
 
@@ -55,15 +55,15 @@ test('전체 최신화 refreshes every team member board for the lead', () => {
   assert.match(result.text, /#in-process/);
 });
 
-test('전체 최신화 is rejected for non-lead users', () => {
+test('전체 최신화 remains a compatibility alias for every team member board', () => {
   const result = handleDmCommand({
     text: '전체 최신화',
     user: config.users[1],
     config
   });
 
-  assert.equal(result.type, 'not_allowed');
-  assert.match(result.text, /수현님만/);
+  assert.equal(result.type, 'refresh_all_in_process');
+  assert.equal(result.refreshAllInProcess, true);
 });
 
 test('로드맵 반영 requests IDEA CRUISE roadmap reflection for the lead', () => {
