@@ -731,34 +731,6 @@ test('listOpenTasksForUser reads open tasks and maps database columns', async ()
   assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[3].includes('보완 필요')));
 });
 
-test('listOpenTasks reads team open tasks without filtering one assignee', async () => {
-  const supabase = createFakeSupabase({
-    tableData: {
-      tasks: [
-        {
-          id: 'task-1',
-          assignee_user_key: 'joeun',
-          title: '소리 데이터셋 후보 정리',
-          status: '추가 진행 예정',
-          importance: '🟡 중',
-          coordination: '🟢 하',
-          source_type: 'meeting',
-          context: { why: '드론 소리와 말소리 데이터셋 후보를 비교한다.' },
-          created_at: '2026-06-28T01:00:00.000Z'
-        }
-      ]
-    }
-  });
-  const store = createSupabaseStore(supabase);
-
-  const tasks = await store.listOpenTasks({ limit: 50 });
-
-  assert.equal(tasks[0].assigneeUserKey, 'joeun');
-  assert.equal(tasks[0].title, '소리 데이터셋 후보 정리');
-  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'in' && call[2] === 'status'));
-  assert.equal(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'eq' && call[2] === 'assignee_user_key'), false);
-  assert.ok(supabase.calls.some((call) => call[0] === 'tasks' && call[1] === 'limit' && call[2] === 50));
-});
 test('markAcceptedTasksUnresolvedForUser changes accepted tasks to unresolved', async () => {
   const supabase = createFakeSupabase();
   const store = createSupabaseStore(supabase);

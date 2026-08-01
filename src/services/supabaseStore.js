@@ -671,18 +671,6 @@ export function createSupabaseStore(supabase) {
     return result.data.map(mapTask);
   }
 
-  async function listOpenTasks({ limit = 50 } = {}) {
-    const result = await supabase
-      .from('tasks')
-      .select('id,assignee_user_key,title,status,importance,coordination,source_type,context,created_at')
-      .in('status', OPEN_TASK_STATUSES)
-      .order('created_at', { ascending: true })
-      .limit(limit);
-
-    throwIfError(result, 'Failed to list open team tasks');
-    return result.data.map(mapTask);
-  }
-
   async function markAcceptedTasksUnresolvedForUser({ userKey }) {
     const result = await supabase
       .from('tasks')
@@ -1163,7 +1151,6 @@ export function createSupabaseStore(supabase) {
     createIdeaCruiseTask,
     listEndedWorkSessionsForDate,
     listOpenTasksForUser,
-    listOpenTasks,
     markAcceptedTasksUnresolvedForUser,
     archiveTestTasks,
     listDailyTasksForUser,

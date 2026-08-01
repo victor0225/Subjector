@@ -327,7 +327,7 @@ test('handleStartWork opens a personal DM task board and refreshes the team prog
   const result = await service.handleStartWork({ user, dmChannelId: 'D_SUHYEON' });
 
   assert.equal(result.personalTaskCount, 1);
-  assert.equal(result.teamTaskCount, 2);
+  assert.equal(result.teamTaskCount, 1);
   assert.match(result.dmText, /개인 task 보드/);
   const dmPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.channel === 'D_SUHYEON');
   assert.ok(dmPost);
@@ -337,7 +337,7 @@ test('handleStartWork opens a personal DM task board and refreshes the team prog
   const teamUpdate = slackClient.calls.find(([name, input]) => name === 'update' && input.channel === 'C_IN_PROCESS');
   assert.ok(teamUpdate);
   assert.match(teamUpdate[1].text, /라즈베리파이 통신 방식 정리/);
-  assert.match(teamUpdate[1].text, /소리 데이터셋 후보 정리/);
+  assert.doesNotMatch(teamUpdate[1].text, /소리 데이터셋 후보 정리/);
   assert.doesNotMatch(teamUpdate[1].text, /작업 제출/);
 });
 test('handleStartWork updates an existing #in-process message', async () => {
@@ -1192,7 +1192,7 @@ test('handleTaskActionSubmission marks a task cleaned up with type, reason, and 
     rawText: '[정리 유형]\ntask로 하지 않음\n\n[정리 사유]\n오늘 회의에서 정리한 내용이라 별도 진행 부담을 만들지 않기로 함'
   });
   assert.equal(store.calls.find(([name]) => name === 'updateTaskStatus')[1].status, '정리됨');
-  assert.ok(store.calls.some(([name]) => name === 'listOpenTasks'));
+  assert.ok(store.calls.some(([name]) => name === 'listOpenTasksForUser'));
 });
 
 test('handleTaskActionSubmission stores change request output', async () => {
