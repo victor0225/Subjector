@@ -38,12 +38,13 @@ test('buildInProcessBoardMessage shows an empty task state', () => {
   assert.equal(message.blocks[0].type, 'section');
 });
 
-test('buildInProcessBoardMessage includes assigned task summaries', () => {
+test('buildInProcessBoardMessage shows read-only team task summaries', () => {
   const message = buildInProcessBoardMessage({
     user,
     workDate: '2026-06-28',
     tasks: [
       {
+        id: 'task-1',
         title: '센서 후보 정리',
         status: '미시작',
         importance: '🔴 상',
@@ -60,11 +61,38 @@ test('buildInProcessBoardMessage includes assigned task summaries', () => {
   assert.match(message.text, /센서 후보 정리/);
   assert.match(message.text, /🟡 `미시작`/);
   assert.match(message.text, /🔴 상/);
+  assert.match(message.text, /세부사항: 센서 선택 기준이 정해져야 다음 개발 방향을 잡을 수 있음/);
+  assert.doesNotMatch(message.text, /해야 할 일/);
+  assert.doesNotMatch(message.text, /확인할 것/);
+  assert.doesNotMatch(message.text, /완료 기준/);
+  assert.equal(message.blocks.some((block) => block.type === 'actions'), false);
+});
+
+test('buildInProcessBoardMessage keeps personal DM task board details and actions', () => {
+  const message = buildInProcessBoardMessage({
+    user,
+    workDate: '2026-06-28',
+    boardLabel: '개인 task 보드',
+    tasks: [
+      {
+        id: 'task-1',
+        title: '센서 후보 정리',
+        status: '미시작',
+        importance: '🔴 상',
+        coordination: '🟡 중',
+        context: {
+          why: '센서 선택 기준이 정해져야 다음 개발 방향을 잡을 수 있음',
+          neededInfo: '가격, 전력, 구현 난이도',
+          doneCriteria: '비교표와 추천안 1개'
+        }
+      }
+    ]
+  });
+
   assert.match(message.text, /해야 할 일: 센서 선택 기준이 정해져야 다음 개발 방향을 잡을 수 있음/);
   assert.match(message.text, /확인할 것: 가격, 전력, 구현 난이도/);
   assert.match(message.text, /완료 기준: 비교표와 추천안 1개/);
-  assert.doesNotMatch(message.text, /조율/);
-  assert.doesNotMatch(message.text, /상세 근거/);
+  assert.equal(message.blocks.some((block) => block.type === 'actions'), true);
 });
 
 test('buildInProcessBoardMessage orders important tasks first', () => {
@@ -157,6 +185,7 @@ test('buildInProcessBoardMessage attaches task action buttons including direct w
   const message = buildInProcessBoardMessage({
     user,
     workDate: '2026-06-28',
+    boardLabel: '개인 task 보드',
     tasks: [
       {
         id: 'task-1',
@@ -190,6 +219,7 @@ test('buildInProcessBoardMessage replaces accept button with prompt copy after t
   const message = buildInProcessBoardMessage({
     user,
     workDate: '2026-06-28',
+    boardLabel: '개인 task 보드',
     tasks: [
       {
         id: 'task-1',
@@ -245,6 +275,7 @@ test('buildInProcessBoardMessage lets users submit revisions for needs-revision 
   const message = buildInProcessBoardMessage({
     user,
     workDate: '2026-06-28',
+    boardLabel: '개인 task 보드',
     tasks: [
       {
         id: 'task-1',

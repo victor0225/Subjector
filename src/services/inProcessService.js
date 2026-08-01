@@ -299,12 +299,39 @@ export function createInProcessService({
           purpose
         });
 
+        await ensureTaskDetailThreads({
+          channelId,
+          threadTs: posted.ts,
+          tasks,
+          user
+        });
+
+        await cleanupStaleTaskDetailThreads({
+          channelId,
+          threadTs: posted.ts,
+          tasks
+        });
+
         return {
           action: 'reposted',
           taskCount: tasks.length,
           messageTs: posted.ts
         };
       }
+
+      const threadTs = existingMessage.threadTs ?? existingMessage.messageTs;
+      await ensureTaskDetailThreads({
+        channelId,
+        threadTs,
+        tasks,
+        user
+      });
+
+      await cleanupStaleTaskDetailThreads({
+        channelId,
+        threadTs,
+        tasks
+      });
 
       return {
         action: 'updated',
@@ -317,6 +344,19 @@ export function createInProcessService({
       channelId,
       message,
       purpose
+    });
+
+    await ensureTaskDetailThreads({
+      channelId,
+      threadTs: posted.ts,
+      tasks,
+      user
+    });
+
+    await cleanupStaleTaskDetailThreads({
+      channelId,
+      threadTs: posted.ts,
+      tasks
     });
 
     return {
@@ -421,17 +461,16 @@ export function createInProcessService({
           throw error;
         }
 
-        const posted = await postBoardMessage({
+        await postBoardMessage({
           channelId,
           message,
           purpose
         });
 
-        await ensureTaskDetailThreads({
+        await cleanupStaleTaskDetailThreads({
           channelId,
-          threadTs: posted.ts,
-          tasks,
-          user
+          threadTs: existingMessage.threadTs ?? existingMessage.messageTs,
+          tasks: []
         });
 
         return {
@@ -440,17 +479,10 @@ export function createInProcessService({
         };
       }
 
-      await ensureTaskDetailThreads({
-        channelId,
-        threadTs: existingMessage.threadTs ?? existingMessage.messageTs,
-        tasks,
-        user
-      });
-
       await cleanupStaleTaskDetailThreads({
         channelId,
         threadTs: existingMessage.threadTs ?? existingMessage.messageTs,
-        tasks
+        tasks: []
       });
 
       return {
@@ -459,17 +491,10 @@ export function createInProcessService({
       };
     }
 
-    const posted = await postBoardMessage({
+    await postBoardMessage({
       channelId,
       message,
       purpose,
-    });
-
-    await ensureTaskDetailThreads({
-      channelId,
-      threadTs: posted.ts,
-      tasks,
-      user
     });
 
     return {

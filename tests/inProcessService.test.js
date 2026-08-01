@@ -412,12 +412,14 @@ test('refreshBoardForUser updates #in-process without starting a work session', 
   assert.match(slackClient.calls[0][1].text, /IDEA CRUISE task 반영/);
 });
 
-test('handleRefreshInProcess deletes stale task detail thread messages', async () => {
+test('handleRefreshInProcess removes task detail thread messages from the team board', async () => {
   const store = createFakeStore({
-    existingMessage: {
-      channelId: 'C_IN_PROCESS',
-      messageTs: '1700000000.000001',
-      threadTs: '1700000000.000001'
+    existingMessagesByPurpose: {
+      'in_process:suhyeon': {
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000001',
+        threadTs: '1700000000.000001'
+      }
     },
     taskDetailMessages: [
       {
@@ -455,18 +457,18 @@ test('handleRefreshInProcess deletes stale task detail thread messages', async (
   await service.handleRefreshInProcess({ user });
 
   const deletedSlackMessages = slackClient.calls.filter(([name]) => name === 'delete');
-  assert.equal(deletedSlackMessages.length, 1);
-  assert.deepEqual(deletedSlackMessages[0][1], {
-    channel: 'C_IN_PROCESS',
-    ts: '1700000000.000012'
-  });
+  assert.equal(deletedSlackMessages.length, 2);
+  assert.deepEqual(deletedSlackMessages.map(([, input]) => input.ts), [
+    '1700000000.000011',
+    '1700000000.000012'
+  ]);
 
   const deletedRecords = store.calls.filter(([name]) => name === 'deleteSlackMessage');
-  assert.equal(deletedRecords.length, 1);
-  assert.deepEqual(deletedRecords[0][1], {
-    channelId: 'C_IN_PROCESS',
-    messageTs: '1700000000.000012'
-  });
+  assert.equal(deletedRecords.length, 2);
+  assert.deepEqual(deletedRecords.map(([, input]) => input.messageTs), [
+    '1700000000.000011',
+    '1700000000.000012'
+  ]);
 });
 
 test('handleArchiveTestTasks archives test tasks and refreshes the board', async () => {
@@ -494,12 +496,14 @@ test('handleArchiveTestTasks archives test tasks and refreshes the board', async
   assert.match(result.dmText, /보관 처리/);
 });
 
-test('handleStartWork posts task detail threads for tasks that do not have one yet', async () => {
+test('handleStartWork posts task detail threads in the personal DM board', async () => {
   const store = createFakeStore({
-    existingMessage: {
-      channelId: 'C_IN_PROCESS',
-      messageTs: '1700000000.000001',
-      threadTs: '1700000000.000001'
+    existingMessagesByPurpose: {
+      'in_process:suhyeon': {
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000001',
+        threadTs: '1700000000.000001'
+      }
     },
     tasks: [
       {
@@ -527,9 +531,9 @@ test('handleStartWork posts task detail threads for tasks that do not have one y
     clock: () => new Date('2026-06-28T01:00:00.000Z')
   });
 
-  await service.handleStartWork({ user });
+  await service.handleStartWork({ user, dmChannelId: 'D_SUHYEON' });
 
-  const detailPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.thread_ts === '1700000000.000001');
+  const detailPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.channel === 'D_SUHYEON' && input.thread_ts === '1710000000.000001');
   assert.ok(detailPost);
   assert.match(detailPost[1].text, /task 실행 정보/);
   assert.match(detailPost[1].text, /왜 하는가/);
@@ -579,16 +583,16 @@ test('handleStartWork recreates #in-process message when the stored Slack messag
   assert.equal(upsert[1].threadTs, '1710000000.000001');
 });
 
-test('handleStartWork reposts task details when the board thread was recreated', async () => {
+test('handleStartWork does not repost task details in the team board thread', async () => {
   const deletedMessageError = new Error('message_not_found');
   deletedMessageError.data = { error: 'message_not_found' };
   const store = createFakeStore({
-    existingMessage: {
-      channelId: 'C_IN_PROCESS',
-      messageTs: '1700000000.000001',
-      threadTs: '1700000000.000001'
-    },
     existingMessagesByPurpose: {
+      'in_process:suhyeon': {
+        channelId: 'C_IN_PROCESS',
+        messageTs: '1700000000.000001',
+        threadTs: '1700000000.000001'
+      },
       'task_detail:task-1': {
         channelId: 'C_IN_PROCESS',
         messageTs: '1700000000.000002',
@@ -619,8 +623,7 @@ test('handleStartWork reposts task details when the board thread was recreated',
   await service.handleStartWork({ user });
 
   const detailPost = slackClient.calls.find(([name, input]) => name === 'postMessage' && input.thread_ts === '1710000000.000001');
-  assert.ok(detailPost);
-  assert.match(detailPost[1].text, /task 실행 정보/);
+  assert.equal(detailPost, undefined);
 });
 
 test('handleTaskActionSubmission refreshes the personal DM board and team progress board', async () => {

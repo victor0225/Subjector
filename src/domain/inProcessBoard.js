@@ -134,6 +134,18 @@ function formatTask(task, index) {
   ].join('\n');
 }
 
+function formatTeamTaskSummary(task, index) {
+  const context = task?.context ?? {};
+  const why = detailFromContext(context, ['why', 'reason', 'goal', 'meetingContext']);
+
+  return [
+    `${index + 1}. *${task.title}*`,
+    `   - 상태: ${statusBadge(task.status)}`,
+    `   - 중요도: ${task.importance}`,
+    `   - 세부사항: ${compactDetail(why || task.title)}`
+  ].join('\n');
+}
+
 function taskActionButton({ actionId, text, task, user, style }) {
   const button = {
     type: 'button',
@@ -200,9 +212,10 @@ export function formatKstDate(date = new Date()) {
   }).format(date);
 }
 
-export function buildInProcessBoardMessage({ user, tasks = [], workDate = formatKstDate(), boardLabel = '팀 진행 과정 보드' }) {
+export function buildInProcessBoardMessage({ user, tasks = [], workDate = formatKstDate(), boardLabel = '팀 진행 과정 보드', showActions = boardLabel === '개인 task 보드' }) {
   const displayName = formatDisplayName(user);
   const sortedTasks = sortTasksForDisplay(tasks);
+  const formatTaskForBoard = showActions ? formatTask : formatTeamTaskSummary;
   const header = [
     `*${displayName} ${boardLabel}*`,
     `기준일: ${workDate}`
@@ -213,7 +226,7 @@ export function buildInProcessBoardMessage({ user, tasks = [], workDate = format
         boardLabel === '개인 task 보드' ? '현재 배정된 개인 task가 없습니다.' : '현재 공유할 진행 task가 없습니다.',
         boardLabel === '개인 task 보드' ? '회의 결과나 변경 제안이 반영되면 다음 출근 때 다시 표시됩니다.' : '개인 task 진행 상태가 바뀌면 여기에 공유됩니다.'
       ].join('\n')
-    : sortedTasks.map(formatTask).join('\n\n');
+    : sortedTasks.map(formatTaskForBoard).join('\n\n');
 
   const text = [header, body].join('\n\n');
 
@@ -221,10 +234,9 @@ export function buildInProcessBoardMessage({ user, tasks = [], workDate = format
     ? [section(text)]
     : [
         section(header),
-        ...sortedTasks.flatMap((task, index) => [
-          section(formatTask(task, index)),
-          taskActionsBlock({ task, user })
-        ])
+        ...sortedTasks.flatMap((task, index) => showActions
+          ? [section(formatTaskForBoard(task, index)), taskActionsBlock({ task, user })]
+          : [section(formatTaskForBoard(task, index))])
       ];
 
   return {
