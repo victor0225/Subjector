@@ -18,6 +18,7 @@ export function createDefaultHealthStatus() {
     slack: { ok: false, message: 'not checked' },
     supabase: { ok: false, message: 'not checked' },
     openai: { ok: false, message: 'not checked' },
+    deployment: { ok: false, message: 'not checked' },
     channels: {
       meeting: { ok: false, message: '#회의-결과록 not checked' },
       inProcess: { ok: false, message: '#in-process not checked' },
@@ -85,6 +86,7 @@ export function renderHealthPage({ pin, config, status = createDefaultHealthStat
         ${statusRow('Slack', status.slack)}
         ${statusRow('Supabase', status.supabase)}
         ${statusRow('OpenAI', status.openai)}
+        ${statusRow('Deployment', status.deployment)}
         ${statusRow('IDEA CRUISE', status.web?.ideaCruise)}
         ${statusRow('#회의-결과록', status.channels?.meeting)}
         ${statusRow('#in-process', status.channels?.inProcess)}

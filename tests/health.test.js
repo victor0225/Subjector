@@ -50,6 +50,7 @@ test('renderHealthPage with valid PIN shows service statuses and channel checks'
       slack: { ok: true, message: 'connected' },
       supabase: { ok: false, message: 'missing env' },
       openai: { ok: true, message: 'configured' },
+      deployment: { ok: true, message: 'c8ca660668af4a73e0e8db9e8e77d7fbc83517e9' },
       channels: {
         meeting: { ok: true, message: '#회의-결과록' },
         inProcess: { ok: true, message: '#in-process' },
@@ -66,6 +67,8 @@ test('renderHealthPage with valid PIN shows service statuses and channel checks'
   assert.match(html, /Supabase/);
   assert.match(html, /OpenAI/);
   assert.match(html, /IDEA CRUISE/);
+  assert.match(html, /Deployment/);
+  assert.match(html, /c8ca660/);
   assert.match(html, /\/idea-cruise/);
   assert.match(html, /#회의-결과록/);
   assert.match(html, /not invited/);

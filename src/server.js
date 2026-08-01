@@ -17,7 +17,7 @@ async function main() {
   const { app } = createSlackApp({ config, logger: console });
 
   await app.start(config.port);
-  console.log(`Subjector is running on port ${config.port}`);
+  console.log(`Subjector is running on port ${config.port} (commit ${config.deployment?.commit ?? 'unknown'})`);
 }
 
 main().catch((error) => {

@@ -59,6 +59,10 @@ export function buildBootHealthStatus(config) {
           : 'missing env')
         : 'not selected'
     },
+    deployment: {
+      ok: Boolean(config.deployment?.commit),
+      message: config.deployment?.commit || 'unknown'
+    },
     web: {
       ideaCruise: {
         ok: true,
@@ -675,6 +679,7 @@ export async function handleDirectDmMessage({ message, say, client = null, confi
     backgroundRunner(async () => {
       try {
         const result = await inProcessService.handleRefreshInProcess({ user });
+        logger.info?.(`In-process refresh completed: user=${user.key} action=${result.action} taskCount=${result.taskCount}`);
         if (client?.chat?.postMessage && message.channel) {
           await client.chat.postMessage({
             channel: message.channel,

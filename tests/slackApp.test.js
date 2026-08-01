@@ -57,11 +57,14 @@ test('buildBootHealthStatus reports OpenAI when meeting task extraction uses Ope
     supabase: { url: 'https://example.supabase.co', serviceRoleKey: 'service-key' },
     ai: { evaluationProvider: 'gemini', meetingTaskProvider: 'openai' },
     openai: { apiKey: 'sk-key' },
-    channels: { meeting: 'C1', inProcess: 'C2', finals: 'C3' }
+    channels: { meeting: 'C1', inProcess: 'C2', finals: 'C3' },
+    deployment: { commit: 'c8ca660668af4a73e0e8db9e8e77d7fbc83517e9' }
   });
 
   assert.equal(status.openai.ok, true);
   assert.match(status.openai.message, /task extraction/);
+  assert.equal(status.deployment.ok, true);
+  assert.match(status.deployment.message, /c8ca660/);
 });
 
 test('createSlackApp wires IDEA CRUISE roadmap and task candidates to OpenAI GPT-5.4 while transcription stays Gemini', () => {

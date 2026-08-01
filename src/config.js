@@ -158,6 +158,9 @@ export function loadConfigFromEnv(env = process.env) {
       repositories: parseGithubRepositories(env.GITHUB_REPOSITORIES),
       token: env.GITHUB_TOKEN?.trim() || ''
     },
+    deployment: {
+      commit: env.RENDER_GIT_COMMIT?.trim() || env.GIT_COMMIT?.trim() || 'local'
+    },
     features: {
       enableTestParticipantSkip: envFlag(env.ENABLE_TEST_PARTICIPANT_SKIP),
       enableMeetingTaskFlow: envFlag(env.ENABLE_MEETING_TASK_FLOW)
