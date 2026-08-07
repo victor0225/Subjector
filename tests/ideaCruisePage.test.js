@@ -20,11 +20,14 @@ test('renderIdeaCruisePage exposes the two-layer roadmap desk', () => {
   assert.doesNotMatch(html, /Completed Brainstorming Inputs/);
 });
 
-test('renderIdeaCruisePage documents the model split at each AI step', () => {
+test('renderIdeaCruisePage keeps model labels out of the top-right header', () => {
   const html = renderIdeaCruisePage();
 
-  assert.match(html, /로드맵 생성: GPT-5\.4/);
-  assert.match(html, /Task 후보 생성: GPT-5\.4/);
+  const headerStatus = html.match(/<div class="status">([\s\S]*?)<\/div>/)?.[1] || '';
+  assert.match(headerStatus, /id="open-question-drawer"[^>]*>질문/);
+  assert.doesNotMatch(headerStatus, /로드맵 생성: GPT-5\.4/);
+  assert.doesNotMatch(headerStatus, /Task 후보 생성: GPT-5\.4/);
+  assert.doesNotMatch(headerStatus, /감지 예민도 기본/);
   assert.match(html, /자료조사, 검증, 구현/);
   assert.doesNotMatch(html, /회의록 생성: Gemini 2\.5 Flash-Lite/);
   assert.doesNotMatch(html, /Task 최종 정제: Gemini 2\.5 Flash-Lite/);
@@ -148,7 +151,7 @@ test('renderIdeaCruisePage supports fixed activity panels, anonymous questions, 
   assert.match(html, /id="task-list"/);
   assert.match(html, /회의 자료로 task 생성/);
   assert.doesNotMatch(html, /grid-template-rows: minmax\(380px, 6fr\) minmax\(260px, 4fr\)/);
-  assert.match(html, /감지 예민도 기본/);
+  assert.doesNotMatch(html, /감지 예민도 기본/);
   assert.match(html, /id="zoom-in"/);
   assert.match(html, /id="zoom-out"/);
   assert.match(html, /data-move-topic/);

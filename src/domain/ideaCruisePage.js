@@ -638,9 +638,6 @@ export function renderIdeaCruisePage() {
       <p>1층은 회의 기준 로드맵입니다. 카드 고정 = 기준 확정, 로드맵 저장 = 회의 마침 기준 보관입니다.</p>
     </div>
     <div class="status">
-      <span>로드맵 생성: GPT-5.4</span>
-      <span>Task 후보 생성: GPT-5.4</span>
-      <span>감지 예민도 기본</span>
       <button id="open-question-drawer" class="primary" type="button">질문</button>
     </div>
   </header>
