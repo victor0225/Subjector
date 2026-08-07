@@ -52,6 +52,36 @@ function createJsonResponse() {
   };
 }
 
+function createHtmlResponse() {
+  return {
+    statusCode: null,
+    contentType: null,
+    body: '',
+    cookies: [],
+    headers: {},
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    type(type) {
+      this.contentType = type;
+      return this;
+    },
+    cookie(name, value, options) {
+      this.cookies.push({ name, value, options });
+      return this;
+    },
+    setHeader(name, value) {
+      this.headers[name] = value;
+      return this;
+    },
+    send(body) {
+      this.body = body;
+      return this;
+    }
+  };
+}
+
 test('buildBootHealthStatus reports OpenAI when meeting task extraction uses OpenAI', () => {
   const status = buildBootHealthStatus({
     supabase: { url: 'https://example.supabase.co', serviceRoleKey: 'service-key' },
@@ -85,7 +115,7 @@ test('createSlackApp logs Slack handler errors instead of letting them escape si
   assert.match(source, /app\.error\(async/);
   assert.match(source, /Slack app error/);
 });
-test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
+test('registerIdeaCruiseRoute prompts for the health PIN before serving IDEA CRUISE', () => {
   const routes = [];
   const receiver = {
     router: {
@@ -98,30 +128,40 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
     }
   };
 
-  registerIdeaCruiseRoute(receiver);
+  registerIdeaCruiseRoute(receiver, {
+    config: { ...teamConfig, healthPin: '1234' }
+  });
 
   const route = routes.find((item) => item.method === 'get' && item.path === '/idea-cruise');
   assert.ok(route);
 
-  const response = {
-    statusCode: null,
-    contentType: null,
-    body: '',
-    status(code) {
-      this.statusCode = code;
-      return this;
-    },
-    type(type) {
-      this.contentType = type;
-      return this;
-    },
-    send(body) {
-      this.body = body;
-      return this;
+  const response = createHtmlResponse();
+  route.handler({ query: {}, headers: {} }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.contentType, 'html');
+  assert.match(response.body, /IDEA CRUISE 접근 PIN/);
+  assert.doesNotMatch(response.body, /1F Topic Root Layer/);
+});
+
+test('registerIdeaCruiseRoute accepts the health PIN and sets an IDEA CRUISE session cookie', () => {
+  const routes = [];
+  const receiver = {
+    router: {
+      get(path, handler) {
+        routes.push({ method: 'get', path, handler });
+      },
+      post() {}
     }
   };
 
-  route.handler({}, response);
+  registerIdeaCruiseRoute(receiver, {
+    config: { ...teamConfig, healthPin: '1234' }
+  });
+
+  const route = routes.find((item) => item.method === 'get' && item.path === '/idea-cruise');
+  const response = createHtmlResponse();
+  route.handler({ query: { pin: '1234' }, headers: {} }, response);
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.contentType, 'html');
@@ -132,6 +172,9 @@ test('registerIdeaCruiseRoute serves the IDEA CRUISE roadmap workspace', () => {
   assert.match(response.body, /Public Questions/);
   assert.match(response.body, /card-popover/);
   assert.doesNotMatch(response.body, /Meeting Record|generate-record|copy-record/);
+  assert.equal(response.cookies[0].name, 'idea_cruise_access');
+  assert.equal(response.cookies[0].options.httpOnly, true);
+  assert.equal(response.cookies[0].options.path, '/idea-cruise');
 });
 
 test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee', async () => {
@@ -165,7 +208,7 @@ test('registerIdeaCruiseRoute rejects IDEA CRUISE task apply without an assignee
   assert.match(response.body.error, /담당자/);
 });
 
-test('registerIdeaCruiseRoute serves roadmap refresh context without a pin', async () => {
+test('registerIdeaCruiseRoute rejects roadmap refresh context without IDEA CRUISE access', async () => {
   const routes = [];
   const receiver = {
     router: {
@@ -252,9 +295,102 @@ test('registerIdeaCruiseRoute serves roadmap refresh context without a pin', asy
   });
 
   const route = routes.find((item) => item.path === '/idea-cruise/roadmap-context');
+  const rejected = createJsonResponse();
+  await route.handler({ query: {}, headers: {} }, rejected);
+  assert.equal(rejected.statusCode, 401);
+  assert.equal(rejected.body.ok, false);
+  assert.match(rejected.body.error, /PIN/);
+});
 
+test('registerIdeaCruiseRoute serves roadmap refresh context with the health PIN', async () => {
+  const routes = [];
+  const receiver = {
+    router: {
+      get(path, handler) {
+        routes.push({ method: 'get', path, handler });
+      },
+      post() {}
+    }
+  };
+
+  registerIdeaCruiseRoute(receiver, {
+    config: { ...teamConfig, healthPin: '1234' },
+    store: {
+      async listAllTasks() {
+        return [
+          {
+            id: 'task-1',
+            assigneeUserKey: 'suhyeon',
+            title: '하드웨어 후보 비교',
+            status: '수락',
+            context: {
+              why: '초기 개발 보드를 정해야 함',
+              neededInfo: '가격과 전력',
+              doneCriteria: '추천 후보 1개',
+              changeHistory: [
+                {
+                  why: 'ESP32 기준 비교로 좁힘',
+                  neededInfo: '전력 확인',
+                  doneCriteria: '추천 후보 1개 제시',
+                  rawText: '[해야 할 일 변경]\nESP32 기준 비교',
+                  createdAt: '2026-07-08T01:00:00.000Z'
+                }
+              ]
+            }
+          }
+        ];
+      },
+      async listAllChangeRequests() {
+        return [
+          {
+            taskId: 'task-1',
+            taskTitle: '하드웨어 후보 비교',
+            status: '기록됨',
+            rawText: '[변경 제안]\nESP32 중심으로 비교',
+            createdAt: '2026-07-08T02:00:00.000Z'
+          }
+        ];
+      },
+      async listRecentRoadmapReflections() {
+        return [
+          {
+            externalId: 'roadmap-reflection-1710000000.000400',
+            parentExternalId: '',
+            sourceType: 'roadmap-reflection',
+            title: '회의 반영: 소음 차단 범위 결정',
+            text: '소음 차단은 우선 폭음/충격음 중심으로 좁힌다.',
+            cards: [
+              {
+                kind: 'decision',
+                type: 'AI 애매함 검토',
+                title: '소음 차단 범위 결정',
+                body: '회의록에서 차단 범위가 넓게 남아 있다.',
+                suggestion: '폭음/충격음 중심으로 좁힌다.'
+              }
+            ]
+          }
+        ];
+      },
+      async listRecentMeetingContexts() {
+        return [
+          [
+            '회의: Subjector 프로젝트 하드웨어 및 AI 모델 설계 회의',
+            '요약: ESP32 기반의 무선 통신 헤드셋 제작과 EfficientAT 기반 소리 분류 AI 모델 구축 방안을 조율함.',
+            '결정: 기성 차음 귀마개 개조 / MANET 통신 프로토콜 설계'
+          ].join('\n')
+        ];
+      }
+    },
+    githubContextProvider: {
+      async listContext() {
+        return ['repo SAFIRA-ondevice/headset | updated: 2026-07-08'];
+      }
+    }
+  });
+
+  const route = routes.find((item) => item.path === '/idea-cruise/roadmap-context');
   const accepted = createJsonResponse();
-  await route.handler({ query: {} }, accepted);
+  await route.handler({ query: { pin: '1234' }, headers: {} }, accepted);
   assert.equal(accepted.statusCode, 200);
   assert.equal(accepted.body.ok, true);
   assert.ok(accepted.body.topics.some((topic) => topic.title === 'GitHub 프로젝트 상태'));

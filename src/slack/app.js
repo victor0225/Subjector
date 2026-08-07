@@ -1,4 +1,5 @@
 import { App, ExpressReceiver } from '@slack/bolt';
+import { createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { formatDisplayName, getUserBySlackId } from '../config.js';
 import { handleDmCommand } from '../domain/dmCommands.js';
@@ -123,9 +124,138 @@ const IDEA_CRUISE_ROADMAP_TASK_STATUSES = new Set([
   '회의 필요'
 ]);
 
+const IDEA_CRUISE_AUTH_COOKIE = 'idea_cruise_access';
+const IDEA_CRUISE_AUTH_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
 function isValidIdeaCruisePin(req, config) {
   const provided = String(req.query?.pin ?? req.headers?.['x-idea-cruise-pin'] ?? '').trim();
   return Boolean(config.healthPin && provided && provided === config.healthPin);
+}
+
+function ideaCruiseSessionToken(config) {
+  if (!config.healthPin) return '';
+  return createHash('sha256')
+    .update(`subjector-idea-cruise:${config.healthPin}`)
+    .digest('hex');
+}
+
+function readCookie(req, name) {
+  const cookieHeader = String(req.headers?.cookie ?? '');
+  return cookieHeader
+    .split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith(`${name}=`))
+    ?.slice(name.length + 1) ?? '';
+}
+
+function isIdeaCruiseAuthorized(req, config) {
+  if (!config.healthPin) return true;
+  if (isValidIdeaCruisePin(req, config)) return true;
+  return readCookie(req, IDEA_CRUISE_AUTH_COOKIE) === ideaCruiseSessionToken(config);
+}
+
+function setIdeaCruiseSessionCookie(res, config) {
+  const value = ideaCruiseSessionToken(config);
+  const options = {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: String(config.baseUrl ?? '').startsWith('https://'),
+    maxAge: IDEA_CRUISE_AUTH_MAX_AGE_SECONDS * 1000,
+    path: '/idea-cruise'
+  };
+
+  if (typeof res.cookie === 'function') {
+    res.cookie(IDEA_CRUISE_AUTH_COOKIE, value, options);
+    return;
+  }
+
+  if (typeof res.setHeader === 'function') {
+    const flags = [
+      `${IDEA_CRUISE_AUTH_COOKIE}=${value}`,
+      `Max-Age=${IDEA_CRUISE_AUTH_MAX_AGE_SECONDS}`,
+      'Path=/idea-cruise',
+      'HttpOnly',
+      'SameSite=Lax',
+      options.secure ? 'Secure' : ''
+    ].filter(Boolean);
+    res.setHeader('Set-Cookie', flags.join('; '));
+  }
+}
+
+function renderIdeaCruisePinPage({ invalid = false } = {}) {
+  return `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IDEA CRUISE 접근 PIN</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      place-items: center;
+      background: #edf3f5;
+      color: #132530;
+      font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+    main {
+      width: min(420px, calc(100vw - 32px));
+      border: 1px solid #d3e0e7;
+      border-radius: 8px;
+      padding: 22px;
+      background: #fff;
+      box-shadow: 0 16px 34px rgba(19, 37, 48, 0.12);
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p { margin: 0 0 18px; color: #617484; font-size: 13px; line-height: 1.5; }
+    label { display: grid; gap: 7px; color: #617484; font-size: 12px; font-weight: 800; }
+    input {
+      width: 100%;
+      border: 1px solid #d3e0e7;
+      border-radius: 7px;
+      padding: 10px;
+      font: inherit;
+    }
+    button {
+      width: 100%;
+      margin-top: 12px;
+      border: 1px solid #0b7769;
+      border-radius: 7px;
+      padding: 10px;
+      background: #0b7769;
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .error { color: #b8424a; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>IDEA CRUISE 접근 PIN</h1>
+    <p>팀 로드맵과 회의 맥락은 공개하지 않습니다. Subjector health PIN을 입력해 주세요.</p>
+    ${invalid ? '<p class="error">PIN이 맞지 않습니다.</p>' : ''}
+    <form method="GET" action="/idea-cruise">
+      <label>PIN
+        <input name="pin" type="password" autocomplete="current-password" autofocus>
+      </label>
+      <button type="submit">들어가기</button>
+    </form>
+  </main>
+</body>
+</html>`;
+}
+
+function requireIdeaCruiseAccess(req, res, config) {
+  if (isIdeaCruiseAuthorized(req, config)) return true;
+  res.status(401).json({
+    ok: false,
+    error: 'IDEA CRUISE PIN이 필요합니다.'
+  });
+  return false;
 }
 
 function trimForRoadmap(text, limit = 900) {
@@ -243,10 +373,22 @@ export function registerIdeaCruiseRoute(receiver, {
   const publicQuestionMessages = [];
 
   receiver.router.get('/idea-cruise', (req, res) => {
+    if (!isIdeaCruiseAuthorized(req, config)) {
+      return res.status(200).type('html').send(renderIdeaCruisePinPage({
+        invalid: Boolean(req.query?.pin)
+      }));
+    }
+
+    if (isValidIdeaCruisePin(req, config)) {
+      setIdeaCruiseSessionCookie(res, config);
+    }
+
     res.status(200).type('html').send(renderIdeaCruisePage());
   });
 
   receiver.router.get('/idea-cruise/roadmap-context', async (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     try {
       const [githubContexts, roadmapReflections] = await Promise.all([
         githubContextProvider?.listContext ? githubContextProvider.listContext({ repoLimit: 6, issueLimit: 4 }) : [],
@@ -270,6 +412,8 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 
   receiver.router.post('/idea-cruise/roadmap-patch', async (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     try {
       if (!roadmapPatchGenerator?.generate) {
         return res.status(503).json({
@@ -328,6 +472,8 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 
   receiver.router.post('/idea-cruise/cards', async (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     try {
       if (!cardAnalyzer?.analyze) {
         return res.status(503).json({
@@ -369,6 +515,8 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 
   receiver.router.get('/idea-cruise/questions', (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     return res.status(200).json({
       ok: true,
       messages: publicQuestionMessages
@@ -376,6 +524,8 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 
   receiver.router.post('/idea-cruise/questions', async (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     try {
       const body = await readIdeaCruiseTaskBody(req);
       const question = String(body.question ?? '').trim();
@@ -434,6 +584,8 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 
   receiver.router.delete?.('/idea-cruise/questions', (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     publicQuestionMessages.length = 0;
     return res.status(200).json({
       ok: true,
@@ -442,6 +594,8 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 
   receiver.router.post('/idea-cruise/task-candidates', async (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     try {
       if (!taskCandidateGenerator?.generate) {
         return res.status(503).json({
@@ -491,6 +645,8 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 
   receiver.router.post('/idea-cruise/tasks', async (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     try {
       const body = await readIdeaCruiseTaskBody(req);
       const assignee = String(body.assignee ?? '').trim();
@@ -551,6 +707,8 @@ export function registerIdeaCruiseRoute(receiver, {
   });
 
   receiver.router.post('/idea-cruise/task-updates', async (req, res) => {
+    if (!requireIdeaCruiseAccess(req, res, config)) return;
+
     try {
       const body = await readIdeaCruiseTaskBody(req);
       const taskId = String(body.taskId ?? '').trim();
