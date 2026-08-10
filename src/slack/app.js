@@ -125,7 +125,7 @@ const IDEA_CRUISE_ROADMAP_TASK_STATUSES = new Set([
 ]);
 
 const IDEA_CRUISE_AUTH_COOKIE = 'idea_cruise_access';
-const IDEA_CRUISE_AUTH_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const IDEA_CRUISE_AUTH_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 function isValidIdeaCruisePin(req, config) {
   const provided = String(req.query?.pin ?? req.headers?.['x-idea-cruise-pin'] ?? '').trim();

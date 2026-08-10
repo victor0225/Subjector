@@ -174,6 +174,7 @@ test('registerIdeaCruiseRoute accepts the health PIN and sets an IDEA CRUISE ses
   assert.doesNotMatch(response.body, /Meeting Record|generate-record|copy-record/);
   assert.equal(response.cookies[0].name, 'idea_cruise_access');
   assert.equal(response.cookies[0].options.httpOnly, true);
+  assert.equal(response.cookies[0].options.maxAge, 24 * 60 * 60 * 1000);
   assert.equal(response.cookies[0].options.path, '/idea-cruise');
 });
 
